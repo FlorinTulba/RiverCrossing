@@ -1,0 +1,48 @@
+{"ScenarioDescription": [
+	"Father, mother and their son and daughter want to cross the river",
+	"and help an old man with his wife to get to the other side as well.",
+	"Constraints:",
+	"- the raft can hold a maximum of 2 people",
+	"- only father, mother and the old man can row, but the old man refuses to be accompanied on the raft",
+	"- the children cannot stay with anyone without one of their parents",
+	"- the son can only row with his father and the daughter can only row with her mother"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Father",
+	"CanRow": "true",
+	"Type": "parent"},
+
+	{"Id": 1,
+	"Name": "Mother",
+	"CanRow": "true",
+	"Type": "parent"},
+
+	{"Id": 2,
+	"Name": "Son",
+	"Type": "child"},
+
+	{"Id": 3,
+	"Name": "Daughter",
+	"Type": "child"},
+
+	{"Id": 4,
+	"Name": "OldMan",
+	"CanRow": "true",
+	"Type": "stranger"},
+
+	{"Id": 5,
+	"Name": "OldLady",
+	"Type": "stranger"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2,
+	"DisallowedRaftConfigurations": "4 * ; 1 2 ; 0 3"
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations": "1+ x child + 0 x parent + 1+ x stranger"
+	}
+}

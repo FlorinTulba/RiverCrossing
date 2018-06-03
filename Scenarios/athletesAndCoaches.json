@@ -1,0 +1,48 @@
+{"ScenarioDescription": [
+	"3 athletes and their individual coaches need to cross a river.",
+	"Constraints:",
+	"- no coach trusts his athlete to be with any other coach unless he is also with his athlete",
+	"- each athlete can either be alone or with other athletes, but not alone with a different coach",
+	"- the raft can hold maximum 2 people and everyone can row"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Athlete1",
+	"Type": "athlete",
+	"CanRow": true},
+
+	{"Id": 1,
+	"Name": "Coach1",
+	"Type": "coach",
+	"CanRow": true},
+
+	{"Id": 2,
+	"Name": "Athlete2",
+	"Type": "athlete",
+	"CanRow": true},
+
+	{"Id": 3,
+	"Name": "Coach2",
+	"Type": "coach",
+	"CanRow": true},
+
+	{"Id": 4,
+	"Name": "Athlete3",
+	"Type": "athlete",
+	"CanRow": true},
+
+	{"Id": 5,
+	"Name": "Coach3",
+	"Type": "coach",
+	"CanRow": true}
+	],
+
+"CrossingConstraints" : {
+	"AllowedRaftConfigurations": "* ; 2 x coach ; 2 x athlete ; 0 1 ; 2 3 ; 4 5"
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations": "0 (3 | 5) !1 ... ; 2 (1 | 5) !3 ... ; 4 (1 | 3) !5 ..."
+	}
+}

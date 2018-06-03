@@ -1,0 +1,53 @@
+{"ScenarioDescription": [
+	"3 dogs and 3 cats must cross a river:",
+	"a big dog, a medium dog and a small dog;",
+	"a big cat, a medium cat and a small cat.",
+	"Constraints:",
+	"- the raft can carry 2 animals and all of the animals can row",
+	"- the medium animal of each kind cannot be left alone with either of the other animals of its kind on the riverbank or on the raft",
+	"- the big animal of each kind will not fight with the small animal",
+	"- if ever there are more dogs than cats together on the bank, the dogs will fight with the cats"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "BigDog",
+	"CanRow": "true",
+	"Type": "dog"},
+
+	{"Id": 1,
+	"Name": "MediumDog",
+	"CanRow": "true",
+	"Type": "dog"},
+
+	{"Id": 2,
+	"Name": "SmallDog",
+	"CanRow": "true",
+	"Type": "dog"},
+
+	{"Id": 3,
+	"Name": "BigCat",
+	"CanRow": "true",
+	"Type": "cat"},
+
+	{"Id": 4,
+	"Name": "MediumCat",
+	"CanRow": "true",
+	"Type": "cat"},
+
+	{"Id": 5,
+	"Name": "SmallCat",
+	"CanRow": "true",
+	"Type": "cat"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2,
+	"DisallowedRaftConfigurations": "1 (0 | 2) ; 4 (3 | 5)"
+	},
+
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations": "1 (0 | 2) ; 4 (3 | 5) ; 3 x dog + 2 x cat ; 2+ x dog + cat"
+	}
+}

@@ -1,0 +1,50 @@
+{"ScenarioDescription": [
+	"3 robbers have come to the left bank of a river.",
+	"At the same time, 3 merchants have come to the right bank of the river.",
+	"Each group wants to cross to the opposite side.",
+	"Constraints:",
+	"- there is a small raft on the left bank, which can hold only 2 people",
+	"- there can never be more robbers than merchants together on the same side",
+	"- only 1 merchant and 1 robber can row"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Merchant1",
+	"Type": "merchant",
+	"CanRow": "true",
+	"StartsFromRightBank": true},
+
+	{"Id": 1,
+	"Name": "Merchant2",
+	"Type": "merchant",
+	"StartsFromRightBank": true},
+
+	{"Id": 2,
+	"Name": "Merchant3",
+	"Type": "merchant",
+	"StartsFromRightBank": true},
+
+	{"Id": 3,
+	"Name": "Robber1",
+	"Type": "robber",
+	"CanRow": "true"},
+
+	{"Id": 4,
+	"Name": "Robber2",
+	"Type": "robber"},
+
+	{"Id": 5,
+	"Name": "Robber3",
+	"Type": "robber"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations":
+		"2+ x robber + merchant ; 3 x robber + 2 x merchant"
+	}
+}

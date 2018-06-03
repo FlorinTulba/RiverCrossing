@@ -1,0 +1,38 @@
+{"ScenarioDescription": [
+	"A family needs to cross a river in a small raft.",
+	"The father weighs 90kg, the mother weighs 80kg, the boy weighs 60kg, the girl weighs 40kg",
+	"and they also have a 20kg bag.",
+	"Constraints:",
+	"- the raft cannot bear a load heavier than 100kg"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Father",
+	"CanRow": "true",
+	"Weight": 90},
+
+	{"Id": 1,
+	"Name": "Mother",
+	"CanRow": "true",
+	"Weight": 80},
+
+	{"Id": 2,
+	"Name": "Boy",
+	"CanRow": "true",
+	"Weight": 60},
+
+	{"Id": 3,
+	"Name": "Girl",
+	"CanRow": "true",
+	"Weight": 40},
+
+	{"Id": 4,
+	"Name": "Bag",
+	"Weight": 20}
+	],
+
+"CrossingConstraints" : {
+	"RaftMaxLoad": 100
+	}
+}

@@ -1,0 +1,9 @@
+*.bak
+*.cbp
+*.cscope_file_list
+*.depend
+*.layout
+.d
+.r
+.td
+x64

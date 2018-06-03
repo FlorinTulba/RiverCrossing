@@ -1,0 +1,46 @@
+{"ScenarioDescription": [
+	"On an early morning 6 animals (2 lions, 2 raccoons and 2 squirrels) need to cross the river.",
+	"Constraints:",
+	"- squirrels are diurnal animals, they can only row during the day",
+	"- raccoons are nocturnal animals, they can only row during the night",
+	"- lions are cathemeral animals, the can row anytime",
+	"- each animal can be on the raft alone or with an animal of its kind",
+	"- each crossing and the following return take a full day or a full night"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Lion1",
+	"CanRow": "true",
+	"Type": "lion"},
+
+	{"Id": 1,
+	"Name": "Lion2",
+	"CanRow": "true",
+	"Type": "lion"},
+
+	{"Id": 2,
+	"Name": "Raccoon1",
+	"CanRow": "if (%CrossingIndex% mod 4) in {0, 3}",
+	"Type": "raccoon"},
+
+	{"Id": 3,
+	"Name": "Raccoon2",
+	"CanRow": "if (%CrossingIndex% mod 4) in {0, 3}",
+	"Type": "raccoon"},
+
+	{"Id": 4,
+	"Name": "Squirrel1",
+	"CanRow": "if (%CrossingIndex% mod 4) in {1, 2}",
+	"Type": "squirrel"},
+
+	{"Id": 5,
+	"Name": "Squirrel2",
+	"CanRow": "if (%CrossingIndex% mod 4) in {1, 2}",
+	"Type": "squirrel"}
+	],
+
+"CrossingConstraints" : {
+	"AllowedRaftConfigurations": "* ; 2 x lion ; 2 x raccoon ; 2 x squirrel"
+	}
+}

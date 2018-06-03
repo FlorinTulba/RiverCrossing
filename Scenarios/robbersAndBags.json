@@ -1,0 +1,41 @@
+{"ScenarioDescription": [
+	"3 robbers have just robbed a bank. To escape, they need to cross a river.",
+	"The first robber stole $3000, the second stole $5000 and the third stole $8000.",
+	"Constraints:",
+	"- the raft can hold either 2 robbers or 1 robber and 1 bag",
+	"- no robber can be left alone with bags worth more than the amount he stole",
+	"- 2 robbers cannot be left alone with bags that are together worth more than the sum of what both originally stole"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Robber1",
+	"CanRow": "true"},
+
+	{"Id": 1,
+	"Name": "Robber2",
+	"CanRow": "true"},
+
+	{"Id": 2,
+	"Name": "Robber3",
+	"CanRow": "true"},
+
+	{"Id": 3,
+	"Name": "Bag$3000"},
+
+	{"Id": 4,
+	"Name": "Bag$5000"},
+
+	{"Id": 5,
+	"Name": "Bag$8000"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations":
+"0 !1 !2 3? * ... ; 1 !0 !2 3 * ... ; 1 4? 5 ; 2 !0 !1 5 * ... ; 0 1 !2 5 * ... ; 0 2 4 5 ; 1 2 3 4 5"
+	}
+}

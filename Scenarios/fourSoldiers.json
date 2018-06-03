@@ -1,0 +1,34 @@
+{"ScenarioDescription": [
+	"4 soldiers need to cross a river. One is arrogant, one is lazy and 2 are brave.",
+	"Constraints:",
+	"- the raft can hold maximum 2 soldiers",
+	"- the lazy soldier refuses to be alone either on the raft or on either bank",
+	"- the arrogant one refuses to be accompanied on the raft"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Arrogant_Soldier",
+	"CanRow": "true"},
+
+	{"Id": 1,
+	"Name": "Lazy_Soldier"},
+
+	{"Id": 2,
+	"Name": "Brave_Soldier1",
+	"CanRow": "true"},
+
+	{"Id": 3,
+	"Name": "Brave_Soldier2",
+	"CanRow": "true"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2,
+	"DisallowedRaftConfigurations": "1 ; 0 *"
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations": "1"
+	}
+}

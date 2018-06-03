@@ -1,0 +1,50 @@
+{"ScenarioDescription": [
+	"A family must catch a train on the other side of a river.",
+	"The train is leaving in 29 minutes.",
+	"They have been joined by their friend, a cop, who wants to help them cross the river.",
+	"Constraints:",
+	"- the cop can cross the river in 1 minute",
+	"- the father can cross in 3 minutes",
+	"- the mother can cross in 6 minutes",
+	"- the daughter can cross in 8 minutes",
+	"- the son can cross in 12 minutes",
+	"- if 2 people are on the raft, they will cross the river in the time that it would take for the slower person to cross alone"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Cop",
+	"CanRow": "true"},
+
+	{"Id": 1,
+	"Name": "Father",
+	"CanRow": "true"},
+
+	{"Id": 2,
+	"Name": "Mother",
+	"CanRow": "true"},
+
+	{"Id": 3,
+	"Name": "Daughter",
+	"CanRow": "true"},
+
+	{"Id": 4,
+	"Name": "Son",
+	"CanRow": "true"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2,
+	"CrossingDurationsOfConfigurations": [
+		"12 : 4 (0 | 1 | 2 | 3)?",
+		"8 : 3 (0 | 1 | 2)?",
+		"6 : 2 (0 | 1)?",
+		"3 : 1 0?",
+		"1 : 0"
+		]
+	},
+
+"OtherConstraints" : {
+	"TimeLimit": 29
+	}
+}

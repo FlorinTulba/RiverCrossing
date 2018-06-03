@@ -1,0 +1,47 @@
+{"ScenarioDescription": [
+	"3 cops and 3 robbers need to cross a river.",
+	"Constraints:",
+	"- the raft can hold maximum 2 people and everyone can row",
+	"- there can never be more robbers than cops together on the same side"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Cop1",
+	"Type": "cop",
+	"CanRow": "true"},
+
+	{"Id": 1,
+	"Name": "Cop2",
+	"Type": "cop",
+	"CanRow": "true"},
+
+	{"Id": 2,
+	"Name": "Cop3",
+	"Type": "cop",
+	"CanRow": "true"},
+
+	{"Id": 3,
+	"Name": "Robber1",
+	"Type": "robber",
+	"CanRow": "true"},
+
+	{"Id": 4,
+	"Name": "Robber2",
+	"Type": "robber",
+	"CanRow": "true"},
+
+	{"Id": 5,
+	"Name": "Robber3",
+	"Type": "robber",
+	"CanRow": "true"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations": "2+ x robber + cop ; 3 x robber + 2 x cop"
+	}
+}

@@ -1,0 +1,42 @@
+{"ScenarioDescription": [
+	"2 chess kings (white and black), each accompanied by his queen and 1 pawn, want to cross the river.",
+	"Constraints:",
+	"- kings should not be left alone either on the bank or on the raft without 1 of their followers",
+	"- queens can row, but must be alone on the raft",
+	"- pawns can row together",
+	"- the raft can hold a maximum of 2 chess pieces"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "WhiteKing"},
+
+	{"Id": 1,
+	"Name": "WhiteQueen",
+	"CanRow": "true"},
+
+	{"Id": 2,
+	"Name": "WhitePawn",
+	"CanRow": "true"},
+
+	{"Id": 3,
+	"Name": "BlackKing"},
+
+	{"Id": 4,
+	"Name": "BlackQueen",
+	"CanRow": "true"},
+
+	{"Id": 5,
+	"Name": "BlackPawn",
+	"CanRow": "true"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2,
+	"DisallowedRaftConfigurations": "0 (4 | 5) ; 3 (1 | 2) ; 1 * ; 4 *"
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations": "0 !1 !2 ... ; 3 !4 !5 ..."
+	}
+}

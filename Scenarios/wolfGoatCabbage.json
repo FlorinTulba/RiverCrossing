@@ -1,0 +1,31 @@
+{"ScenarioDescription": [
+	"A farmer wants to cross a river and take with him a wolf, a goat and a cabbage.",
+	"Constraints:",
+	"- the farmer is the only one who can steer the raft. He can only take 1 passenger (the wolf, the goat or the cabbage) in addition to himself",
+	"- if the wolf and the goat are alone on the same riverbank, the wolf will eat the goat",
+	"- if the goat and the cabbage are alone on the same riverbank, the goat will eat the cabbage"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Farmer",
+	"CanRow": "true"},
+
+	{"Id": 1,
+	"Name": "Wolf"},
+
+	{"Id": 2,
+	"Name": "Goat"},
+
+	{"Id": 3,
+	"Name": "Cabbage"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations": "2 !0 * ..."
+	}
+}

@@ -1,0 +1,33 @@
+{"ScenarioDescription": [
+	"2 workers and 2 children want to cross a river.",
+	"Constraints:",
+	"- everyone can row",
+	"- the raft can hold a maximum of one worker or 2 children"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Worker1",
+	"Type": "worker",
+	"CanRow": "true"},
+
+	{"Id": 1,
+	"Name": "Worker2",
+	"Type": "worker",
+	"CanRow": "true"},
+
+	{"Id": 2,
+	"Name": "Child1",
+	"Type": "child",
+	"CanRow": "true"},
+
+	{"Id": 3,
+	"Name": "Child2",
+	"Type": "child",
+	"CanRow": "true"}
+	],
+
+"CrossingConstraints" : {
+	"AllowedRaftConfigurations": "worker ; 1+ x child"
+	}
+}

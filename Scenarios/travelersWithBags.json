@@ -1,0 +1,38 @@
+{"ScenarioDescription": [
+	"3 travelers need to cross a river. The first has 2 bags, the second has one bag and the third has no bags.",
+	"Constraints:",
+	"- the raft can hold either 2 travelers or 1 traveler and 1 bag",
+	"- no traveler should be left alone with another traveler's bag(s)"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Traveler1",
+	"CanRow": "true"},
+
+	{"Id": 1,
+	"Name": "Traveler2",
+	"CanRow": "true"},
+
+	{"Id": 2,
+	"Name": "Traveler3",
+	"CanRow": "true"},
+
+	{"Id": 3,
+	"Name": "Bag1_of_Traveler1"},
+
+	{"Id": 4,
+	"Name": "Bag2_of_Traveler1"},
+
+	{"Id": 5,
+	"Name": "Bag_of_Traveler2"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations": "0 5 3? 4? ; 1 5? !0 !2 * ... ; 2 !0 !1 * ..."
+	}
+}

@@ -1,0 +1,26 @@
+{"ScenarioDescription": [
+	"5 people (numbered from 1 to 5) want to cross a river.",
+	"Each of them dislikes both of his neighbors:",
+	"1 dislikes 5 and 2, 2 dislikes 1 and 3, ..., 5 dislikes 4 and 1",
+	"Constraints:",
+	"- the raft can hold maximum 2 people",
+	"- if 2 people dislike each other, they refuse to be either on the raft together or on the same bank together without any other person"
+	],
+
+"Entities" : [
+	{"Id":0, "Name":"Person1", "CanRow":true},
+	{"Id":1, "Name":"Person2", "CanRow":true},
+	{"Id":2, "Name":"Person3", "CanRow":true},
+	{"Id":3, "Name":"Person4", "CanRow":true},
+	{"Id":4, "Name":"Person5", "CanRow":true}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity":2,
+	"DisallowedRaftConfigurations" : "1 (0 | 2) ; 3 (2 | 4) ; 0 4"
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations" : "1 (0 | 2) ; 3 (2 | 4) ; 0 4"
+	}
+}

@@ -1,0 +1,38 @@
+{"ScenarioDescription": [
+	"5 animals want to cross the river: a mouse, a chicken, a bear and 2 gorillas.",
+	"Constraints:",
+	"- all animals can row, but the raft can only hold the 2 small animals (mouse and chicken) or one big animal (a bear or a gorilla)",
+	"- the mouse should not be left alone on either bank",
+	"- the chicken should not be left alone with any gorilla"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Mouse",
+	"CanRow": true},
+
+	{"Id": 1,
+	"Name": "Chicken",
+	"CanRow": true},
+
+	{"Id": 2,
+	"Name": "Bear",
+	"CanRow": true},
+
+	{"Id": 3,
+	"Name": "Gorilla1",
+	"CanRow": true},
+
+	{"Id": 4,
+	"Name": "Gorilla2",
+	"CanRow": true}
+	],
+
+"CrossingConstraints" : {
+	"AllowedRaftConfigurations": "* ; 0 1"
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations": "0 ; 1 !0 !2 * ..."
+	}
+}

@@ -1,0 +1,34 @@
+{"ScenarioDescription": [
+	"Transfer 4 metal weights (1kg, 2kg, 3kg and 4kg) to the other side of the river.",
+	"Constraints:",
+	"- raft can carry a maximum of 2 metal weights",
+	"- the difference in total loaded weight between 2 successive transfers should not be greater than 1 kg"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "1kg",
+	"CanRow": "true",
+	"Weight": 1},
+
+	{"Id": 1,
+	"Name": "2kg",
+	"CanRow": "true",
+	"Weight": 2},
+
+	{"Id": 2,
+	"Name": "3kg",
+	"CanRow": "true",
+	"Weight": 3},
+
+	{"Id": 3,
+	"Name": "4kg",
+	"CanRow": "true",
+	"Weight": 4}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2,
+	"AllowedRaftLoads": "add(%PreviousRaftLoad%, -1) .. add(%PreviousRaftLoad%, 1)"
+	}
+}

@@ -1,0 +1,1 @@
+./x64/g++/tests/RiverCrossing.exe --log_level=test_suite --report_level=short --build_info=yes --color_output

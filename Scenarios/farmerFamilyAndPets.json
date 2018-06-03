@@ -1,0 +1,49 @@
+{"ScenarioDescription": [
+	"A farmer, his son and daughter, and their pets need to cross a river.",
+	"The pets are a fierce dog, 2 suirrels and 2 rabbits.",
+	"Constraints:",
+	"- if the farmer is not around, the dog will bite everybody and everything",
+	"- if the boy is not around, the girl will tease the rabbits",
+	"- if the girl is not around, the boy will tease the squirrels",
+	"- all 3 people can row the raft, but none of the animals can",
+	"- the raft can hold either 2 persons or 1 person with 1 animal"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Farmer",
+	"CanRow": "true"},
+
+	{"Id": 1,
+	"Name": "Son",
+	"CanRow": "true"},
+
+	{"Id": 2,
+	"Name": "Daughter",
+	"CanRow": "true"},
+
+	{"Id": 3,
+	"Name": "Dog"},
+
+	{"Id": 4,
+	"Name": "Squirrel1"},
+
+	{"Id": 5,
+	"Name": "Squirrel2"},
+
+	{"Id": 6,
+	"Name": "Rabbit1"},
+
+	{"Id": 7,
+	"Name": "Rabbit2"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2,
+	"DisallowedRaftConfigurations": "3 (1 | 2) ; 2 (6 | 7) ; 1 (4 | 5)"
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations": "3 !0 * ... ; 2 (6 | 7) !1 ... ; 1 (4 | 5) !2 ..."
+	}
+}

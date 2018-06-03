@@ -1,0 +1,41 @@
+{"ScenarioDescription": [
+	"4 people come to a river in the night and need to cross it over a narrow bridge using a single torch.",
+	"Constraints:",
+	"- the bridge can only hold 2 people at a time",
+	"- the torch expires in 15 minutes",
+	"- first person can cross the bridge in 1 minute, second in 2 minutes, third in 5 minutes and forth in 8 minutes",
+	"- when 2 people cross the bridge together, they must move at the slower person's pace"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Person1",
+	"AllowedToCross": "true"},
+
+	{"Id": 1,
+	"Name": "Person2",
+	"AllowedToCross": "true"},
+
+	{"Id": 2,
+	"Name": "Person3",
+	"AllowedToCross": "true"},
+
+	{"Id": 3,
+	"Name": "Person4",
+	"AllowedToCross": "true"}
+	],
+
+"CrossingConstraints" : {
+	"BridgeCapacity": 2,
+	"CrossingDurationsOfConfigurations": [
+		"8 : 3 (0 | 1 | 2)?",
+		"5 : 2 (0 | 1)?",
+		"2 : 1 0?",
+		"1 : 0"
+		]
+	},
+
+"OtherConstraints" : {
+	"TimeLimit": 15
+	}
+}

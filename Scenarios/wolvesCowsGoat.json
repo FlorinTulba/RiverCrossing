@@ -1,0 +1,37 @@
+{"ScenarioDescription": [
+	"A farmer wants to cross the river taking with him a goat, 2 cows and 2 wolves.",
+	"Constraints:",
+	"- the raft can fit the farmer plus another animal",
+	"- if the goat and either one of the wolves are left alone on one side, a wolf will eat the goat",
+	"- if a cow and the 2 wolves are alone on one side, the wolves will eat the cow"
+	],
+
+"Entities" : [
+	{"Id": 0,
+	"Name": "Farmer",
+	"CanRow": "true"},
+
+	{"Id": 1,
+	"Name": "Goat"},
+
+	{"Id": 2,
+	"Name": "Cow1"},
+
+	{"Id": 3,
+	"Name": "Cow2"},
+
+	{"Id": 4,
+	"Name": "Wolf1"},
+
+	{"Id": 5,
+	"Name": "Wolf2"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity": 2
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations": "1 (4 | 5) ; 4 5 (1 | 2 | 3)"
+	}
+}
