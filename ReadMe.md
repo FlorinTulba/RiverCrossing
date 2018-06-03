@@ -145,7 +145,7 @@ Explanations of the example scenario:
 
 - - -
 
-The program will signal scenarios that are either trivial or unfeasable. Examples of such scenarios:
+The program will signal scenarios that are either trivial or unfeasible. Examples of such scenarios:
 
 - when all entities can board the raft at once and thus perform a single crossing
 - when the raft can hold only a single entity. Such an entity will cross the river just to realize it must cross the river back to return the raft. Situations like that prevent any progress towards a solution
