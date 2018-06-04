@@ -218,7 +218,7 @@ The provided [Makefile](./Makefile) allows generating the binaries for the relea
 
 - - -
 
-The puzzles from the [Scenarios](./Scenarios/) folder are from a [River Crossing game](https://play.google.com/store/apps/details?id=com.androyal.rivercrossing.complete) from Google Play Store. The [bridge and torch problem](https://en.wikipedia.org/wiki/Bridge_and_torch_problem) is from Wikipedia.
+The puzzles from the [Scenarios](./Scenarios/) folder are from a [River Crossing game](https://play.google.com/store/apps/details?id=com.androyal.rivercrossing.complete) from Google Play Store. The [bridge and torch problem](./Scenarios/bridgeAndTorch.json) is from [Wikipedia](https://en.wikipedia.org/wiki/Bridge_and_torch_problem). The puzzle [parents with 4 children, a policeman and a thief](./Scenarios/parents4ChildrenCopAndThief.json) is from [here](http://www.japaneseiqtest.net/).
 
 * * *
 

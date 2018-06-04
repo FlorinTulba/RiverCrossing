@@ -1,0 +1,31 @@
+{"ScenarioDescription": [
+	"A mother, a father, their 2 sons and 2 daughters, a policeman and a thief have to cross a river.",
+	"Constraints:",
+	"- the raft can hold maximum 2 people",
+	"- the father cannot stay with any of the daughters without the presence of the mother",
+	"- the mother cannot stay with any of the sons without the presence of the father",
+	"- the thief cannot stay with any family member without the presence of the policeman",
+	"- the raft can only be operated by the policeman, the father and the mother"
+	],
+
+"Entities" : [
+	{"Id":0, "Name":"Policeman", "CanRow":true},
+	{"Id":1, "Name":"Mother", "CanRow":true},
+	{"Id":2, "Name":"Father", "CanRow":true},
+	{"Id":3, "Name":"Son1"},
+	{"Id":4, "Name":"Son2"},
+	{"Id":5, "Name":"Daughter1"},
+	{"Id":6, "Name":"Daughter2"},
+	{"Id":7, "Name":"Thief"}
+	],
+
+"CrossingConstraints" : {
+	"RaftCapacity":2,
+	"DisallowedRaftConfigurations": "2 (5 | 6) ; 1 (3 | 4) ; 7 !0 *"
+	},
+
+"BanksConstraints" : {
+	"DisallowedBankConfigurations":
+"2 !1 (5 | 6) ... ; 2 !1 5 6 ... ; 1 !2 (3 | 4) ... ; 1 !2 3 4 ... ; 7 !0 * ..."
+	}
+}
