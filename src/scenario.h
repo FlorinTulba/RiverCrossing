@@ -5,7 +5,7 @@
 
  Requires Boost installation (www.boost.org).
 
- @2018 Florin Tulba (florintulba@yahoo.com)
+ (c) 2018 Florin Tulba (florintulba@yahoo.com)
 */
 
 #ifndef H_SCENARIO

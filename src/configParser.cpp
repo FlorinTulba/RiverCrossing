@@ -5,7 +5,7 @@ https://en.wikipedia.org/wiki/River_crossing_puzzle
 
 Requires Boost installation (www.boost.org).
 
-@2018 Florin Tulba (florintulba@yahoo.com)
+(c) 2018 Florin Tulba (florintulba@yahoo.com)
 */
 
 #include "configParser.h"
