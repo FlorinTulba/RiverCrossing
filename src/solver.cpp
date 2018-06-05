@@ -1036,10 +1036,12 @@ protected:
       // Dead end => backtracking
       solver.steps->pop();
       const size_t attemptLen = solver.steps->length();
-      if(attemptLen > 0ULL)
-        solver.SymTb["PreviousRaftLoad"] =
+      if(attemptLen > 0ULL) {
+        const double theLoad =
           solver.steps->move(attemptLen-1ULL).movedEntities().weight();
-      else
+        if(theLoad > 0.)
+          solver.SymTb["PreviousRaftLoad"] = theLoad;
+      } else
         solver.SymTb.erase("PreviousRaftLoad");
 
       --solver.SymTb["CrossingIndex"];
