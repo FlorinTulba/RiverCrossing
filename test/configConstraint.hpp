@@ -1097,18 +1097,22 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
     ae += make_shared<const Entity>(7U, "e7", "t4", false, "true", 8.);
     ae += make_shared<const Entity>(8U, "e8", "t5", false, "true", 9.);
   });
+
   const size_t countAvailEnts = ae.count();
   const unsigned cap = UINT_MAX;
   const double maxLoad = DBL_MAX;
-  BankEntities be(spAe);
+  MovingEntities me(spAe);
+
 
   BOOST_CHECK_NO_THROW({ // allow nothing
     TransferConstraints cc(grammar::ConstraintsVec {}, spAe, cap, maxLoad);
     BOOST_CHECK(cc.empty());
     BOOST_CHECK(cc.allowed());
     BOOST_CHECK(cc.minRequiredCapacity() == 0U);
-    BOOST_CHECK( ! cc.check(be = vector<unsigned>{}));
-    BOOST_CHECK( ! cc.check(be = vector<unsigned>({0U, 8U})));
+    BOOST_CHECK( ! cc.check(me = vector<unsigned>{}));
+    BOOST_CHECK( ! cc.check(me = vector<unsigned>({0U, 8U})));
+    BOOST_CHECK_THROW(cc.check(BankEntities(spAe)),
+                      logic_error); // needs a MovingEntities parameter
   });
 
   BOOST_CHECK_NO_THROW({ // allow anything in groups not larger than 2 entities
@@ -1118,9 +1122,9 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
     BOOST_CHECK(notCc.empty());
     BOOST_CHECK( ! notCc.allowed());
     BOOST_CHECK(notCc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);
-    BOOST_CHECK(notCc.check(be = vector<unsigned>{}));
-    BOOST_CHECK(notCc.check(be = vector<unsigned>({0U, 8U})));
-    BOOST_CHECK( ! notCc.check(be = vector<unsigned>({0U, 2U, 8U})));
+    BOOST_CHECK(notCc.check(me = vector<unsigned>{}));
+    BOOST_CHECK(notCc.check(me = vector<unsigned>({0U, 8U})));
+    BOOST_CHECK( ! notCc.check(me = vector<unsigned>({0U, 2U, 8U})));
   });
 
   BOOST_CHECK_NO_THROW({ // allow anything in groups not heavier than 12
@@ -1130,11 +1134,11 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
     BOOST_CHECK(notCc.empty());
     BOOST_CHECK( ! notCc.allowed());
     BOOST_CHECK(notCc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);
-    BOOST_CHECK(notCc.check(be = vector<unsigned>{})); // 0 < 12
+    BOOST_CHECK(notCc.check(me = vector<unsigned>{})); // 0 < 12
     BOOST_CHECK(notCc.check(
-                be = vector<unsigned>({2U, 8U}))); // 3+9=12 <= 12
+                me = vector<unsigned>({2U, 8U}))); // 3+9=12 <= 12
     BOOST_CHECK( ! notCc.check(
-                be = vector<unsigned>({0U, 2U, 8U}))); // 1+3+9=13 > 12
+                me = vector<unsigned>({0U, 2U, 8U}))); // 1+3+9=13 > 12
   });
 
   BOOST_CHECK_NO_THROW({ // required more entities than available
@@ -1305,33 +1309,33 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
     BOOST_CHECK(notCc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);
 
     // These are some of the configurations which satisfy 1st constraint
-    BOOST_CHECK(cc.check(be = vector<unsigned>({0U, 6U}))); // weight: 1+7 < 12
-    BOOST_CHECK( ! notCc.check(be));
-    BOOST_CHECK(cc.check(be = vector<unsigned>({0U, 8U}))); // weight: 1+9 < 12
-    BOOST_CHECK( ! notCc.check(be));
-    BOOST_CHECK(cc.check(be = vector<unsigned>({4U, 6U}))); // weight: 5+7 <= 12
-    BOOST_CHECK( ! notCc.check(be));
+    BOOST_CHECK(cc.check(me = vector<unsigned>({0U, 6U}))); // weight: 1+7 < 12
+    BOOST_CHECK( ! notCc.check(me));
+    BOOST_CHECK(cc.check(me = vector<unsigned>({0U, 8U}))); // weight: 1+9 < 12
+    BOOST_CHECK( ! notCc.check(me));
+    BOOST_CHECK(cc.check(me = vector<unsigned>({4U, 6U}))); // weight: 5+7 <= 12
+    BOOST_CHECK( ! notCc.check(me));
 
     // These are some of the configurations which satisfy 2nd constraint
-    BOOST_CHECK(cc.check(be = vector<unsigned>({1U, 8U}))); // weight: 2+9 < 12
-    BOOST_CHECK( ! notCc.check(be));
+    BOOST_CHECK(cc.check(me = vector<unsigned>({1U, 8U}))); // weight: 2+9 < 12
+    BOOST_CHECK( ! notCc.check(me));
 
     // Several configurations which should not satisfy neither of the constraints
     BOOST_CHECK( ! cc.check( // both constraints require at least 2 id-s
-      be = vector<unsigned>{}));
-    BOOST_CHECK(notCc.check(be));
+      me = vector<unsigned>{}));
+    BOOST_CHECK(notCc.check(me));
     BOOST_CHECK( ! cc.check( // both constraints require at least 2 id-s
-      be = vector<unsigned>{0U}));
-    BOOST_CHECK(notCc.check(be));
+      me = vector<unsigned>{0U}));
+    BOOST_CHECK(notCc.check(me));
     BOOST_CHECK( ! cc.check( // missing unspecified mandatory id
-      be = vector<unsigned>({2U, 7U})));
-    BOOST_CHECK(notCc.check(be));
+      me = vector<unsigned>({2U, 7U})));
+    BOOST_CHECK(notCc.check(me));
     BOOST_CHECK( ! cc.check( // capacity overflow: 3 > 2
-      be = vector<unsigned>({0U, 2U, 6U})));
-    BOOST_CHECK( ! notCc.check(be)); // negated constraints still need to respect capacity
+      me = vector<unsigned>({0U, 2U, 6U})));
+    BOOST_CHECK( ! notCc.check(me)); // negated constraints still need to respect capacity
     BOOST_CHECK( ! cc.check( // beyond max load: 6+8 = 14 > 12
-      be = vector<unsigned>({5U, 7U})));
-    BOOST_CHECK( ! notCc.check(be)); // negated constraints still need to respect maxLoad
+      me = vector<unsigned>({5U, 7U})));
+    BOOST_CHECK( ! notCc.check(me)); // negated constraints still need to respect maxLoad
   });
 
   BOOST_CHECK_NO_THROW({ //

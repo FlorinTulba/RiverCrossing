@@ -89,7 +89,14 @@ TransferConstraints::TransferConstraints(grammar::ConstraintsVec &&constraints_,
 }
 
 bool TransferConstraints::check(const ent::IsolatedEntities &ents) const {
+  const ent::MovingEntities *pEnts =
+    dynamic_cast<const ent::MovingEntities*>(&ents);
+  VP_EX_MSG(pEnts, std::logic_error,
+            "needs a (subclass of) MovingEntities parameter!");
+#ifndef NDEBUG
   const auto &entsIds = ents.ids();
+#endif // NDEBUG
+
   if((unsigned)ents.count() > _capacity) {
 #ifndef NDEBUG
     cout<<"violates capacity constraint [ "
@@ -100,10 +107,7 @@ bool TransferConstraints::check(const ent::IsolatedEntities &ents) const {
     return false;
   }
 
-  const double entsWeight = accumulate(CBOUNDS(entsIds), 0.,
-    [this](double prevSum, unsigned id) {
-      return prevSum + (*allEnts)[id]->weight();
-    });
+  const double entsWeight = pEnts->weight();
   if(entsWeight - 1e-4 > _maxLoad) {
 #ifndef NDEBUG
     cout<<"violates maxWeight constraint [ "
