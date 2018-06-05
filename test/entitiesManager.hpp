@@ -447,7 +447,7 @@ BOOST_AUTO_TEST_CASE(movingEntities_usecases) {
     BOOST_CHECK( ! (me != expectedIds));
     BOOST_CHECK(equal(CBOUNDS(me.ids()), CBOUNDS(expectedIds)));
     BOOST_CHECK(me.idsByTypes().size() == 2ULL); // t0 and t1
-    BOOST_CHECK( ! me.anyRowCapableEnts(InitialSymbolsTable)); // CrossingIndex % 2 == 0
+    BOOST_CHECK( ! me.anyRowCapableEnts(InitialSymbolsTable())); // CrossingIndex % 2 == 0
     BOOST_TEST(me.weight() == 3.);
 
     me += 4U; // Entity 4 rows for CrossingIndex % 2 == 0
@@ -457,7 +457,7 @@ BOOST_AUTO_TEST_CASE(movingEntities_usecases) {
     BOOST_CHECK( ! (me != expectedIds));
     BOOST_CHECK(equal(CBOUNDS(me.ids()), CBOUNDS(expectedIds)));
     BOOST_CHECK(me.idsByTypes().size() == 3ULL); // t0, t1 and t2
-    BOOST_CHECK(me.anyRowCapableEnts(InitialSymbolsTable)); // 4 can row
+    BOOST_CHECK(me.anyRowCapableEnts(InitialSymbolsTable())); // 4 can row
   });
 }
 
@@ -533,7 +533,7 @@ BOOST_AUTO_TEST_CASE(bankEntities_usecases) {
     BOOST_CHECK((~be).count() == entsCount - 2ULL);
     BOOST_CHECK(equal(CBOUNDS(be.ids()), CBOUNDS(expectedIds)));
     BOOST_CHECK(be.idsByTypes().size() == 2ULL); // t0 and t1
-    BOOST_CHECK( ! be.anyRowCapableEnts(InitialSymbolsTable)); // CrossingIndex % 2 == 0
+    BOOST_CHECK( ! be.anyRowCapableEnts(InitialSymbolsTable())); // CrossingIndex % 2 == 0
     BOOST_CHECK(be.differencesCount(be) == 0ULL);
     BOOST_CHECK(be.differencesCount(be1) == 2ULL);
 
@@ -545,7 +545,7 @@ BOOST_AUTO_TEST_CASE(bankEntities_usecases) {
     BOOST_CHECK((~be).count() == entsCount - 3ULL);
     BOOST_CHECK(equal(CBOUNDS(be.ids()), CBOUNDS(expectedIds)));
     BOOST_CHECK(be.idsByTypes().size() == 3ULL); // t0, t1 and t2
-    BOOST_CHECK(be.anyRowCapableEnts(InitialSymbolsTable)); // 4 can row
+    BOOST_CHECK(be.anyRowCapableEnts(InitialSymbolsTable())); // 4 can row
     BOOST_CHECK(be.differencesCount(be) == 0ULL);
     BOOST_CHECK(be.differencesCount(be1) == 3ULL);
 

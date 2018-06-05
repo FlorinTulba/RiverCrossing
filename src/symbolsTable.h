@@ -19,8 +19,13 @@ namespace rc {
 /// Type of the symbols table - numeric values associated to string keys
 typedef std::unordered_map<std::string, double> SymbolsTable;
 
-/// Content of the SymbolsTable at the beginning
-extern const SymbolsTable InitialSymbolsTable;
+/**
+When setting the initial state of a scenario,
+the 1-based index of the crossing moves (CrossingIndex)
+should have an invalid value and 0 is just fine,
+as it only needs to be incremented for the first actual crossing move.
+*/
+const SymbolsTable& InitialSymbolsTable();
 
 } // namespace rc
 

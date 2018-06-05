@@ -1141,7 +1141,7 @@ public:
          Scenario::Results &results_) :
       scenarioDetails(scenarioDetails_),
       results(results_),
-      SymTb(InitialSymbolsTable),
+      SymTb(InitialSymbolsTable()),
       movingCfgsManager(scenarioDetails_, SymTb),
       steps(make_shared<Attempt>()) {}
 
@@ -1171,6 +1171,11 @@ public:
 } // anonymous namespace
 
 namespace rc {
+
+const SymbolsTable& InitialSymbolsTable(){
+  static const SymbolsTable st{{"CrossingIndex", 0.}};
+  return st;
+}
 
 unique_ptr<const IState>
       Scenario::Details::createInitialState(const SymbolsTable &SymTb) const {

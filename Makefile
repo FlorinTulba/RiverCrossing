@@ -16,7 +16,6 @@
 
 # The C++ sources of the RiverCrossing project
 SOURCES = \
-	symbolsTable.cpp \
 	entity.cpp \
 	entitiesManager.cpp \
 	configConstraint.cpp \

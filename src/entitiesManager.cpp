@@ -82,7 +82,7 @@ AllEntities::AllEntities(const ptree &entTree) {
   */
   const BankEntities leftBank(make_shared<const AllEntities>(*this),
                               idsStartingFromLeftBank());
-  if( ! leftBank.anyRowCapableEnts(InitialSymbolsTable))
+  if( ! leftBank.anyRowCapableEnts(InitialSymbolsTable()))
     throw domain_error(string(__func__) +
       " - There is nobody able to row on the starting left bank!");
 }

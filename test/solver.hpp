@@ -329,7 +329,7 @@ BOOST_AUTO_TEST_CASE(contextValidation_usecases) {
 
     BOOST_CHECK(inprleh->dependsOnPreviousRaftLoad);
 
-    BOOST_CHECK(inprleh->assess(me, InitialSymbolsTable)); // idx is 0
+    BOOST_CHECK(inprleh->assess(me, InitialSymbolsTable())); // idx is 0
     BOOST_CHECK(inprleh->assess(me,
                                 {{"CrossingIndex",
                                 1.}})); // true for idx <=1
@@ -350,7 +350,7 @@ BOOST_AUTO_TEST_CASE(contextValidation_usecases) {
 
     // Although 'a' is missing, validation succeeds due to inprleh
     BOOST_CHECK(alv.validate( // no `PreviousRaftLoad`; `CrossingIndex` is 0
-                me = vector<unsigned>{6U}, InitialSymbolsTable));
+                me = vector<unsigned>{6U}, InitialSymbolsTable()));
 
     // Although 'a' is missing, validation succeeds due to inprleh
     BOOST_CHECK(alv.validate( // no `PreviousRaftLoad`; `CrossingIndex` is 1
@@ -724,7 +724,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
     shared_ptr<const IState> decoratedS =
       make_shared<const State>(left, right, true, t);
 
-    BOOST_CHECK_THROW(PrevLoadStateDecorator(nullptr, InitialSymbolsTable),
+    BOOST_CHECK_THROW(PrevLoadStateDecorator(nullptr, InitialSymbolsTable()),
                       invalid_argument); // NULL decorated state
 
     BOOST_CHECK_THROW(PrevLoadStateDecorator(decoratedS, SymbolsTable()),
@@ -737,7 +737,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
 
     BOOST_CHECK_NO_THROW({ // CrossingIndex 0 or 1 and no PreviousRaftLoad is ok
       PrevLoadStateDecorator plsd1(decoratedS,
-                                   InitialSymbolsTable); // CrossingIndex 0
+                                   InitialSymbolsTable()); // CrossingIndex 0
       const SymbolsTable &syms1 = plsd1.symbolsValues();
       bool b = false;
       BOOST_CHECK(b = (syms1.find("PreviousRaftLoad") != cend(syms1)));
@@ -843,7 +843,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
     d.allowedLoads = nullptr;
 
     BOOST_CHECK_NO_THROW({ // Creates State, since allowedLoads is NULL
-      unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable);
+      unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable());
       BOOST_CHECK(nullptr != dynamic_cast<const State*>(initS.get()));
       BOOST_CHECK(nullptr == dynamic_cast<const StatePlusSymbols*>(initS.get()));
     });
@@ -853,7 +853,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
 
     // Creates State, since allowedLoads doesn't depend on PreviousRaftLoad
     BOOST_CHECK_NO_THROW({
-      unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable);
+      unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable());
       BOOST_CHECK(nullptr != dynamic_cast<const State*>(initS.get()));
       BOOST_CHECK(nullptr == dynamic_cast<const StatePlusSymbols*>(initS.get()));
     });
@@ -862,7 +862,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
 
     // Creates PrevLoadStateDecorator, since allowedLoads depends on PreviousRaftLoad
     BOOST_CHECK_NO_THROW({
-      unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable);
+      unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable());
       BOOST_CHECK(nullptr != dynamic_cast<const PrevLoadStateDecorator*>(initS.get()));
       BOOST_CHECK(nullptr != dynamic_cast<const StatePlusSymbols*>(initS.get()));
     });
@@ -924,7 +924,7 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
   d._capacity = 2U;
 
   BOOST_CHECK_THROW(a.append({MovingEntities(ae, vector<unsigned>({1U})),
-                             d.createInitialState(InitialSymbolsTable),
+                             d.createInitialState(InitialSymbolsTable()),
                              UINT_MAX}),
                     logic_error); // MovingEntities for first append not empty
 
@@ -941,7 +941,7 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
 
     // The move creating the initial state
     a.append({moved, // empty right now
-             d.createInitialState(InitialSymbolsTable),
+             d.createInitialState(InitialSymbolsTable()),
              UINT_MAX}); // doesn't need a meaningful index
     BOOST_CHECK( ! a.isSolution());
     BOOST_CHECK(a.length() == 0ULL);
@@ -1059,7 +1059,7 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
 
     // The move creating the initial state
     a.append({moved, // empty right now
-             d.createInitialState(InitialSymbolsTable),
+             d.createInitialState(InitialSymbolsTable()),
              UINT_MAX}); // doesn't need a meaningful index
 
     // First move
