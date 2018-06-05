@@ -98,7 +98,8 @@ public:
       throw domain_error(string(__func__) +
         " - RaftCapacity / BridgeCapacity should be "
           "at least 2 and less than the number of entities!");
-    capacity = capacity_;
+    if(capacity_ < capacity)
+      capacity = capacity_;
   }
 
   /**
