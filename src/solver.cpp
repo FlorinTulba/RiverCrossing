@@ -536,6 +536,42 @@ public:
 
 using namespace rc::sol;
 
+/// Default State extension, which does nothing
+struct DefStateExt final : IStateExt {
+  /// Allows sharing the default instance
+  static shared_ptr<const DefStateExt>& INST() {
+    static shared_ptr<const DefStateExt> inst = make_shared<const DefStateExt>();
+    return inst;
+  }
+
+  /// Clones the State extension
+  shared_ptr<const IStateExt> clone() const override final {
+    return INST();
+  }
+
+  /// Validates the parameter state based on the constraints of the extension
+  bool validate() const override final {return true;}
+
+  /**
+  @return true if the state which is extended is not better than provided state
+    based on the constraints of the extension
+  */
+  bool isNotBetterThan(const IState&) const override final {
+    return true;
+  }
+
+  /**
+  @return the extension to be used by the next state,
+    based on current extension and the parameters
+  */
+  shared_ptr<const IStateExt>
+      extensionForNextState(const MovingEntities&) const override final {
+    return DefStateExt::INST();
+  }
+
+  string toString(bool suffixesInsteadOfPrefixes/* = true*/) const override final {return "";}
+};
+
 /// A state during solving the scenario
 class State : public IState {
 
@@ -547,24 +583,72 @@ protected:
 
   BankEntities _leftBank;
   BankEntities _rightBank;
-  unsigned _time; ///< the moment this state is reached
   bool _nextMoveFromLeft; ///< is the direction of next move from left to right?
+
+  shared_ptr<const IStateExt> extension;
 
 public:
   State(const BankEntities &leftBank, const BankEntities &rightBank,
-        bool nextMoveFromLeft, unsigned time = UINT_MAX) :
-      _leftBank(leftBank), _rightBank(rightBank), _time(time),
-      _nextMoveFromLeft(nextMoveFromLeft) {
+        bool nextMoveFromLeft,
+        const shared_ptr<const IStateExt> &extension_ = DefStateExt::INST()) :
+      _leftBank(leftBank), _rightBank(rightBank),
+      _nextMoveFromLeft(nextMoveFromLeft), extension(VP(extension_)) {
     if(_leftBank != ~_rightBank)
       throw invalid_argument(string(__func__) +
         " - needs complementary bank configurations!");
   }
 
+  shared_ptr<const IStateExt> getExtension() const override final {
+    return extension;
+  }
+
+  /// @return true if this state conforms to all constraints that apply to it
+  bool valid(const unique_ptr<const ConfigConstraints> &banksConstraints) const override{
+    assert(nullptr != extension);
+    if( ! extension->validate())
+      return false;
+
+    if(banksConstraints) {
+      if( ! banksConstraints->check(_leftBank)) {
+#ifndef NDEBUG
+      cout<<"violates bank constraint ["
+        <<*banksConstraints<<"] : "
+        <<_leftBank<<endl;
+#endif // NDEBUG
+        return false;
+      }
+      if( ! banksConstraints->check(_rightBank)) {
+#ifndef NDEBUG
+      cout<<"violates bank constraint ["
+        <<*banksConstraints<<"] : "
+        <<_rightBank<<endl;
+#endif // NDEBUG
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /// @return true if the provided examinedStates do not cover already this state
+  bool handledBy(const vector<unique_ptr<const IState>> &examinedStates) const override {
+    for(const auto &prevSt : examinedStates)
+      if(handledBy(*prevSt)) {
+#ifndef NDEBUG
+        cout<<"previously considered state"<<endl;
+#endif // NDEBUG
+        return true;
+      }
+
+    return false;
+  }
+
   /// @return true if the `other` state is the same or a better version of this state
   bool handledBy(const IState &other) const override {
+    assert(nullptr != extension);
     return
+      (extension->isNotBetterThan(other)) &&
       (_nextMoveFromLeft == other.nextMoveFromLeft()) &&
-      (_time >= other.time()) && // if the other state was reached earlier, it is better
       ((_leftBank.count() <= _rightBank.count()) ? // compare the less crowded bank
         (_leftBank == other.leftBank()) :
         (_rightBank == other.rightBank()));
@@ -572,12 +656,10 @@ public:
 
   const BankEntities& leftBank() const override {return _leftBank;}
   const BankEntities& rightBank() const override {return _rightBank;}
-  unsigned time() const override {return _time;}
   bool nextMoveFromLeft() const override {return _nextMoveFromLeft;}
 
   /// @return the next state of the algorithm when moving `movedEnts` to the opposite bank
-  unique_ptr<const IState> next(const MovingEntities &movedEnts,
-             const vector<ConfigurationsTransferDuration> &ctdItems = {})
+  unique_ptr<const IState> next(const MovingEntities &movedEnts)
       const override {
     BankEntities left = _leftBank, right = _rightBank;
     if(_nextMoveFromLeft) {
@@ -585,53 +667,40 @@ public:
     } else {
       left += movedEnts; right -= movedEnts;
     }
-    unsigned t = _time;
-    if( ! ctdItems.empty()) {
-      bool foundMatch = false;
-
-      for(const ConfigurationsTransferDuration &ctdItem : ctdItems) {
-        const TransferConstraints& config = ctdItem.configConstraints();
-        if( ! config.check(movedEnts))
-          continue;
-
-        foundMatch = true;
-        t += ctdItem.duration();
-        break;
-      }
-
-      if( ! foundMatch)
-        throw domain_error(string(__func__) +
-          " - Provided CrossingDurationsOfConfigurations items don't cover "
-          "raft configuration: "s + movedEnts.toString());
-    }
-    return make_unique<const State>(left, right, ! _nextMoveFromLeft, t);
+    assert(nullptr != extension);
+    return make_unique<const State>(left, right, ! _nextMoveFromLeft,
+                                    extension->extensionForNextState(movedEnts));
   }
 
   /// Clones this state
   unique_ptr<const IState> clone() const override {
-    return make_unique<const State>(_leftBank, _rightBank, _nextMoveFromLeft, _time);
+    assert(nullptr != extension);
+    return make_unique<const State>(_leftBank, _rightBank, _nextMoveFromLeft,
+                                    extension->clone());
   }
 
   string toString() const override {
+    assert(nullptr != extension);
     ostringstream oss;
-    if(UINT_MAX != _time)
-      oss<<"[Time "<<setw(4)<<_time<<"] ";
-    oss<<"Left bank: "<<_leftBank<<" ; "<<"Right bank: "<<_rightBank
-      <<" ; Next move direction: ";
-    if(_nextMoveFromLeft)
-      oss<<" --> ";
-    else
-      oss<<" <-- ";
+    { IStateExt::ToStringManager tsm(*extension, oss); // extension wrapper
+
+      oss<<"Left bank: "<<_leftBank<<" ; "<<"Right bank: "<<_rightBank
+        <<" ; Next move direction: ";
+      if(_nextMoveFromLeft)
+        oss<<" --> ";
+      else
+        oss<<" <-- ";
+    } // ensures tsm's destructor flushes to oss before the return
     return oss.str();
   }
 };
 
 /**
-State capturing also environment information from the generation moment.
-This is also the base class for any state decorators.
-Any such derived decorator might need the values from the Symbols Table.
+Base class for state extensions decorators.
+Some of the new virtual methods are abstract and must be implemented
+by every derived class.
 */
-class StatePlusSymbols /*abstract*/ : public State {
+class AbsStateExt /*abstract*/ : public IStateExt {
 
     #ifdef UNIT_TESTING // leave fields public for Unit tests
 public:
@@ -639,69 +708,108 @@ public:
 protected:
     #endif
 
-  SymbolsTable SymTb; ///< snapshot of the Symbols Table when reaching this state
+  const Scenario::Details &info;
+  shared_ptr<const IStateExt> nextExt;
 
-  /// The state to be decorated with the Symbols Table
-  shared_ptr<const IState> decoratedState;
+  AbsStateExt(const Scenario::Details &info_,
+              const shared_ptr<const IStateExt> &nextExt_) :
+      info(info_), nextExt(VP(nextExt_)) {}
 
-  StatePlusSymbols(const shared_ptr<const IState> &decoratedState_,
-                   const SymbolsTable &SymTb_) :
-      State(VP(decoratedState_)->leftBank(), VP(decoratedState_)->rightBank(),
-            VP(decoratedState_)->nextMoveFromLeft(), VP(decoratedState_)->time()),
-      SymTb(SymTb_), decoratedState(decoratedState_) {}
+  /// Clones the State extension
+  virtual shared_ptr<const IStateExt>
+    _clone(const shared_ptr<const IStateExt> &nextExt_) const = 0;
+
+  /// Validates the parameter state based on the constraints of the extension
+  virtual bool _validate() const {return true;}
 
   /**
-  @return the next state of the algorithm (based on nextForDecoratedState)
-    when moving `movedEnts` to the opposite bank
+  @return true if the state which is extended is not better than provided state
+    based on the constraints of the extension
   */
-  virtual unique_ptr<const IState> _next(const MovingEntities &movedEnts,
-        unique_ptr<const IState> nextForDecoratedState,
-        const vector<ConfigurationsTransferDuration> &ctdItems = {}) const = 0;
+  virtual bool _isNotBetterThan(const IState&) const {
+    return true;
+  }
 
-  /// @return true if the `other` state is the same or a better version of this state
-  virtual bool _handledBy(const IState &other) const = 0;
+  /**
+  @return the extension to be used by the next state,
+    based on current extension and the parameters
+  */
+  virtual shared_ptr<const IStateExt>
+      _extensionForNextState(const MovingEntities&,
+                             const shared_ptr<const IStateExt> &fromNextExt)
+                      const = 0;
 
-  /// Clones this state on top of cloneOfDecoratedState
-  virtual unique_ptr<const IState> _clone(
-                      unique_ptr<const IState> cloneOfDecoratedState) const = 0;
+  virtual string _toString(bool suffixesInsteadOfPrefixes = true) const {
+    return "";
+  }
 
-  virtual string _toString() const = 0;
+  template<class ExtType,
+          typename = enable_if_t<is_convertible<ExtType*, AbsStateExt*>::value>>
+  static shared_ptr<const ExtType>
+      selectExt(const shared_ptr<const IStateExt> &ext) {
+    shared_ptr<const ExtType> resExt = dynamic_pointer_cast<const ExtType>(ext);
+    if(nullptr != resExt)
+      return resExt;
+
+    shared_ptr<const AbsStateExt> hostExt =
+      dynamic_pointer_cast<const AbsStateExt>(ext);
+    while(nullptr != hostExt) {
+      resExt = dynamic_pointer_cast<const ExtType>(hostExt->nextExt);
+      if(nullptr != resExt)
+        return resExt;
+
+      hostExt = dynamic_pointer_cast<const AbsStateExt>(hostExt->nextExt);
+    }
+
+    return nullptr;
+  }
 
 public:
-  /// @return the Symbols Table
-  const SymbolsTable& symbolsValues() const {return SymTb;}
-
-  /// @return the next state of the algorithm when moving `movedEnts` to the opposite bank
-  unique_ptr<const IState> next(const MovingEntities &movedEnts,
-                                const vector<ConfigurationsTransferDuration>
-                                  &ctdItems = {}) const override {
-    assert(nullptr != decoratedState);
-    return _next(movedEnts, decoratedState->next(movedEnts, ctdItems), ctdItems);
+  /// Clones the State extension
+  shared_ptr<const IStateExt> clone() const override final {
+    assert(nullptr != nextExt);
+    return _clone(nextExt->clone());
   }
 
-  /// @return true if the `other` state is the same or a better version of this state
-  bool handledBy(const IState &other) const override {
-    assert(nullptr != decoratedState);
-    return decoratedState->handledBy(other) && _handledBy(other);
+  /// Validates the parameter state based on the constraints of the extension
+  bool validate() const override final {
+    assert(nullptr != nextExt);
+    return nextExt->validate() && _validate();
   }
 
-  /// Clones this state
-  unique_ptr<const IState> clone() const override {
-    assert(nullptr != decoratedState);
-    return _clone(decoratedState->clone());
+  /**
+  @return true if the state which is extended is not better than provided state
+    based on the constraints of the extension
+  */
+  bool isNotBetterThan(const IState &s2) const override final {
+    assert(nullptr != nextExt);
+    return nextExt->isNotBetterThan(s2) && _isNotBetterThan(s2);
   }
 
-  string toString() const override {
-    ostringstream oss;
-    assert(nullptr != decoratedState);
-    oss<<decoratedState->toString();
-    oss<<_toString();
-    return oss.str();
+  /**
+  @return the extension to be used by the next state,
+    based on current extension and the parameters
+  */
+  shared_ptr<const IStateExt>
+      extensionForNextState(const MovingEntities &me) const override final {
+    assert(nullptr != nextExt);
+    const shared_ptr<const IStateExt> fromNextExt =
+      nextExt->extensionForNextState(me);
+    return _extensionForNextState(me, fromNextExt);
+  }
+
+  string toString(bool suffixesInsteadOfPrefixes/* = true*/) const override final {
+    assert(nullptr != nextExt);
+    // Only the matching extension categories will return non-empty strings
+    // given suffixesInsteadOfPrefixes
+    // (some display only as prefixes, the rest only as suffixes)
+    return _toString(suffixesInsteadOfPrefixes) +
+      nextExt->toString(suffixesInsteadOfPrefixes);
   }
 };
 
-/// A state decorator considering `PreviousRaftLoad` from the Symbols Table
-class PrevLoadStateDecorator : public StatePlusSymbols {
+/// Allows State to contain a time entry - the moment the state is reached
+class TimeStateExt : public AbsStateExt {
 
     #ifdef UNIT_TESTING // leave fields public for Unit tests
 public:
@@ -709,37 +817,124 @@ public:
 protected:
     #endif
 
-  /**
-  @return the next state of the algorithm (based on nextForDecoratedState)
-    when moving `movedEnts` to the opposite bank
-  */
-  unique_ptr<const IState> _next(const MovingEntities &movedEnts,
-                        unique_ptr<const IState> nextForDecoratedState,
-                        const vector<ConfigurationsTransferDuration>&
-                          = {}) const override {
-    SymbolsTable SymTbForNext(SymTb);
-    ++SymTbForNext["CrossingIndex"];
-    SymTbForNext["PreviousRaftLoad"] = movedEnts.weight();
+  unsigned _time; ///< the moment this state is reached
 
-    return make_unique<const PrevLoadStateDecorator>(
-            shared_ptr<const IState>(nextForDecoratedState.release()),
-            SymTbForNext);
+  shared_ptr<const IStateExt>
+      _clone(const shared_ptr<const IStateExt> &nextExt_) const override {
+    return make_shared<const TimeStateExt>(_time, info, nextExt_);
   }
 
-  /// @return true if the `other` state is the same or a better version of this state
-  bool _handledBy(const IState &other) const override {
-    const StatePlusSymbols *pOther =
-      dynamic_cast<const StatePlusSymbols*>(&other);
-    VP_MSG(pOther, "needs a parameter derived from StatePlusSymbols!");
+  /// Validates the parameter state based on the constraints of the extension
+  bool _validate() const override {
+    if(_time > info._maxDuration) {
+#ifndef NDEBUG
+      cout<<"violates duration constraint ["
+        <<_time<<" > "<<info._maxDuration<<']'<<endl;
+#endif // NDEBUG
+      return false;
+    }
+    return true;
+  }
 
-    const auto otherStEnd = cend(pOther->symbolsValues()),
-      itOtherPreviousRaftLoad = pOther->symbolsValues().find("PreviousRaftLoad");
-    if(otherStEnd == itOtherPreviousRaftLoad)
-      throw invalid_argument(string(__func__) +
-        " - needs a state parameter with a Symbols Table "
-        "containing a PreviousRaftLoad entry!");
+  /**
+  @return true if the state which is extended is not better than provided state
+    based on the constraints of the extension
+  */
+  bool _isNotBetterThan(const IState &s2) const override {
+    const shared_ptr<const IStateExt> extensions2 = s2.getExtension();
+    assert(nullptr != extensions2);
 
-    const double otherPreviousRaftLoad = itOtherPreviousRaftLoad->second;
+    shared_ptr<const TimeStateExt> timeExt2 =
+      AbsStateExt::selectExt<TimeStateExt>(extensions2);
+
+    // if the other state was reached earlier, it is better
+    return _time >=
+      VP_EX_MSG(timeExt2,
+                logic_error,
+                "The parameter must be a state "
+                "with a TimeStateExt extension!")->_time;
+  }
+
+  /**
+  @return the extension to be used by the next state,
+    based on current extension and the parameters
+  */
+  shared_ptr<const IStateExt>
+      _extensionForNextState(const MovingEntities &movedEnts,
+                             const shared_ptr<const IStateExt> &fromNextExt) const override {
+    unsigned timeOfNextState = _time;
+    bool foundMatch = false;
+    for(const ConfigurationsTransferDuration &ctdItem : info.ctdItems) {
+      const TransferConstraints& config = ctdItem.configConstraints();
+      if( ! config.check(movedEnts))
+        continue;
+
+      foundMatch = true;
+      timeOfNextState += ctdItem.duration();
+      break;
+    }
+
+    if( ! foundMatch)
+      throw domain_error(string(__func__) +
+        " - Provided CrossingDurationsOfConfigurations items don't cover "
+        "raft configuration: "s + movedEnts.toString());
+
+    return make_shared<const TimeStateExt>(timeOfNextState, info, fromNextExt);
+  }
+
+  string _toString(bool suffixesInsteadOfPrefixes/* = true*/) const override {
+    // This is displayed only as prefix information
+    if(suffixesInsteadOfPrefixes)
+      return "";
+
+    ostringstream oss;
+    oss<<"[Time "<<setw(4)<<_time<<"] ";
+    return oss.str();
+  }
+
+public:
+  TimeStateExt(unsigned time_, const Scenario::Details &info_,
+               const shared_ptr<const IStateExt> &nextExt_ = DefStateExt::INST()) :
+      AbsStateExt(info_, nextExt_), _time(time_) {}
+
+  unsigned time() const {return _time;}
+};
+
+/// A state decorator considering `PreviousRaftLoad` from the Symbols Table
+class PrevLoadStateExt : public AbsStateExt {
+
+    #ifdef UNIT_TESTING // leave fields public for Unit tests
+public:
+    #else // keep fields protected otherwise
+protected:
+    #endif
+
+  double previousRaftLoad;
+  unsigned crossingIndex;
+
+  /// Clones the State extension
+  shared_ptr<const IStateExt>
+      _clone(const shared_ptr<const IStateExt> &nextExt_) const override {
+    return make_shared<const PrevLoadStateExt>(crossingIndex, previousRaftLoad,
+                                               info, nextExt_);
+  }
+
+  /**
+  @return true if the state which is extended is not better than provided state
+    based on the constraints of the extension
+  */
+  bool _isNotBetterThan(const IState &s2) const override {
+    const shared_ptr<const IStateExt> extensions2 = s2.getExtension();
+    assert(nullptr != extensions2);
+
+    shared_ptr<const PrevLoadStateExt> prevLoadStateExt2 =
+      AbsStateExt::selectExt<PrevLoadStateExt>(extensions2);
+
+    const double otherPreviousRaftLoad =
+      VP_EX_MSG(prevLoadStateExt2,
+                logic_error,
+                "The parameter must be a state "
+                "with a PrevLoadStateExt extension!")->previousRaftLoad;
 
     /*
     PreviousRaftLoad on NaN means the initial state.
@@ -752,45 +947,66 @@ protected:
     if(isNaN(otherPreviousRaftLoad))
       return true; // deciding to disallow revisiting the initial state
 
-    assert(SymTb.find("PreviousRaftLoad") != cend(SymTb));
-    return abs(SymTb.at("PreviousRaftLoad") - otherPreviousRaftLoad) < Eps;
+    return abs(previousRaftLoad - otherPreviousRaftLoad) < Eps;
   }
 
-  /// Clones this state on top of cloneOfDecoratedState
-  unique_ptr<const IState> _clone(
-                unique_ptr<const IState> cloneOfDecoratedState) const override {
-    return make_unique<const PrevLoadStateDecorator>(
-            shared_ptr<const IState>(cloneOfDecoratedState.release()),
-            SymTb);
+  /**
+  @return the extension to be used by the next state,
+    based on current extension and the parameters
+  */
+  shared_ptr<const IStateExt>
+      _extensionForNextState(const MovingEntities &movedEnts,
+                             const shared_ptr<const IStateExt> &fromNextExt)
+                      const override {
+    return make_shared<const PrevLoadStateExt>(crossingIndex + 1U,
+                                               movedEnts.weight(),
+                                               info, fromNextExt);
   }
 
-  string _toString() const override {
-    assert(SymTb.find("PreviousRaftLoad") != cend(SymTb));
+  string _toString(bool suffixesInsteadOfPrefixes/* = true*/) const override {
+    // This is displayed only as suffix information
+    if( ! suffixesInsteadOfPrefixes)
+      return "";
+
     ostringstream oss;
-    oss<<" ; PrevRaftLoad: "<<SymTb.at("PreviousRaftLoad");
+    oss<<" ; PrevRaftLoad: "<<previousRaftLoad;
     return oss.str();
   }
 
 public:
-  PrevLoadStateDecorator(const shared_ptr<const IState> &decoratedState_,
-                         const SymbolsTable &SymTb_) :
-      StatePlusSymbols(decoratedState_, SymTb_) {
+  PrevLoadStateExt(unsigned crossingIndex_, double previousRaftLoad_,
+                   const Scenario::Details &info_,
+                   const shared_ptr<const IStateExt> &nextExt_
+                      = DefStateExt::INST()) :
+      AbsStateExt(info_, nextExt_),
+      crossingIndex(crossingIndex_), previousRaftLoad(previousRaftLoad_) {}
+
+  PrevLoadStateExt(const SymbolsTable &symbols,
+                   const Scenario::Details &info_,
+                   const shared_ptr<const IStateExt> &nextExt_
+                      = DefStateExt::INST()) :
+      AbsStateExt(info_, nextExt_) {
     // PreviousRaftLoad should miss from Symbols Table when CrossingIndex <= 1
-    const auto stEnd = cend(SymTb);
-    const auto itCrossingIndex = SymTb.find("CrossingIndex"),
-      itPreviousRaftLoad = SymTb.find("PreviousRaftLoad");
+    const auto stEnd = cend(symbols);
+    const auto itCrossingIndex = symbols.find("CrossingIndex"),
+      itPreviousRaftLoad = symbols.find("PreviousRaftLoad");
     if(itCrossingIndex == stEnd)
       throw logic_error(string(__func__) +
-        " - needs to get SymTb_ containing an entry for CrossingIndex!");
+        " - needs to get `symbols` table containing an entry for CrossingIndex!");
+
+    crossingIndex = (unsigned)floor(.5 + itCrossingIndex->second); // rounded value
     if(itPreviousRaftLoad == stEnd) {
-      if(itCrossingIndex->second > 2 - Eps)
+      if(crossingIndex >= 2U)
         throw logic_error(string(__func__) +
-          " - needs to get SymTb_ containing an entry for PreviousRaftLoad "
+          " - needs to get `symbols` table containing an entry for PreviousRaftLoad "
           "when the CrossingIndex entry is >= 2 !");
 
-      SymTb["PreviousRaftLoad"] = numeric_limits<double>::quiet_NaN();
-    }
+      previousRaftLoad = numeric_limits<double>::quiet_NaN();
+    } else previousRaftLoad = itPreviousRaftLoad->second;
   }
+
+  double prevRaftLoad() const {return previousRaftLoad;}
+  unsigned crossingIdx() const {return crossingIndex;}
 };
 
 /// The moved entities and the resulted state
@@ -1057,46 +1273,6 @@ protected:
 
   friend class StepManager;
 
-  /// @return true for a new state satisfying the timing and bank constraints
-  bool validState(const IState &st) {
-    if(st.time() > scenarioDetails._maxDuration) {
-#ifndef NDEBUG
-      cout<<"violates duration constraint ["
-        <<st.time()<<" > "<<scenarioDetails._maxDuration<<']'<<endl;
-#endif // NDEBUG
-      return false;
-    }
-
-    if(scenarioDetails._banksConstraints) {
-      if( ! scenarioDetails._banksConstraints->check(st.leftBank())) {
-#ifndef NDEBUG
-      cout<<"violates bank constraint ["
-        <<*scenarioDetails._banksConstraints<<"] : "
-        <<st.leftBank()<<endl;
-#endif // NDEBUG
-        return false;
-      }
-      if( ! scenarioDetails._banksConstraints->check(st.rightBank())) {
-#ifndef NDEBUG
-      cout<<"violates bank constraint ["
-        <<*scenarioDetails._banksConstraints<<"] : "
-        <<st.rightBank()<<endl;
-#endif // NDEBUG
-        return false;
-      }
-    }
-
-    for(const auto &prevSt : examinedStates)
-      if(st.handledBy(*prevSt)) {
-#ifndef NDEBUG
-        cout<<"previously considered state"<<endl;
-#endif // NDEBUG
-        return false;
-      }
-
-    return true;
-  }
-
   /// @return true if a solution was found
   bool explore(Move &&move) {
     StepManager stepManager(*this, move);
@@ -1112,14 +1288,14 @@ protected:
 
     for(const MovingEntities *movingCfg : allowedMovingConfigs) {
       assert(movingCfg);
-      unique_ptr<const IState> nextState =
-        crtState->next(*movingCfg, scenarioDetails.ctdItems);
+      unique_ptr<const IState> nextState = crtState->next(*movingCfg);
 
 #ifndef NDEBUG
       cout<<endl<<"Simulating move "<<*movingCfg<<" => "<<*nextState<<endl;
 #endif // NDEBUG
 
-      if( ! validState(*nextState))
+      if( ! nextState->valid(scenarioDetails._banksConstraints)
+          || nextState->handledBy(examinedStates))
         continue; // check next raft/bridge config
 
       if(explore({*movingCfg, std::move(nextState), (unsigned)steps->length()})) {
@@ -1181,20 +1357,19 @@ const SymbolsTable& InitialSymbolsTable(){
 
 unique_ptr<const IState>
       Scenario::Details::createInitialState(const SymbolsTable &SymTb) const {
-  const unsigned timeParam =
-    (_maxDuration != UINT_MAX) ? 0U : UINT_MAX;
+  shared_ptr<const IStateExt> stateExt = DefStateExt::INST();
 
-  shared_ptr<const IState> initState =
-    make_shared<const State>(
+  if(allowedLoads && allowedLoads->dependsOnVariable("PreviousRaftLoad"))
+    stateExt = make_shared<const PrevLoadStateExt>(SymTb, *this, stateExt);
+
+  if(_maxDuration != UINT_MAX)
+    stateExt = make_shared<const TimeStateExt>(0U, *this, stateExt);
+
+  return make_unique<const State>(
             BankEntities(entities, entities->idsStartingFromLeftBank()),
             BankEntities(entities, entities->idsStartingFromRightBank()),
             true, // always start from left bank
-            timeParam);
-
-  if(allowedLoads && allowedLoads->dependsOnVariable("PreviousRaftLoad"))
-    return make_unique<const PrevLoadStateDecorator>(initState, SymTb);
-
-  return initState->clone();
+            stateExt);
 }
 
 const Scenario::Results& Scenario::solution() {

@@ -26,11 +26,67 @@ class MovingEntities;
 
 namespace cond {
 
-class ConfigurationsTransferDuration;
+class ConfigConstraints; // forward declaration
 
-} // namespace cond
+} // namespace ent
 
 namespace sol {
+
+struct IState; // forward declaration
+
+/// Allows State extensions
+struct IStateExt /*abstract*/ {
+  virtual ~IStateExt()/* = 0 */{}
+
+  /// Clones the State extension
+  virtual std::shared_ptr<const IStateExt> clone() const = 0;
+
+  /// Validates the parameter state based on the constraints of the extension
+  virtual bool validate() const = 0;
+
+  /**
+  @return true if the state which is extended is not better than provided state
+    based on the constraints of the extension
+  */
+  virtual bool isNotBetterThan(const IState&) const = 0;
+
+  /**
+  @return the extension to be used by the next state,
+    based on current extension and the parameters
+  */
+  virtual std::shared_ptr<const IStateExt>
+    extensionForNextState(const ent::MovingEntities&) const = 0;
+
+  /**
+  Display either only suffix (most of them), or only prefix extensions.
+  It needs to be called before (with param false) and after (with param true)
+  the state information
+  */
+  virtual std::string toString(bool suffixesInsteadOfPrefixes = true) const = 0;
+
+  /// Ensures that toString() from above is called twice, as mentioned
+  class ToStringManager {
+
+      #ifdef UNIT_TESTING // leave fields public for Unit tests
+  public:
+      #else // keep fields protected otherwise
+  protected:
+      #endif
+
+    const IStateExt &ext;
+    std::ostringstream &oss;
+
+  public:
+
+    ToStringManager(const IStateExt &ext_, std::ostringstream &oss_) :
+        ext(ext_), oss(oss_) {
+      oss<<ext.toString(false);
+    }
+    ~ToStringManager() {
+      oss<<ext.toString();
+    }
+  };
+};
 
 /// A state during solving the scenario
 struct IState /*abstract*/ {
@@ -38,19 +94,29 @@ struct IState /*abstract*/ {
 
   virtual const ent::BankEntities& leftBank() const = 0;
   virtual const ent::BankEntities& rightBank() const = 0;
-  virtual unsigned time() const = 0; ///< the moment this state is reached
 
   /// Is the direction of next move from left to right?
   virtual bool nextMoveFromLeft() const = 0;
 
+  /// Provides access to the extensions of this IState
+  virtual std::shared_ptr<const IStateExt> getExtension() const = 0;
+
   /// @return the next state of the algorithm when moving `movedEnts` to the opposite bank
   virtual std::unique_ptr<const IState>
-    next(const ent::MovingEntities &movedEnts,
-         const std::vector<cond::ConfigurationsTransferDuration> &ctdItems = {})
-      const = 0;
+    next(const ent::MovingEntities &movedEnts) const = 0;
 
   /// @return true if the `other` state is the same or a better version of this state
   virtual bool handledBy(const IState &other) const = 0;
+
+  /// @return true if the provided examinedStates do not cover already this state
+  virtual bool
+    handledBy(const std::vector<std::unique_ptr<const IState>> &examinedStates)
+        const = 0;
+
+  /// @return true if this state conforms to all constraints that apply to it
+  virtual bool
+    valid(const std::unique_ptr<const cond::ConfigConstraints> &bankConstraints)
+        const = 0;
 
   /// Clones this state
   virtual std::unique_ptr<const IState> clone() const = 0;

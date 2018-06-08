@@ -26,6 +26,7 @@ by `#ifdef UNIT_TESTING`!"
 #include <cmath>
 
 using namespace rc;
+using namespace rc::sol;
 
 /// factorial function
 template<typename T, typename = enable_if_t<is_integral<T>::value>>
@@ -646,7 +647,6 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
   BOOST_CHECK_THROW(State(left, left, true),
                     invalid_argument); // uncomplementary bank configs
 
-  MovingEntities moved(ae, vector<unsigned>({2U, 3U}));
   const unsigned t = 1234U, cap = 2U;
   const double maxLoad = 12.;
   IdsConstraint *pIc = new IdsConstraint;
@@ -655,33 +655,75 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
     shared_ptr<const IdsConstraint>(pIc);
   grammar::ConfigurationsTransferDurationInitType ctdit;
   ctdit.setDuration(4321U).setConstraints({ic});
-  vector<ConfigurationsTransferDuration> ctds({
-    ConfigurationsTransferDuration(std::move(ctdit), ae, cap, maxLoad)});
+
+  Scenario::Details info;
+  info.entities = ae;
+  info._capacity = cap;
+  info._maxLoad = maxLoad;
+  info._maxDuration = t*t;
+  info.ctdItems.emplace_back(std::move(ctdit), ae, cap, maxLoad);
+
+  MovingEntities moved(ae, vector<unsigned>({2U, 3U}));
 
   {
     BankEntities left5(left), right5(right);
     left5 -= moved; right5 += moved;
-    State s(left, right, true, t), s1(s), s2(s), s3(s), s4(s),
-          s5(left5, right5, true, t);
+
+    BOOST_CHECK_THROW(State(left, left, true),
+                      invalid_argument); // non-complementary banks
+
+    shared_ptr<const TimeStateExt> stateExt, stateExt3, stateExt4;
+    BOOST_CHECK_THROW(TimeStateExt(t, info, stateExt),
+                      invalid_argument); // stateExt is nullptr now
+
+    BOOST_REQUIRE_NO_THROW({
+      stateExt = make_shared<const TimeStateExt>(t, info);
+      stateExt3 = make_shared<const TimeStateExt>(t+1U, info);
+      stateExt4 = make_shared<const TimeStateExt>(t-1U, info);
+      State s(left, right, true, stateExt);
+      State s1(s);
+    });
+    State s(left, right, true, stateExt), s1(s), s2(s),
+          s3(left, right, true, stateExt3),
+          s4(left, right, true, stateExt4),
+          s5(left5, right5, true, stateExt);
     s2._nextMoveFromLeft = ! s2._nextMoveFromLeft;
-    ++s3._time;
-    --s4._time;
+    vector<unique_ptr<const IState>> someStates;
+    someStates.emplace_back(s2.clone());
+    someStates.emplace_back(s3.clone());
+    someStates.emplace_back(s5.clone());
+
+    BOOST_CHECK_NO_THROW({
+      shared_ptr<const TimeStateExt> timeExt =
+        AbsStateExt::selectExt<TimeStateExt>(s.getExtension());
+      bool b = false;
+      BOOST_CHECK(b = (nullptr != timeExt));
+      if(b)
+        BOOST_CHECK(t == timeExt->time());
+    });
+    BOOST_CHECK_NO_THROW({
+      shared_ptr<const PrevLoadStateExt> prevLoadExt =
+        AbsStateExt::selectExt<PrevLoadStateExt>(s.getExtension());
+      BOOST_CHECK(nullptr == prevLoadExt);
+    });
 
     BOOST_CHECK(s.rightBank().empty());
     BOOST_CHECK(s.leftBank() == pAe->ids());
     BOOST_CHECK(s.nextMoveFromLeft());
-    BOOST_CHECK(s.time() == t);
-    BOOST_CHECK(s.handledBy(s1)); // same
     BOOST_CHECK( ! s.handledBy(s2)); // direction mismatch
     BOOST_CHECK( ! s.handledBy(s3)); // s3 occurred later, so s is preferred
-    BOOST_CHECK(s.handledBy(s4)); // s4 occurred earlier than s
     BOOST_CHECK( ! s.handledBy(s5)); // different bank configs
+    BOOST_CHECK( ! s.handledBy(someStates)); // {s2, s3, s5}
+    BOOST_CHECK(s.handledBy(s1)); // same
+    BOOST_CHECK(s.handledBy(s4)); // s4 occurred earlier than s
+
+    someStates.emplace_back(s4.clone());
+    BOOST_CHECK(s.handledBy(someStates)); // {s2, s3, s5, s4}
 
     unique_ptr<const IState> nextS;
     bool b = false;
     BOOST_CHECK_NO_THROW({
-      s.next(moved = vector<unsigned>({1U,9U})); // next state ignoring time
-      nextS = s.next(moved = vector<unsigned>({1U,9U}), ctds);
+      nextS = s.next(moved = vector<unsigned>({1U,9U}));
       b = true;
     });
     if(b) {
@@ -695,145 +737,130 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
         BOOST_CHECK(cloneNextS->rightBank() == set<unsigned>({1U,9U}));
         BOOST_CHECK(cloneNextS->leftBank().count() == entsCount - 2ULL);
         BOOST_CHECK( ! cloneNextS->nextMoveFromLeft());
-        BOOST_CHECK(cloneNextS->time() == 5555U);
+        BOOST_CHECK_NO_THROW({
+          shared_ptr<const TimeStateExt> timeExtCloneNextS =
+            AbsStateExt::selectExt<TimeStateExt>(cloneNextS->getExtension());
+          bool b = false;
+          BOOST_CHECK(b = (nullptr != timeExtCloneNextS));
+          if(b)
+            BOOST_CHECK(5555U == timeExtCloneNextS->time());
+        });
       }
     }
 
-    BOOST_CHECK_THROW(s.next(moved = vector<unsigned>({2U}),
-                             ctds), // covers only config '1 *'
-                      domain_error); // no duration for config 2
+    // ctds covers only config '1 *'. There is no duration for config 2
+    BOOST_CHECK_THROW(s.next(moved = vector<unsigned>({2U})),
+                      domain_error);
   }
 
   {
-    /// Used to check some parameter validity for other children of StatePlusSymbols
-    struct DummyDecorator : public StatePlusSymbols {
-      DummyDecorator(const shared_ptr<const IState> &decoratedState_) :
-        StatePlusSymbols(decoratedState_, {}) {}
+    shared_ptr<const IState> s =
+      make_shared<const State>(left, right, true); // default extension
 
-      string _toString() const override {return "";}
-      unique_ptr<const IState> _clone(unique_ptr<const IState>) const override {
-        return nullptr;
-      }
-      bool _handledBy(const IState&) const override {return false;}
-      unique_ptr<const IState> _next(const MovingEntities&,
-                                     unique_ptr<const IState>,
-                                     const vector<ConfigurationsTransferDuration>&
-                                        = {}) const override {return nullptr;}
-    };
+    shared_ptr<const IStateExt> nullExt;
+    shared_ptr<const TimeStateExt> timeExt =
+      make_shared<const TimeStateExt>(t, info);
 
-    shared_ptr<const IState> decoratedS =
-      make_shared<const State>(left, right, true, t);
+    BOOST_CHECK_THROW(PrevLoadStateExt(InitialSymbolsTable(), info, nullExt),
+                      invalid_argument); // NULL next extension
 
-    BOOST_CHECK_THROW(PrevLoadStateDecorator(nullptr, InitialSymbolsTable()),
-                      invalid_argument); // NULL decorated state
-
-    BOOST_CHECK_THROW(PrevLoadStateDecorator(decoratedS, SymbolsTable()),
+    BOOST_CHECK_THROW(PrevLoadStateExt(SymbolsTable(), info),
                       logic_error); // missing CrossingIndex entry
 
     // missing PreviousRaftLoad entry when CrossingIndex >= 2
-    BOOST_CHECK_THROW(PrevLoadStateDecorator plsd(decoratedS,
-                                        SymbolsTable({{"CrossingIndex", 2.}})),
+    BOOST_CHECK_THROW(PrevLoadStateExt plse(SymbolsTable({{"CrossingIndex", 2.}}),
+                                            info),
                       logic_error);
 
     BOOST_CHECK_NO_THROW({ // CrossingIndex 0 or 1 and no PreviousRaftLoad is ok
-      PrevLoadStateDecorator plsd1(decoratedS,
-                                   InitialSymbolsTable()); // CrossingIndex 0
-      const SymbolsTable &syms1 = plsd1.symbolsValues();
+      PrevLoadStateExt plse1(InitialSymbolsTable(), info,
+                             timeExt); // CrossingIndex 0
+      State s1(left, right, true, plse1.clone());
+      BOOST_CHECK(isNaN(plse1.prevRaftLoad()));
+
+      PrevLoadStateExt plse2(SymbolsTable({{"CrossingIndex", 1.}}), info,
+                             timeExt);
+      State s2(left, right, true, plse2.clone());
+      BOOST_CHECK(isNaN(plse2.prevRaftLoad()));
+
+      PrevLoadStateExt plse3(SymbolsTable({{"CrossingIndex", 2.},
+                                          {"PreviousRaftLoad", 10.}}),
+                             info, timeExt);
+      State s3(left, right, true, plse3.clone());
+      BOOST_TEST(plse3.prevRaftLoad() == 10.);
+
+      BOOST_CHECK(s3.handledBy(s1)); // CrossingIndex 0/1 handles all
+      BOOST_CHECK(s3.handledBy(s2)); // CrossingIndex 0/1 handles all
+
+      // s has only the default extension
+      BOOST_CHECK_THROW(s3.handledBy(*s),
+                        logic_error);
+
+      PrevLoadStateExt plse4(SymbolsTable({{"CrossingIndex", 15.},
+                                          {"PreviousRaftLoad", 10.}}),
+                             info, timeExt);
+      State s4(left, right, true, plse4.clone());
+      BOOST_CHECK(s4.handledBy(s1)); // CrossingIndex 0/1 handles all
+      BOOST_CHECK(s4.handledBy(s2)); // CrossingIndex 0/1 handles all
+      BOOST_CHECK(s4.handledBy(s3)); // same PreviousRaftLoad
+      BOOST_CHECK(s3.handledBy(s4)); // same PreviousRaftLoad
+
+      PrevLoadStateExt plse5(SymbolsTable({{"CrossingIndex", 13.},
+                                          {"PreviousRaftLoad", 18.}}),
+                             info, timeExt);
+      State s5(left, right, true, plse5.clone());
+      BOOST_CHECK(s5.handledBy(s1)); // CrossingIndex 0/1 handles all
+      BOOST_CHECK(s5.handledBy(s2)); // CrossingIndex 0/1 handles all
+      BOOST_CHECK( ! s5.handledBy(s3)); // different PreviousRaftLoad
+      BOOST_CHECK( ! s5.handledBy(s4)); // different PreviousRaftLoad
+
+      unique_ptr<const IState> cloneOfS5 = s5.clone();
+      BOOST_CHECK(cloneOfS5->rightBank().empty());
+      BOOST_CHECK(cloneOfS5->leftBank().count() == entsCount);
+      BOOST_CHECK(cloneOfS5->nextMoveFromLeft());
+
+      shared_ptr<const PrevLoadStateExt> pCloneOfPlse5 =
+        AbsStateExt::selectExt<PrevLoadStateExt>(cloneOfS5->getExtension());
+      shared_ptr<const TimeStateExt> pCloneOfTse5 =
+        AbsStateExt::selectExt<TimeStateExt>(cloneOfS5->getExtension());
       bool b = false;
-      BOOST_CHECK(b = (syms1.find("PreviousRaftLoad") != cend(syms1)));
-      if(b)
-        BOOST_CHECK(isNaN(syms1.at("PreviousRaftLoad")));
+      bool b1 = false;
+      BOOST_CHECK(b = (nullptr != pCloneOfPlse5));
+      BOOST_CHECK(b1 = (nullptr != pCloneOfTse5));
+      if(b && b1) {
+        BOOST_CHECK(pCloneOfTse5->time() == t);
 
-      PrevLoadStateDecorator plsd2(decoratedS,
-                                   SymbolsTable({{"CrossingIndex", 1.}}));
-      const SymbolsTable &syms2 = plsd2.symbolsValues();
-      b = false;
-      BOOST_CHECK(b = (syms2.find("PreviousRaftLoad") != cend(syms2)));
-      if(b)
-        BOOST_CHECK(isNaN(syms2.at("PreviousRaftLoad")));
-
-      PrevLoadStateDecorator plsd3(decoratedS,
-                                   SymbolsTable({{"CrossingIndex", 2.},
-                                                {"PreviousRaftLoad", 10.}}));
-      const SymbolsTable &syms3 = plsd3.symbolsValues();
-      b = false;
-      BOOST_CHECK(b = (syms3.find("PreviousRaftLoad") != cend(syms3)));
-      if(b)
-        BOOST_TEST(syms3.at("PreviousRaftLoad") == 10.);
-
-      BOOST_CHECK(plsd3.handledBy(plsd1)); // CrossingIndex 0/1 handles all
-      BOOST_CHECK(plsd3.handledBy(plsd2)); // CrossingIndex 0/1 handles all
-
-      // decoratedS isn't derived from StatePlusSymbols
-      BOOST_CHECK_THROW(plsd3.handledBy(*decoratedS),
-                        invalid_argument);
-
-      // PreviousRaftLoad is missing from DummyDecorator's SymbolsTable
-      BOOST_CHECK_THROW(plsd3.handledBy(DummyDecorator(decoratedS)),
-                        invalid_argument);
-
-      PrevLoadStateDecorator plsd4(decoratedS,
-                                   SymbolsTable({{"CrossingIndex", 15.},
-                                                {"PreviousRaftLoad", 10.}}));
-      BOOST_CHECK(plsd4.handledBy(plsd1)); // CrossingIndex 0/1 handles all
-      BOOST_CHECK(plsd4.handledBy(plsd2)); // CrossingIndex 0/1 handles all
-      BOOST_CHECK(plsd4.handledBy(plsd3)); // same PreviousRaftLoad
-      BOOST_CHECK(plsd3.handledBy(plsd4)); // same PreviousRaftLoad
-
-      PrevLoadStateDecorator plsd5(decoratedS,
-                                   SymbolsTable({{"CrossingIndex", 13.},
-                                                {"PreviousRaftLoad", 18.}}));
-      BOOST_CHECK(plsd5.handledBy(plsd1)); // CrossingIndex 0/1 handles all
-      BOOST_CHECK(plsd5.handledBy(plsd2)); // CrossingIndex 0/1 handles all
-      BOOST_CHECK( ! plsd5.handledBy(plsd3)); // different PreviousRaftLoad
-      BOOST_CHECK( ! plsd5.handledBy(plsd4)); // different PreviousRaftLoad
-
-      unique_ptr<const IState> cloneOfPlsd5 = plsd5.clone();
-      const PrevLoadStateDecorator *pCloneOfPlsd5 =
-        dynamic_cast<const PrevLoadStateDecorator*>(cloneOfPlsd5.get());
-      b = false;
-      BOOST_CHECK(b = (nullptr != pCloneOfPlsd5));
-      if(b) {
-        BOOST_CHECK(pCloneOfPlsd5->rightBank().empty());
-        BOOST_CHECK(pCloneOfPlsd5->leftBank().count() == entsCount);
-        BOOST_CHECK(pCloneOfPlsd5->nextMoveFromLeft());
-        BOOST_CHECK(pCloneOfPlsd5->time() == t);
-
-        const SymbolsTable &symsClone = pCloneOfPlsd5->symbolsValues();
-        b = false;
-        BOOST_CHECK(b = (cend(symsClone) != symsClone.find("CrossingIndex")));
-        if(b)
-          BOOST_TEST(symsClone.at("CrossingIndex") == 13.);
-
-        b = false;
-        BOOST_CHECK(b = (cend(symsClone) != symsClone.find("PreviousRaftLoad")));
-        if(b)
-          BOOST_TEST(symsClone.at("PreviousRaftLoad") == 18.);
+        BOOST_TEST(pCloneOfPlse5->crossingIdx() == 13U);
+        BOOST_TEST(pCloneOfPlse5->prevRaftLoad() == 18.);
       }
 
-      unique_ptr<const IState> nextOfPlsd5 =
-        plsd5.next(moved = vector<unsigned>({1U, 9U})); // weight 10; ignoring time
-      const PrevLoadStateDecorator *pNextOfPlsd5 =
-        dynamic_cast<const PrevLoadStateDecorator*>(nextOfPlsd5.get());
-      b = false;
-      BOOST_CHECK(b = (nullptr != pNextOfPlsd5));
-      if(b) {
-        BOOST_CHECK(pNextOfPlsd5->rightBank() == set<unsigned>({1U,9U}));
-        BOOST_CHECK(pNextOfPlsd5->leftBank().count() == entsCount - 2ULL);
-        BOOST_CHECK( ! pNextOfPlsd5->nextMoveFromLeft());
-        BOOST_CHECK(pNextOfPlsd5->time() == t);
+      unique_ptr<const IState> nextOfS5 =
+        s5.next(moved = vector<unsigned>({1U, 9U})); // weight 10
+      BOOST_CHECK(nextOfS5->rightBank() == set<unsigned>({1U,9U}));
+      BOOST_CHECK(nextOfS5->leftBank().count() == entsCount - 2ULL);
+      BOOST_CHECK( ! nextOfS5->nextMoveFromLeft());
 
-        const SymbolsTable &symsNext = pNextOfPlsd5->symbolsValues();
-        b = false;
-        BOOST_CHECK(b = (cend(symsNext) != symsNext.find("CrossingIndex")));
-        if(b)
-          BOOST_TEST(symsNext.at("CrossingIndex") == 14.);
+      shared_ptr<const PrevLoadStateExt> pNextOfPlse5 =
+        AbsStateExt::selectExt<PrevLoadStateExt>(nextOfS5->getExtension());
+      shared_ptr<const TimeStateExt> pNextOfTse5 =
+        AbsStateExt::selectExt<TimeStateExt>(nextOfS5->getExtension());
+      b = b1 = false;
+      BOOST_CHECK(b = (nullptr != pNextOfPlse5));
+      BOOST_CHECK(b1 = (nullptr != pNextOfTse5));
+      if(b && b1) {
+        BOOST_CHECK(pNextOfTse5->time() == 5555U);
 
-        b = false;
-        BOOST_CHECK(b = (cend(symsNext) != symsNext.find("PreviousRaftLoad")));
-        if(b)
-          BOOST_TEST(symsNext.at("PreviousRaftLoad") == 10.);
+        BOOST_TEST(pNextOfPlse5->crossingIdx() == 14U);
+        BOOST_TEST(pNextOfPlse5->prevRaftLoad() == 10.);
       }
+
+      // s has the default extension and all those states are equivalent
+      // when no other extensions are considered
+      BOOST_CHECK(s->handledBy(s1));
+      BOOST_CHECK(s->handledBy(s2));
+      BOOST_CHECK(s->handledBy(s3));
+      BOOST_CHECK(s->handledBy(s4));
+      BOOST_CHECK(s->handledBy(s5));
     });
   }
 
@@ -842,33 +869,69 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
     d.entities = ae;
     d.allowedLoads = nullptr;
 
-    BOOST_CHECK_NO_THROW({ // Creates State, since allowedLoads is NULL
+    // Default extension (allowedLoads is NULL and _maxDuration is UINT_MAX)
+    BOOST_CHECK_NO_THROW({
       unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable());
-      BOOST_CHECK(nullptr != dynamic_cast<const State*>(initS.get()));
-      BOOST_CHECK(nullptr == dynamic_cast<const StatePlusSymbols*>(initS.get()));
+
+      bool b = false;
+      BOOST_CHECK(b = (nullptr != initS));
+      if(b) {
+        BOOST_CHECK(nullptr ==
+                    AbsStateExt::selectExt<TimeStateExt>(initS->getExtension()));
+        BOOST_CHECK(nullptr ==
+                    AbsStateExt::selectExt<PrevLoadStateExt>(initS->getExtension()));
+      }
     });
 
     ValueSet *pVs = new ValueSet;
     d.allowedLoads = shared_ptr<const ValueSet>(pVs);
 
-    // Creates State, since allowedLoads doesn't depend on PreviousRaftLoad
+    // Default extension (allowedLoads doesn't depend on PreviousRaftLoad; _maxDuration is UINT_MAX)
     BOOST_CHECK_NO_THROW({
       unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable());
-      BOOST_CHECK(nullptr != dynamic_cast<const State*>(initS.get()));
-      BOOST_CHECK(nullptr == dynamic_cast<const StatePlusSymbols*>(initS.get()));
+
+      bool b = false;
+      BOOST_CHECK(b = (nullptr != initS));
+      if(b) {
+        BOOST_CHECK(nullptr ==
+                    AbsStateExt::selectExt<TimeStateExt>(initS->getExtension()));
+        BOOST_CHECK(nullptr ==
+                    AbsStateExt::selectExt<PrevLoadStateExt>(initS->getExtension()));
+      }
     });
 
     pVs->add(ValueOrRange(make_shared<const NumericVariable>("PreviousRaftLoad")));
 
-    // Creates PrevLoadStateDecorator, since allowedLoads depends on PreviousRaftLoad
+    // PrevLoadStateExt (allowedLoads depends on PreviousRaftLoad; _maxDuration is UINT_MAX)
     BOOST_CHECK_NO_THROW({
       unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable());
-      BOOST_CHECK(nullptr != dynamic_cast<const PrevLoadStateDecorator*>(initS.get()));
-      BOOST_CHECK(nullptr != dynamic_cast<const StatePlusSymbols*>(initS.get()));
+
+      bool b = false;
+      BOOST_CHECK(b = (nullptr != initS));
+      if(b) {
+        BOOST_CHECK(nullptr ==
+                    AbsStateExt::selectExt<TimeStateExt>(initS->getExtension()));
+        BOOST_CHECK(nullptr !=
+                    AbsStateExt::selectExt<PrevLoadStateExt>(initS->getExtension()));
+      }
+    });
+
+    d._maxDuration = t * t;
+
+    // PrevLoadStateExt & TimeStateExt (allowedLoads depends on PreviousRaftLoad; _maxDuration < UINT_MAX)
+    BOOST_CHECK_NO_THROW({
+      unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable());
+
+      bool b = false;
+      BOOST_CHECK(b = (nullptr != initS));
+      if(b) {
+        BOOST_CHECK(nullptr !=
+                    AbsStateExt::selectExt<TimeStateExt>(initS->getExtension()));
+        BOOST_CHECK(nullptr !=
+                    AbsStateExt::selectExt<PrevLoadStateExt>(initS->getExtension()));
+      }
     });
   }
-  // AllowedLoads depending on PreviousRaftLoad to createInitialState
-  //  PrevLoadStateDecorator<const State>
 }
 
 BOOST_AUTO_TEST_CASE(algorithmMove_usecases) {
