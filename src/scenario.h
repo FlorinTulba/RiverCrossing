@@ -78,6 +78,14 @@ public:
     @return the appropriately decorated initial state
     */
     std::unique_ptr<const sol::IState> createInitialState(const SymbolsTable &SymTb) const;
+
+    /**
+    Generates a decorated validator for raft / bridge configurations.
+    It assumes the extra decoration for checking if there is someone able to row
+    or not is added separately only when needed.
+    Otherwise, it must add any necessary 'dynamic' validators, like allowedLoads
+    */
+    std::shared_ptr<const sol::IContextValidator> createTransferValidator() const;
   };
 
   /**

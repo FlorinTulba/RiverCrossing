@@ -124,6 +124,15 @@ struct IState /*abstract*/ {
   virtual std::string toString() const = 0;
 };
 
+/// Allows performing canRow, allowedLoads and other checks on raft/bridge configurations
+struct IContextValidator /*abstract*/ {
+  virtual ~IContextValidator()/* = 0 */{}
+
+  /// @return true if `ents` is a valid raft/bridge configuration within `st` context
+  virtual bool validate(const ent::MovingEntities &ents,
+                        const SymbolsTable &st) const = 0;
+};
+
 /// The moved entities and the resulted state
 struct IMove /*abstract*/ {
   virtual ~IMove() /*= 0*/ {}

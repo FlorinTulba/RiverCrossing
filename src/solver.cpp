@@ -65,21 +65,26 @@ void generateCombinations(BidirIt first, BidirIt end,
 
 using namespace rc;
 using namespace rc::ent;
-
-/// Allows performing canRow and allowedLoads checks on raft/bridge configurations
-struct IContextValidator /*abstract*/ {
-  virtual ~IContextValidator()/* = 0 */{}
-
-  /// @return true if `ents` is a valid raft/bridge configuration within `st` context
-  virtual bool validate(const MovingEntities &ents,
-                        const SymbolsTable &st) const = 0;
-};
+using namespace rc::sol;
 
 /// Fall-back context validator - accepts any raft/bridge configuration
-struct DefContextValidator : IContextValidator {
+struct DefContextValidator final : IContextValidator {
+  /// Allows sharing the default instance
+  static const shared_ptr<const DefContextValidator>& INST() {
+    static const shared_ptr<const DefContextValidator>
+      inst(new DefContextValidator);
+    return inst;
+  }
+
   bool validate(const MovingEntities&, const SymbolsTable&) const override {
     return true;
   }
+
+    #ifndef UNIT_TESTING // leave ctor public only for Unit tests
+protected:
+    #endif
+
+  DefContextValidator() {}
 };
 
 /**
@@ -122,7 +127,7 @@ protected:
 
   AbsContextValidator(
     const shared_ptr<const IContextValidator> &nextValidator_
-      = make_shared<const DefContextValidator>(),
+      = DefContextValidator::INST(),
     const shared_ptr<const IValidatorExceptionHandler> &ownValidatorExcHandler_
       = nullptr) :
       nextValidator(VP(nextValidator_)),
@@ -192,7 +197,7 @@ protected:
 public:
   CanRowValidator(
     const shared_ptr<const IContextValidator> &nextValidator_
-      = make_shared<const DefContextValidator>(),
+      = DefContextValidator::INST(),
     const shared_ptr<const IValidatorExceptionHandler> &ownValidatorExcHandler_
       = nullptr) :
     AbsContextValidator(nextValidator_, ownValidatorExcHandler_) {}
@@ -287,7 +292,7 @@ public:
   AllowedLoadsValidator(
     const shared_ptr<const IValues<double>> &allowedLoads,
     const shared_ptr<const IContextValidator> &nextValidator_
-      = make_shared<const DefContextValidator>(),
+      = DefContextValidator::INST(),
     const shared_ptr<const IValidatorExceptionHandler> &ownValidatorExcHandler_
       = nullptr) :
       AbsContextValidator(nextValidator_, ownValidatorExcHandler_),
@@ -309,7 +314,7 @@ protected:
 public:
   MovingConfigOption(const MovingEntities &cfg_,
                      const shared_ptr<const IContextValidator> &validator_
-                        = make_shared<const DefContextValidator>()) :
+                        = DefContextValidator::INST()) :
       cfg(cfg_), validator(VP(validator_)) {}
 
   /**
@@ -434,24 +439,10 @@ public:
         " - expecting scenario details with a raft/bridge capacity "
         "less than the number of mentioned entities!");
 
-    const shared_ptr<const IValues<double>> &allowedLoads =
-      scenarioDetails_.allowedLoads;
-
     shared_ptr<const IContextValidator>
-      validatorWithoutCanRow, validatorWithCanRow;
-    if(nullptr != allowedLoads) {
-      validatorWithoutCanRow =
-        make_shared<const AllowedLoadsValidator>(allowedLoads,
-          make_shared<const DefContextValidator>(),
-          make_shared<const InitiallyNoPrevRaftLoadExcHandler>(allowedLoads));
+      validatorWithoutCanRow = scenarioDetails_.createTransferValidator(),
       validatorWithCanRow =
-        make_shared<const AllowedLoadsValidator>(allowedLoads,
-          make_shared<const CanRowValidator>(),
-          make_shared<const InitiallyNoPrevRaftLoadExcHandler>(allowedLoads));
-    } else {
-      validatorWithoutCanRow = make_shared<const DefContextValidator>();
-      validatorWithCanRow = make_shared<const CanRowValidator>();
-    }
+        make_shared<const CanRowValidator>(validatorWithoutCanRow);
 
 #ifndef NDEBUG
     cout<<"All possible raft configs: "<<endl;
@@ -539,8 +530,8 @@ using namespace rc::sol;
 /// Default State extension, which does nothing
 struct DefStateExt final : IStateExt {
   /// Allows sharing the default instance
-  static shared_ptr<const DefStateExt>& INST() {
-    static shared_ptr<const DefStateExt> inst = make_shared<const DefStateExt>();
+  static const shared_ptr<const DefStateExt>& INST() {
+    static const shared_ptr<const DefStateExt> inst(new DefStateExt);
     return inst;
   }
 
@@ -570,6 +561,12 @@ struct DefStateExt final : IStateExt {
   }
 
   string toString(bool suffixesInsteadOfPrefixes/* = true*/) const override final {return "";}
+
+    #ifndef UNIT_TESTING // leave ctor public only for Unit tests
+protected:
+    #endif
+
+  DefStateExt() {}
 };
 
 /// A state during solving the scenario
@@ -1359,7 +1356,8 @@ unique_ptr<const IState>
       Scenario::Details::createInitialState(const SymbolsTable &SymTb) const {
   shared_ptr<const IStateExt> stateExt = DefStateExt::INST();
 
-  if(allowedLoads && allowedLoads->dependsOnVariable("PreviousRaftLoad"))
+  if(nullptr != allowedLoads &&
+          allowedLoads->dependsOnVariable("PreviousRaftLoad"))
     stateExt = make_shared<const PrevLoadStateExt>(SymTb, *this, stateExt);
 
   if(_maxDuration != UINT_MAX)
@@ -1370,6 +1368,17 @@ unique_ptr<const IState>
             BankEntities(entities, entities->idsStartingFromRightBank()),
             true, // always start from left bank
             stateExt);
+}
+
+shared_ptr<const IContextValidator>
+      Scenario::Details::createTransferValidator() const {
+  const shared_ptr<const IContextValidator> &res = DefContextValidator::INST();
+  if(nullptr == allowedLoads)
+    return res;
+
+  return
+    make_shared<const AllowedLoadsValidator>(allowedLoads, res,
+      make_shared<const InitiallyNoPrevRaftLoadExcHandler>(allowedLoads));
 }
 
 const Scenario::Results& Scenario::solution() {

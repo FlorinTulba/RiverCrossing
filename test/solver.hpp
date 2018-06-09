@@ -76,13 +76,19 @@ bool operator==(const vector<const IfEntities*> &returnedConfigs,
         return ret;
       });
   if( ! result) {
-    cout<<"IEntities {[ ";
-    for(const IfEntities *retCfg : returnedConfigs)
+    cout<<"IEntities { ";
+    for(const IfEntities *retCfg : returnedConfigs) {
+      cout<<"[ ";
       copy(CBOUNDS(retCfg->ids()), ostream_iterator<unsigned>(cout, " "));
-    cout<<"]} != ExpectedEntities {[ ";
-    for(const set<unsigned> &cfg : expectedConfigs)
+      cout<<"] ";
+    }
+    cout<<"} != ExpectedEntities { ";
+    for(const set<unsigned> &cfg : expectedConfigs) {
+      cout<<"[ ";
       copy(CBOUNDS(cfg), ostream_iterator<unsigned>(cout, " "));
-    cout<<"]}"<<endl;
+      cout<<"] ";
+    }
+    cout<<"}"<<endl;
   }
   return result;
 }
@@ -423,6 +429,8 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
     *pAe += make_shared<const Entity>(1U, "e1", "t0", false, "false", 1.);
     *pAe += make_shared<const Entity>(3U, "e3", "t1", false, "false", 3.);
     *pAe += make_shared<const Entity>(5U, "e5", "t2", false, "false", 5.);
+    *pAe += make_shared<const Entity>(10U, "e10", "t0", false, "false", 10.);
+    *pAe += make_shared<const Entity>(11U, "e11", "t0", false, "false", 11.);
   });
   const size_t entsCantRowCount = pAe->count();
 
@@ -495,6 +503,24 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
       vector<set<unsigned>> expectedConfigs({{9}, {1, 9}, {3, 9}, {1, 3, 9}});
       mcm.configsForBank(be = vector<unsigned>({1U, 3U, 9U}), configsForABank, false);
       BOOST_CHECK(configsForABank == expectedConfigs);
+      const shared_ptr<const sol::IContextValidator> validator =
+        sd.createTransferValidator(); // allows anything now
+      bool b = false;
+      BOOST_CHECK(b = (nullptr != validator));
+      if(b) {
+        // allows even an unexpected config, where no entity can row
+        BOOST_CHECK(validator->validate(
+          ent::MovingEntities(sd.entities, vector<unsigned>({1U, 3U, 5U})),
+          emptySt));
+
+        // allow confirmed configurations
+        for(const ent::MovingEntities *cfg : configsForABank) {
+          if(nullptr != cfg)
+            BOOST_TEST_CONTEXT("for raft cfg: `"<<*cfg<<'`') {
+              BOOST_CHECK(validator->validate(*cfg, emptySt));
+            }
+        }
+      }
 
       mcm.configsForBank(be, configsForABank, true);
       reverse(BOUNDS(expectedConfigs));
@@ -605,14 +631,44 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
       pVs->add(ValueOrRange(make_shared<const NumericConst>(12.)));
       sd.allowedLoads = shared_ptr<const ValueSet>(pVs);
 
-      MovingConfigsManager mcm(sd, emptySt);
+      // CrossingIndex is 0, so 7 can row
+      MovingConfigsManager mcm(sd, InitialSymbolsTable());
 
-      // only 9 can row; 9 cannot appear alone;
-      // 5&9 weigh 14 > max load; 1&9 weigh different than 12.
-      vector<set<unsigned>> expectedConfigs({{3, 9}});
-      mcm.configsForBank(be = vector<unsigned>({1U, 3U, 5U, 9U}), configsForABank,
+      /*
+       The config requires one entity besides the optional 9;
+       1&3&5&11 don't row; 9 can row and 7 can row sometimes;
+       5&9, 7&9, 9&11 and 7&11 weigh > max load;
+       1&9 and 9 weigh different than 12;
+       5&7 are 2 entities and don't contain 9
+      */
+      vector<set<unsigned>> expectedConfigs({{3U, 9U}});
+      mcm.configsForBank(be = vector<unsigned>({1U, 3U, 5U, 7U, 9U, 11U}),
+                         configsForABank,
                          false);
       BOOST_CHECK(configsForABank == expectedConfigs);
+      const shared_ptr<const sol::IContextValidator> validator =
+        sd.createTransferValidator(); // allows anything weighing 12
+      bool b = false;
+      BOOST_CHECK(b = (nullptr != validator));
+      if(b) {
+        // allows even an unexpected config weighing 12, where no entity can row
+        BOOST_CHECK(validator->validate(
+          ent::MovingEntities(sd.entities, vector<unsigned>({1U, 11U})),
+          emptySt));
+
+        // allows 5&7 weighing 12, which violates `9? *` constraint
+        BOOST_CHECK(validator->validate(
+          ent::MovingEntities(sd.entities, vector<unsigned>({5U, 7U})),
+          InitialSymbolsTable()));
+
+        // allow confirmed configurations
+        for(const ent::MovingEntities *cfg : configsForABank) {
+          if(nullptr != cfg)
+            BOOST_TEST_CONTEXT("for raft cfg: `"<<*cfg<<'`') {
+              BOOST_CHECK(validator->validate(*cfg, emptySt));
+            }
+        }
+      }
 
       mcm.configsForBank(be, configsForABank, true);
       BOOST_CHECK(configsForABank == expectedConfigs);
