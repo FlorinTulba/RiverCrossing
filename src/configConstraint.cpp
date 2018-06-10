@@ -108,7 +108,7 @@ bool TransferConstraints::check(const ent::IsolatedEntities &ents) const {
   }
 
   const double entsWeight = pEnts->weight();
-  if(entsWeight - 1e-4 > _maxLoad) {
+  if(entsWeight - Eps > _maxLoad) {
 #ifndef NDEBUG
     cout<<"violates maxWeight constraint [ "
       <<entsWeight<<" > "<<_maxLoad<<" ] : ";
@@ -204,7 +204,7 @@ void TypesConstraint::validate(const shared_ptr<const ent::AllEntities> &allEnts
       "` is asking for more entities ("s + to_string(minRequiredCount) +
       ") than the capacity ("s + to_string(capacity) + ")!"s);
 
-  if(minConfigWeight - 1e-4 > maxLoad)
+  if(minConfigWeight - Eps > maxLoad)
     throw logic_error(string(__func__) + " - Constraint `"s + toString() +
       "` produces a load >= "s + to_string(minConfigWeight) +
       ", which is more than the maximum allowed load ("s + to_string(maxLoad) + ")!"s);
@@ -747,7 +747,7 @@ string Addition::toString() const {
 
 long Modulus::validLong(double v) {
   const long result = (long)v;
-  if(abs(v - (double)result) > 1e-4)
+  if(abs(v - (double)result) > Eps)
     throw logic_error(string(__func__) +
       " - Operands of modulus need to be integer values!"s);
   return result;
