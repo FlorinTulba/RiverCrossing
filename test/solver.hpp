@@ -462,6 +462,12 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
                      logic_error); // capacity is UINT_MAX >= entsCount
 
   sd._capacity = (unsigned)entsCount - 1U;
+
+  // The default transfer constraints
+  sd._transferConstraints = make_unique<const TransferConstraints>(
+            grammar::ConstraintsVec{}, sd.entities,
+            sd._capacity, sd._maxLoad,
+            false);
   vector<const MovingEntities*> configsForABank;
 
   BOOST_CHECK_NO_THROW({
@@ -1229,6 +1235,12 @@ BOOST_AUTO_TEST_CASE(solvingVariousScenarios) {
   Scenario::Details d;
   d.entities = ae;
   d._capacity = 2U;
+
+  // Default transfer constraints
+  d._transferConstraints = make_unique<const TransferConstraints>(
+            grammar::ConstraintsVec{}, d.entities,
+            d._capacity, d._maxLoad,
+            false);
 
   BOOST_CHECK_NO_THROW({
     assert(d._capacity == 2U);

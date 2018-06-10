@@ -1105,6 +1105,7 @@ BOOST_AUTO_TEST_CASE(crossingDurationsOfConfigurationsValidation) {
           }
         }
       )"));
+    BOOST_CHECK(nullptr != s.details._transferConstraints); // default
     BOOST_CHECK(s.details._capacity == 2U);}); // count of entities - 1
 }
 
@@ -1192,6 +1193,7 @@ BOOST_AUTO_TEST_CASE(bankConfigurationsValidation) {
         }
       )"));
     bool b = false;
+    BOOST_CHECK(b = (nullptr != s.details._transferConstraints)); // default
     BOOST_CHECK(b = (nullptr != s.details._banksConstraints));
     if(b) {
       BankEntities be(s.details.entities);

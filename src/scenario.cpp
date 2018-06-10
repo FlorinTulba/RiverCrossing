@@ -31,7 +31,7 @@ void duplicateKeyExc(const vector<string> &keys) {
 @param pt the tree node that should contain one of the keyNames
 @param keyNames the set of keys
 @param firstFoundKeyName the returned key from the set
-@return true if there is exactly one such key
+@return true if there is exactly one such key; false when no such key
 @throw domain_error when the tree node contains more keys from the set
 */
 bool onlyOneExpected(const ptree &pt, const vector<string> &keyNames,
@@ -320,6 +320,13 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
     capManager.setTransferConstraints(*details._transferConstraints);
 
 		++uniqueConstraints;
+
+	} else { // no [dis]allowed raft/bridge configurations constraint
+    // Create a constraint checking only the capacity & maxLoad for the raft/bridge
+    details._transferConstraints = make_unique<const TransferConstraints>(
+            grammar::ConstraintsVec{}, entities,
+            capManager.getCapacity(), _maxLoad,
+            false);
 	}
 
 	// Keep this after capacitySynonyms, maxLoadSynonyms and allowedLoadsSynonyms

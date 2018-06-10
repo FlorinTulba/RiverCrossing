@@ -379,26 +379,10 @@ protected:
     const unique_ptr<const TransferConstraints> &transferConstraints =
       scenarioDetails._transferConstraints;
 
-    // The validity of the capacity of cfg is ensured through cfg construction
-
     MovingEntities me(entities, cfg);
-    bool accepted = false;
-    if(nullptr != transferConstraints) {
-      accepted = transferConstraints->check(me); // checks maxLoad internally
 
-    } else {
-      accepted = (me.weight() - Eps < scenarioDetails._maxLoad); // explicit maxLoad check
-#ifndef NDEBUG
-      if( ! accepted) {
-        cout<<"violates maxWeight constraint [ "
-          <<me.weight()<<" > "<<scenarioDetails._maxLoad<<" ] : ";
-        copy(CBOUNDS(cfg), ostream_iterator<unsigned>(cout, " "));
-        cout<<endl;
-      }
-#endif // NDEBUG
-    }
-
-    if(accepted) {
+    assert(nullptr != transferConstraints);
+    if(transferConstraints->check(me)) {
       allConfigs.emplace_back(me, validator);
 #ifndef NDEBUG
       copy(CBOUNDS(cfg), ostream_iterator<unsigned>(cout, " "));

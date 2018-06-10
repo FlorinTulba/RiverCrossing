@@ -30,7 +30,11 @@ public:
     // shared as several classes keep this information
     std::shared_ptr<const ent::AllEntities> entities; ///< all mentioned entities (at least 3)
 
-    /// Raft/bridge conditions; Unique as it is always immediately used and not stored
+    /**
+    Raft/bridge conditions; Unique as it is always immediately used and not stored.
+    When not explicitly specified, it gets a default instantiation
+    that checks the capacity and the max load of the raft/bridge.
+    */
     std::unique_ptr<const cond::TransferConstraints> _transferConstraints;
 
     /// Banks conditions; Unique as it is always immediately used and not stored
