@@ -3,6 +3,7 @@
 *.cscope_file_list
 *.depend
 *.layout
+*.stackdump
 .d
 .r
 .td
