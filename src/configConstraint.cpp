@@ -183,7 +183,6 @@ void TypesConstraint::validate(const shared_ptr<const ent::AllEntities> &allEnts
   for(const auto &typeAndLimits : mandatoryTypes) {
     const string &t = typeAndLimits.first;
     const set<unsigned> &matchingIds = idsByTypes.at(t);
-    const auto matchingIdsBegin = cbegin(matchingIds);
     const size_t minLim = (size_t)typeAndLimits.second.first,
       available = matchingIds.size();
     if(minLim > available)
@@ -192,11 +191,14 @@ void TypesConstraint::validate(const shared_ptr<const ent::AllEntities> &allEnts
         ") of type "s + t + " than available ("s + to_string(available) + ")!"s);
 
     minRequiredCount += minLim;
-    minConfigWeight += // add the lightest minLim entities of this type
-      accumulate(matchingIdsBegin, next(matchingIdsBegin, minLim), 0.,
-        [allEnts](double prevSum, unsigned id) {
-          return prevSum + (*allEnts)[id]->weight();
-        });
+
+    // Add the lightest minLim entities of this type
+    multiset<double> weightsOfType;
+    for(unsigned id : matchingIds)
+      weightsOfType.insert((*allEnts)[id]->weight());
+    const auto weightsOfTypeBegin = cbegin(weightsOfType);
+    minConfigWeight +=
+      accumulate(weightsOfTypeBegin, next(weightsOfTypeBegin, minLim), 0.);
   }
 
   if(minRequiredCount > (size_t)capacity)

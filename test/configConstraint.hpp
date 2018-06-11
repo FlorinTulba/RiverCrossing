@@ -640,7 +640,7 @@ BOOST_AUTO_TEST_CASE(typesConstraint_usecases) {
   BOOST_CHECK_NO_THROW(BOOST_CHECK(tc.matches(me)));
   BOOST_CHECK_NO_THROW(BOOST_CHECK(tc.matches(be)));
 
-  BOOST_REQUIRE_NO_THROW({ // Available: 2 x t0 + 2 x t1 + 2 x t2 + t3
+  BOOST_REQUIRE_NO_THROW({ // Available: 2 x t0 + 2 x t1 + 2 x t2 + 2 x t3
     ae += make_shared<const Entity>(0U, "e0", "t0", false, "true", 1.);
     ae += make_shared<const Entity>(1U, "e1", "t0", false, "false", 2.);
     ae += make_shared<const Entity>(2U, "e2", "t1", false, "true", 3.);
@@ -648,7 +648,23 @@ BOOST_AUTO_TEST_CASE(typesConstraint_usecases) {
     ae += make_shared<const Entity>(4U, "e4", "t2", false, "true", 5.);
     ae += make_shared<const Entity>(5U, "e5", "t2", false, "false", 6.);
     ae += make_shared<const Entity>(6U, "e6", "t3", false, "true", 7.);
+    ae += make_shared<const Entity>(7U, "e7", "t3", false, "true", 1.);
   });
+
+  // Creating tc1 as t0 + t1 + t2 + t3, which has min weight 10. and min capacity 4
+  BOOST_CHECK_NO_THROW({
+    TypesConstraint tc1;
+    tc1.addTypeRange("t0", 1U, 1U).addTypeRange("t1", 1U, 1U).
+      addTypeRange("t2", 1U, 1U).addTypeRange("t3", 1U, 1U);
+    tc1.validate(spAe, 4U, 10.);
+    BOOST_CHECK_THROW(tc1.validate(spAe, 3U, 10.),
+                      logic_error); // capacity = 3 < 4
+    BOOST_CHECK_THROW(tc1.validate(spAe, 4U, 9.),
+                      logic_error); // min load = 10 > 9
+  });
+
+
+  // Below working only on tc
 
   BOOST_CHECK_NO_THROW(tc.validate(spAe));
 
