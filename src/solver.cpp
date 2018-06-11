@@ -681,7 +681,11 @@ Base class for state extensions decorators.
 Some of the new virtual methods are abstract and must be implemented
 by every derived class.
 */
-class AbsStateExt /*abstract*/ : public IStateExt {
+class AbsStateExt /*abstract*/ :
+      public IStateExt,
+      public DecoratorManager<AbsStateExt, IStateExt> { // provides `selectExt` static method
+
+  friend struct DecoratorManager<AbsStateExt, IStateExt>; // for accessing nextExt
 
     #ifdef UNIT_TESTING // leave fields public for Unit tests
 public:
@@ -722,27 +726,6 @@ protected:
 
   virtual string _toString(bool suffixesInsteadOfPrefixes = true) const {
     return "";
-  }
-
-  template<class ExtType,
-          typename = enable_if_t<is_convertible<ExtType*, AbsStateExt*>::value>>
-  static shared_ptr<const ExtType>
-      selectExt(const shared_ptr<const IStateExt> &ext) {
-    shared_ptr<const ExtType> resExt = dynamic_pointer_cast<const ExtType>(ext);
-    if(nullptr != resExt)
-      return resExt;
-
-    shared_ptr<const AbsStateExt> hostExt =
-      dynamic_pointer_cast<const AbsStateExt>(ext);
-    while(nullptr != hostExt) {
-      resExt = dynamic_pointer_cast<const ExtType>(hostExt->nextExt);
-      if(nullptr != resExt)
-        return resExt;
-
-      hostExt = dynamic_pointer_cast<const AbsStateExt>(hostExt->nextExt);
-    }
-
-    return nullptr;
   }
 
 public:

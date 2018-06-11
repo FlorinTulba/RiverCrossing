@@ -12,6 +12,7 @@
 #define H_UTIL
 
 #include <iostream>
+#include <memory>
 
 /// Less typing when specifying container ranges
 #define CBOUNDS(cont) std::cbegin(cont), std::cend(cont)
@@ -31,6 +32,8 @@
 
 /// Validating a (smart) pointer. Throwing invalid_argument if NULL
 #define VP(ptr) VP_EX((ptr), std::invalid_argument)
+
+namespace rc {
 
 /**
 The template parameter represents a visitor displaying extended information
@@ -66,5 +69,44 @@ public:
     oss<<ext.toString(true);
   }
 };
+
+/**
+Provides access to a certain decorator type within a hierarchy.
+IfDecorator is the base interface of the entire hierarchy,
+AbsDecorator is the base of the actual decorators.
+*/
+template<class AbsDecorator, class IfDecorator>
+struct DecoratorManager {
+
+  /**
+  Selects the requested `Decorator`, if any, among the collection
+  pointed by the decorator collection parameter `ext`.
+
+  @return the requested `Decorator` or NULL if `ext` does not contain it
+  */
+  template<class Decorator, typename =
+      std::enable_if_t<std::is_convertible<Decorator*, AbsDecorator*>::value>>
+  static std::shared_ptr<const Decorator>
+      selectExt(const std::shared_ptr<const IfDecorator> &ext) {
+    std::shared_ptr<const Decorator> resExt =
+          std::dynamic_pointer_cast<const Decorator>(ext);
+    if(nullptr != resExt)
+      return resExt;
+
+    std::shared_ptr<const AbsDecorator> hostExt =
+          std::dynamic_pointer_cast<const AbsDecorator>(ext);
+    while(nullptr != hostExt) {
+      resExt = std::dynamic_pointer_cast<const Decorator>(hostExt->nextExt);
+      if(nullptr != resExt)
+        return resExt;
+
+      hostExt = std::dynamic_pointer_cast<const AbsDecorator>(hostExt->nextExt);
+    }
+
+    return nullptr;
+  }
+};
+
+} // namespace rc
 
 #endif // H_UTIL
