@@ -663,7 +663,7 @@ public:
   string toString() const override {
     assert(nullptr != extension);
     ostringstream oss;
-    { IStateExt::ToStringManager tsm(*extension, oss); // extension wrapper
+    { ToStringManager<IStateExt> tsm(*extension, oss); // extension wrapper
 
       oss<<"Left bank: "<<_leftBank<<" ; "<<"Right bank: "<<_rightBank
         <<" ; Next move direction: ";

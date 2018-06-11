@@ -11,6 +11,8 @@
 #ifndef H_UTIL
 #define H_UTIL
 
+#include <iostream>
+
 /// Less typing when specifying container ranges
 #define CBOUNDS(cont) std::cbegin(cont), std::cend(cont)
 #define CRBOUNDS(cont) std::crbegin(cont), std::crend(cont)
@@ -29,5 +31,40 @@
 
 /// Validating a (smart) pointer. Throwing invalid_argument if NULL
 #define VP(ptr) VP_EX((ptr), std::invalid_argument)
+
+/**
+The template parameter represents a visitor displaying extended information
+about a host object.
+
+The extra information can be placed:
+
+- partially in front of the previous details with ExtendedInfo::toString(false)
+- and the rest at the end of the previous details with ExtendedInfo::toString(true)
+
+Ensures that these 2 calls to ExtendedInfo::toString(bool) wrap the block
+displaying the previous details.
+*/
+template<class ExtendedInfo>
+class ToStringManager {
+
+    #ifdef UNIT_TESTING // leave fields public for Unit tests
+public:
+    #else // keep fields protected otherwise
+protected:
+    #endif
+
+  const ExtendedInfo &ext;
+  std::ostringstream &oss;
+
+public:
+
+  ToStringManager(const ExtendedInfo &ext_, std::ostringstream &oss_) :
+      ext(ext_), oss(oss_) {
+    oss<<ext.toString(false);
+  }
+  ~ToStringManager() {
+    oss<<ext.toString(true);
+  }
+};
 
 #endif // H_UTIL

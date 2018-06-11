@@ -63,29 +63,6 @@ struct IStateExt /*abstract*/ {
   the state information
   */
   virtual std::string toString(bool suffixesInsteadOfPrefixes = true) const = 0;
-
-  /// Ensures that toString() from above is called twice, as mentioned
-  class ToStringManager {
-
-      #ifdef UNIT_TESTING // leave fields public for Unit tests
-  public:
-      #else // keep fields protected otherwise
-  protected:
-      #endif
-
-    const IStateExt &ext;
-    std::ostringstream &oss;
-
-  public:
-
-    ToStringManager(const IStateExt &ext_, std::ostringstream &oss_) :
-        ext(ext_), oss(oss_) {
-      oss<<ext.toString(false);
-    }
-    ~ToStringManager() {
-      oss<<ext.toString();
-    }
-  };
 };
 
 /// A state during solving the scenario
