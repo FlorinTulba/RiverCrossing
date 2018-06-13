@@ -16,7 +16,6 @@
 #include <set>
 #include <iterator>
 #include <algorithm>
-#include <numeric>
 
 using namespace std;
 using namespace boost::property_tree;
@@ -249,34 +248,101 @@ string IsolatedEntities::toString() const {
   return oss.str();
 }
 
-MovingEntities::MovingEntities(const MovingEntities &other) : IsolatedEntities(other) {}
+unique_ptr<IMovingEntitiesExt> DefMovingEntitiesExt::clone() const {
+  return make_unique<DefMovingEntitiesExt>();
+}
+
+AbsMovingEntitiesExt::AbsMovingEntitiesExt(
+              const shared_ptr<const AllEntities> &all_,
+              unique_ptr<IMovingEntitiesExt> &&nextExt_) :
+      all(all_), nextExt(std::move(nextExt_)) {
+  VP(nextExt.get());
+}
+
+void AbsMovingEntitiesExt::newGroup(const set<unsigned> &ids) {
+  assert(nullptr != nextExt);
+  nextExt->newGroup(ids);
+  _newGroup(ids);
+}
+
+void AbsMovingEntitiesExt::addEntity(unsigned id) {
+  assert(nullptr != nextExt);
+  nextExt->addEntity(id);
+  _addEntity(id);
+}
+
+void AbsMovingEntitiesExt::removeEntity(unsigned id) {
+  assert(nullptr != nextExt);
+  nextExt->removeEntity(id);
+  _removeEntity(id);
+}
+
+void AbsMovingEntitiesExt::addMovePostProcessing(SymbolsTable &SymTb) const {
+  assert(nullptr != nextExt);
+  nextExt->addMovePostProcessing(SymTb);
+  _addMovePostProcessing(SymTb);
+}
+
+void AbsMovingEntitiesExt::removeMovePostProcessing(SymbolsTable &SymTb) const {
+  assert(nullptr != nextExt);
+  nextExt->removeMovePostProcessing(SymTb);
+  _removeMovePostProcessing(SymTb);
+}
+
+unique_ptr<IMovingEntitiesExt> AbsMovingEntitiesExt::clone() const {
+  assert(nullptr != nextExt);
+  return _clone(nextExt->clone());
+}
+
+string AbsMovingEntitiesExt::toString(bool suffixesInsteadOfPrefixes/* = true*/) const {
+  assert(nullptr != nextExt);
+  // Only the matching extension categories will return non-empty strings
+  // given suffixesInsteadOfPrefixes
+  // (some display only as prefixes, the rest only as suffixes)
+  return _toString(suffixesInsteadOfPrefixes) +
+    nextExt->toString(suffixesInsteadOfPrefixes);
+}
+
+MovingEntities::MovingEntities(const MovingEntities &other) :
+  IsolatedEntities(other), extension(other.extension->clone()) {}
 
 MovingEntities::MovingEntities(MovingEntities &&other) :
-  IsolatedEntities(std::move(other)) {}
+  IsolatedEntities(std::move(other)), extension(std::move(other.extension)) {}
 
 MovingEntities& MovingEntities::operator=(const MovingEntities &other) {
   IsolatedEntities::operator=(other);
+  extension = other.extension->clone();
   return *this;
 }
 
 MovingEntities& MovingEntities::operator=(MovingEntities &&other) {
   IsolatedEntities::operator=(std::move(other));
+  extension = std::move(other.extension);
   return *this;
 }
 
-double MovingEntities::weight() const {
-  return accumulate(CBOUNDS(_ids), 0.,
-    [this](double prevSum, unsigned id) {
-      return prevSum + (*all)[id]->weight();
-    });
+MovingEntities& MovingEntities::operator+=(unsigned id) {
+  IsolatedEntities::operator+=(id);
+  extension->addEntity(id);
+  return *this;
+}
+
+MovingEntities& MovingEntities::operator-=(unsigned id) {
+  IsolatedEntities::operator-=(id);
+  extension->removeEntity(id);
+  return *this;
+}
+
+void MovingEntities::clear() {
+  IsolatedEntities::clear();
+  extension->newGroup({});
 }
 
 string MovingEntities::toString() const {
   ostringstream oss;
-  oss<<IsolatedEntities::toString();
-  const double load = weight();
-  if(load > 0.)
-    oss<<" weighing "<<load;
+  { ToStringManager<IMovingEntitiesExt> tsm(*extension, oss); // extension wrapper
+    oss<<IsolatedEntities::toString();
+  } // ensures tsm's destructor flushes to oss before the return
   return oss.str();
 }
 

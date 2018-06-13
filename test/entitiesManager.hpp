@@ -18,6 +18,7 @@ by `#ifdef UNIT_TESTING`!"
 #else // for ENTITIES_MANAGER_CPP and UNIT_TESTING
 
 #include "../src/mathRelated.h"
+#include "../src/transferredLoadExt.h"
 
 #include <boost/test/unit_test.hpp>
 
@@ -414,13 +415,18 @@ BOOST_AUTO_TEST_CASE(movingEntities_usecases) {
   });
 
   BOOST_CHECK_NO_THROW({
-    MovingEntities me(ae);
-    MovingEntities me1(aeForeign);
+    MovingEntities me(ae, {}, make_unique<TotalLoadExt>(ae));
+    MovingEntities me1(aeForeign, {}, make_unique<TotalLoadExt>(ae));
     BOOST_CHECK_THROW(me = MovingEntities(aeForeign), logic_error);
     BOOST_CHECK_THROW(me = me1, logic_error);
     BOOST_CHECK_THROW(me += 10U, out_of_range); // no entity with id 10
     BOOST_CHECK(me.empty());
-    BOOST_TEST(me.weight() == 0.);
+    const TotalLoadExt *meLoadExt =
+      std::move(AbsMovingEntitiesExt::selectExt<TotalLoadExt>(me.getExtension()));
+    bool b = false;
+    BOOST_CHECK(b = (nullptr != meLoadExt));
+    if(b)
+      BOOST_TEST(meLoadExt->totalLoad() == 0.);
 
     me += 1U;
     BOOST_CHECK(me == set<unsigned>({1U}));
@@ -428,7 +434,13 @@ BOOST_AUTO_TEST_CASE(movingEntities_usecases) {
     BOOST_CHECK( ! (me != set<unsigned>({1U})));
     BOOST_CHECK( ! me.empty());
     BOOST_CHECK(me.count() == 1ULL);
-    BOOST_TEST(me.weight() == 1.);
+
+    b = false;
+    BOOST_CHECK(b = (nullptr != meLoadExt));
+    if(b)
+      BOOST_TEST(meLoadExt->totalLoad() == 1.);
+
+
     BOOST_CHECK_THROW(me += 1U, domain_error); // duplicate id
     BOOST_CHECK_THROW(me -= 2U, domain_error); // entity 2 wasn't in me
 
@@ -438,7 +450,11 @@ BOOST_AUTO_TEST_CASE(movingEntities_usecases) {
 
     (me += 3U).clear();
     BOOST_CHECK(me.empty());
-    BOOST_TEST(me.weight() == 0.);
+
+    b = false;
+    BOOST_CHECK(b = (nullptr != meLoadExt));
+    if(b)
+      BOOST_TEST(meLoadExt->totalLoad() == 0.);
 
     me = vector<unsigned>({1U, 2U});
     set<unsigned> expectedIds({1U,2U});
@@ -448,7 +464,11 @@ BOOST_AUTO_TEST_CASE(movingEntities_usecases) {
     BOOST_CHECK(equal(CBOUNDS(me.ids()), CBOUNDS(expectedIds)));
     BOOST_CHECK(me.idsByTypes().size() == 2ULL); // t0 and t1
     BOOST_CHECK( ! me.anyRowCapableEnts(InitialSymbolsTable())); // CrossingIndex % 2 == 0
-    BOOST_TEST(me.weight() == 3.);
+
+    b = false;
+    BOOST_CHECK(b = (nullptr != meLoadExt));
+    if(b)
+      BOOST_TEST(meLoadExt->totalLoad() == 3.);
 
     me += 4U; // Entity 4 rows for CrossingIndex % 2 == 0
     expectedIds = set<unsigned>({1U,2U,4U});

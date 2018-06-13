@@ -9,8 +9,10 @@
 */
 
 #include "scenario.h"
-#include "util.h"
+#include "durationExt.h"
+#include "transferredLoadExt.h"
 
+#include <cfloat>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -76,12 +78,12 @@ protected:
 
   shared_ptr<const AllEntities> entities; ///< all entities of the scenario
 
-  /// Provided / deduced transfer capacity (&Scenario::Details::_capacity)
+  /// Provided / deduced transfer capacity (&ScenarioDetails::_capacity)
   unsigned &capacity;
 
 public:
   TransferCapacityManager(const shared_ptr<const AllEntities> &entities_,
-                          unsigned &capacity_) : // &Scenario::Details::_capacity
+                          unsigned &capacity_) : // &ScenarioDetails::_capacity
       entities(VP(entities_)), capacity(capacity_) {
     if(entities_->count() < 3ULL)
       throw domain_error(string(__func__) +
@@ -177,6 +179,7 @@ public:
 
   const unsigned& getCapacity() const {return capacity;} ///< provided / deduced capacity
 };
+
 } // anonymous namespace
 
 namespace rc {
@@ -292,6 +295,9 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 	}
 
 	// Keep this after capacitySynonyms, maxLoadSynonyms and allowedLoadsSynonyms
+	const std::shared_ptr<const cond::ITransferConstraintsExt>
+    transferConstraintsExt = details.createTransferConstraintsExt();
+
 	static const vector<string> trConfigSpecifiers{"AllowedRaftConfigurations",
 		"AllowedBridgeConfigurations", "DisallowedRaftConfigurations",
 		"DisallowedBridgeConfigurations"};
@@ -311,8 +317,8 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 
 		try {
 			details._transferConstraints = make_unique<const TransferConstraints>(
-				move(*readConstraints), entities, capManager.getCapacity(), _maxLoad,
-				allowed);
+				move(*readConstraints), entities, capManager.getCapacity(), allowed,
+        transferConstraintsExt);
 		} catch(const logic_error &e) {
 			throw domain_error(e.what());
 		}
@@ -325,8 +331,8 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
     // Create a constraint checking only the capacity & maxLoad for the raft/bridge
     details._transferConstraints = make_unique<const TransferConstraints>(
             grammar::ConstraintsVec{}, entities,
-            capManager.getCapacity(), _maxLoad,
-            false);
+            capManager.getCapacity(), false,
+            transferConstraintsExt);
 	}
 
 	// Keep this after capacitySynonyms, maxLoadSynonyms and allowedLoadsSynonyms
@@ -352,7 +358,8 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 				throw domain_error(string(__func__) +
 					" - CrossingDurationsOfConfigurations parsing error! See the cause above."s);
       ctdItems.emplace_back(move(*readCdc), entities,
-                            capManager.getCapacity(), _maxLoad);
+                            capManager.getCapacity(),
+                            transferConstraintsExt);
     	ConfigurationsTransferDuration &ctd = ctdItems.back();
     	if( ! durations.insert(ctd.duration()).second)
 				throw domain_error(string(__func__) +
@@ -456,6 +463,57 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 
   if(solveNow)
   	solution();
+}
+
+shared_ptr<const cond::IContextValidator>
+      ScenarioDetails::createTransferValidator() const {
+  const shared_ptr<const cond::IContextValidator> &res =
+      cond::DefContextValidator::INST();
+  if(nullptr == allowedLoads)
+    return res;
+
+  return
+    make_shared<const AllowedLoadsValidator>(allowedLoads, res,
+      make_shared<const InitiallyNoPrevRaftLoadExcHandler>(allowedLoads));
+}
+
+shared_ptr<const cond::ITransferConstraintsExt>
+      ScenarioDetails::createTransferConstraintsExt() const {
+  const shared_ptr<const cond::ITransferConstraintsExt> &res =
+      cond::DefTransferConstraintsExt::INST();
+  if(_maxLoad == DBL_MAX)
+    return res;
+
+  return
+    make_shared<const MaxLoadTransferConstraintsExt>(_maxLoad, res);
+}
+
+unique_ptr<ent::IMovingEntitiesExt>
+      ScenarioDetails::createMovingEntitiesExt() const {
+  unique_ptr<ent::IMovingEntitiesExt> res =
+    make_unique<DefMovingEntitiesExt>();
+
+  if(nullptr == allowedLoads && _maxLoad == DBL_MAX)
+    return res;
+
+  return make_unique<TotalLoadExt>(entities, 0., std::move(res));
+}
+
+void Scenario::Results::update(const sol::IAttempt &unsuccessfulAttempt,
+                               const ent::BankEntities &currentLeftBank,
+                               size_t &bestMinDistToGoal) {
+  const size_t attemptLen = unsuccessfulAttempt.length();
+  if(attemptLen > longestInvestigatedPath)
+    longestInvestigatedPath = attemptLen;
+
+  const size_t crtDistToSol = unsuccessfulAttempt.distToSolution();
+  if(bestMinDistToGoal > crtDistToSol) {
+    bestMinDistToGoal = crtDistToSol;
+    closestToTargetLeftBank = {currentLeftBank};
+
+  } else if(bestMinDistToGoal == crtDistToSol) {
+    closestToTargetLeftBank.push_back(currentLeftBank);
+  }
 }
 
 const string& Scenario::description() const {

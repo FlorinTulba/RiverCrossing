@@ -19,6 +19,9 @@ SOURCES = \
 	entity.cpp \
 	entitiesManager.cpp \
 	configConstraint.cpp \
+	rowAbilityExt.cpp \
+	durationExt.cpp \
+	transferredLoadExt.cpp \
 	configParser.cpp \
 	solver.cpp \
 	scenario.cpp

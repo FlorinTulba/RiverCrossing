@@ -143,7 +143,8 @@ public:
     return *this;
   }
 
-  void clear(); ///< empties the subset of ids. Leaves the choice pool in place
+  /// Empties the subset of ids. Leaves the choice pool in place
+  virtual void clear();
 
   /// Appends to the subset the entity with the given id
   IsolatedEntities& operator+=(unsigned id);
@@ -165,6 +166,149 @@ public:
   std::string toString() const override;
 };
 
+/// Interface for the extensions for each group of entities moving to the other bank
+struct IMovingEntitiesExt /*abstract*/ {
+  virtual ~IMovingEntitiesExt()/* = 0 */{}
+
+  /// Selecting a new group of entities for moving to the other bank
+  virtual void newGroup(const std::set<unsigned>&) = 0;
+
+  /// Adds a new entity to the group from the raft/bridge
+  virtual void addEntity(unsigned id) {}
+
+  /// Removes an existing entity from the raft/bridge
+  virtual void removeEntity(unsigned id) {}
+
+  /**
+  Some extensions might want to change the content of the Symbols Table
+  after a move is performed
+  */
+  virtual void addMovePostProcessing(SymbolsTable&) const {}
+
+  /**
+  Some extensions might want to change the content of the Symbols Table
+  after a move is removed
+  */
+  virtual void removeMovePostProcessing(SymbolsTable&) const {}
+
+  /// @return a clone of these extensions
+  virtual std::unique_ptr<IMovingEntitiesExt> clone() const = 0;
+
+  /**
+  Display either only suffix (most of them), or only prefix extensions.
+  It needs to be called before (with param false) and after (with param true)
+  the information of the moving entities
+  */
+  virtual std::string toString(bool = true) const = 0;
+};
+
+/// Neutral MovingEntities extension
+struct DefMovingEntitiesExt final : IMovingEntitiesExt {
+  /// Selecting a new group of entities for moving to the other bank
+  void newGroup(const std::set<unsigned>&) override final {}
+
+  /// @return a clone of these extensions
+  std::unique_ptr<IMovingEntitiesExt> clone() const override final;
+
+  /**
+  Display either only suffix (most of them), or only prefix extensions.
+  It needs to be called before (with param false) and after (with param true)
+  the information of the moving entities
+  */
+  std::string toString(bool = true) const override final {
+    return "";
+  }
+};
+
+/**
+Base class for extensions of moving entities.
+Some of the new virtual methods are abstract and must be implemented
+by every derived class.
+*/
+class AbsMovingEntitiesExt /*abstract*/ : public IMovingEntitiesExt,
+      // provides `selectExt` static method
+      public rc::DecoratorManager<AbsMovingEntitiesExt, IMovingEntitiesExt> {
+
+  // for accessing nextExt
+  friend struct rc::DecoratorManager<AbsMovingEntitiesExt, IMovingEntitiesExt>;
+
+    #ifdef UNIT_TESTING // leave fields public for Unit tests
+public:
+    #else // keep fields protected otherwise
+protected:
+    #endif
+
+  std::shared_ptr<const AllEntities> all;
+  std::unique_ptr<IMovingEntitiesExt> nextExt;
+
+  AbsMovingEntitiesExt(const std::shared_ptr<const AllEntities> &all_,
+              std::unique_ptr<IMovingEntitiesExt> &&nextExt_);
+
+  /**
+  Some extensions might want to change the content of the Symbols Table
+  after a move is performed
+  */
+  virtual void _addMovePostProcessing(SymbolsTable&) const {}
+
+  /**
+  Some extensions might want to change the content of the Symbols Table
+  after a move is removed
+  */
+  virtual void _removeMovePostProcessing(SymbolsTable&) const {}
+
+  /// Selecting a new group of entities for moving to the other bank
+  virtual void _newGroup(const std::set<unsigned>&) = 0;
+
+  /// Adds a new entity to the group from the raft/bridge
+  virtual void _addEntity(unsigned id) {}
+
+  /// Removes an existing entity from the raft/bridge
+  virtual void _removeEntity(unsigned id) {}
+
+  /// @return a clone of these extensions
+  virtual std::unique_ptr<IMovingEntitiesExt> _clone(
+              std::unique_ptr<IMovingEntitiesExt> &&cloneOfNextExt) const = 0;
+
+  /**
+  Display either only suffix (most of them), or only prefix extensions.
+  It needs to be called before (with param false) and after (with param true)
+  the information of the moving entities
+  */
+  virtual std::string _toString(bool = true) const {return "";}
+
+public:
+  /// Selecting a new group of entities for moving to the other bank
+  void newGroup(const std::set<unsigned> &ids) override final;
+
+  /// Adds a new entity to the group from the raft/bridge
+  void addEntity(unsigned id) override final;
+
+  /// Removes an existing entity from the raft/bridge
+  void removeEntity(unsigned id) override final;
+
+  /**
+  Some extensions might want to change the content of the Symbols Table
+  after a move is performed
+  */
+  void addMovePostProcessing(SymbolsTable &SymTb) const override final;
+
+  /**
+  Some extensions might want to change the content of the Symbols Table
+  after a move is removed
+  */
+  void removeMovePostProcessing(SymbolsTable &SymTb) const override final;
+
+  /// @return a clone of these extensions
+  std::unique_ptr<IMovingEntitiesExt> clone() const override final;
+
+  /**
+  Display either only suffix (most of them), or only prefix extensions.
+  It needs to be called before (with param false) and after (with param true)
+  the information of the moving entities
+  */
+  std::string toString(bool suffixesInsteadOfPrefixes/* = true*/) const override final;
+};
+
 /// Entities traversing the river on the raft / over the bridge
 class MovingEntities : public IsolatedEntities {
 
@@ -174,11 +318,17 @@ public:
 protected:
     #endif
 
+  std::unique_ptr<IMovingEntitiesExt> extension;
+
 public:
   template<class IdsCont = std::vector<unsigned>>
   MovingEntities(const std::shared_ptr<const AllEntities> &all_,
-                 const IdsCont &ids_ = {}) :
-      IsolatedEntities(all_, ids_) {}
+                 const IdsCont &ids_ = {},
+                 std::unique_ptr<IMovingEntitiesExt> &&extension_
+                    = std::make_unique<DefMovingEntitiesExt>()) :
+      IsolatedEntities(all_, ids_), extension(std::move(extension_)) {
+    VP(extension.get())->newGroup(_ids);
+  }
 
   MovingEntities(const MovingEntities &other);
   MovingEntities(MovingEntities &&other);
@@ -188,11 +338,29 @@ public:
   /// @return a new subset with the provided ids_ from the original pool
   template<class IdsCont>
   MovingEntities& operator=(const IdsCont &ids_) {
+    /*
+    Calls:
+    - virtual extension->newGroup({})
+    - non-virtual operator+=(id), so no extension->addEntity(id)
+    */
     IsolatedEntities::operator=(ids_);
+
+    extension->newGroup(_ids); // no redundant previous extension->addEntity(id) calls
     return *this;
   }
 
-  double weight() const; ///< total weight of this subset of entities
+  /// Appends to the subset the entity with the given id
+  MovingEntities& operator+=(unsigned id);
+
+  /// Removes from the subset the entity with the given id
+  MovingEntities& operator-=(unsigned id);
+
+  /// Empties the subset of ids. Leaves the choice pool in place
+  void clear() override;
+
+  const IMovingEntitiesExt* getExtension() const {
+    return extension.get();
+  }
 
   std::string toString() const override;
 };

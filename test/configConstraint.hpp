@@ -17,9 +17,11 @@ by `#ifdef UNIT_TESTING`!"
 
 #else // for CONFIG_CONSTRAINT_CPP and UNIT_TESTING
 
+#include <cfloat>
 #include <boost/test/unit_test.hpp>
 
 #include "../src/entity.h"
+#include "../src/transferredLoadExt.h"
 
 using namespace rc;
 using namespace rc::cond;
@@ -656,10 +658,13 @@ BOOST_AUTO_TEST_CASE(typesConstraint_usecases) {
     TypesConstraint tc1;
     tc1.addTypeRange("t0", 1U, 1U).addTypeRange("t1", 1U, 1U).
       addTypeRange("t2", 1U, 1U).addTypeRange("t3", 1U, 1U);
-    tc1.validate(spAe, 4U, 10.);
-    BOOST_CHECK_THROW(tc1.validate(spAe, 3U, 10.),
+    const shared_ptr<const IConfigConstraintValidatorExt> maxLoad10 =
+        make_shared<const MaxLoadValidatorExt>(10.);
+    tc1.validate(spAe, 4U, maxLoad10);
+    BOOST_CHECK_THROW(tc1.validate(spAe, 3U, maxLoad10),
                       logic_error); // capacity = 3 < 4
-    BOOST_CHECK_THROW(tc1.validate(spAe, 4U, 9.),
+    BOOST_CHECK_THROW(tc1.validate(spAe, 4U,
+                                   make_shared<const MaxLoadValidatorExt>(9.)),
                       logic_error); // min load = 10 > 9
   });
 
@@ -679,13 +684,14 @@ BOOST_AUTO_TEST_CASE(typesConstraint_usecases) {
 
   BOOST_CHECK_THROW(tc.validate(spAe, 0U),
     logic_error); // asking for 1 't1' when capacity is 0
-  BOOST_CHECK_THROW(tc.validate(spAe, 1U, 2.),
+  BOOST_CHECK_THROW(tc.validate(spAe, 1U,
+                                make_shared<const MaxLoadValidatorExt>(2.)),
     logic_error); // asking for 1 't1' (weighing >= 3) when maxLoad is 2
 
   BOOST_CHECK_THROW(tc.addTypeRange("t1"),
     logic_error); // duplicate type
 
-  // Empty configurations don't match anylonger
+  // Empty configurations don't match any longer
   BOOST_CHECK_NO_THROW(BOOST_CHECK( ! tc.matches(me)));
   BOOST_CHECK_NO_THROW(BOOST_CHECK( ! tc.matches(be)));
 
@@ -1116,12 +1122,10 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
 
   const size_t countAvailEnts = ae.count();
   const unsigned cap = UINT_MAX;
-  const double maxLoad = DBL_MAX;
   MovingEntities me(spAe);
 
-
   BOOST_CHECK_NO_THROW({ // allow nothing
-    TransferConstraints cc(grammar::ConstraintsVec {}, spAe, cap, maxLoad);
+    TransferConstraints cc(grammar::ConstraintsVec {}, spAe, cap);
     BOOST_CHECK(cc.empty());
     BOOST_CHECK(cc.allowed());
     BOOST_CHECK(cc.minRequiredCapacity() == 0U);
@@ -1133,8 +1137,7 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
 
   BOOST_CHECK_NO_THROW({ // allow anything in groups not larger than 2 entities
     const unsigned cap = 2U;
-    TransferConstraints notCc(grammar::ConstraintsVec {}, spAe, cap, maxLoad,
-                              false);
+    TransferConstraints notCc(grammar::ConstraintsVec {}, spAe, cap, false);
     BOOST_CHECK(notCc.empty());
     BOOST_CHECK( ! notCc.allowed());
     BOOST_CHECK(notCc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);
@@ -1145,8 +1148,12 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
 
   BOOST_CHECK_NO_THROW({ // allow anything in groups not heavier than 12
     const double maxLoad = 12.;
-    TransferConstraints notCc(grammar::ConstraintsVec {}, spAe, cap, maxLoad,
-                              false);
+    const auto maxLoadExt =
+        make_shared<const MaxLoadTransferConstraintsExt>(maxLoad);
+    TransferConstraints notCc(grammar::ConstraintsVec {}, spAe, cap,
+                              false, maxLoadExt);
+    MovingEntities me(spAe, {}, make_unique<TotalLoadExt>(spAe, maxLoad));
+
     BOOST_CHECK(notCc.empty());
     BOOST_CHECK( ! notCc.allowed());
     BOOST_CHECK(notCc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);
@@ -1163,42 +1170,38 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
 
     // empty ids constraint
     BOOST_CHECK_NO_THROW({
-      TransferConstraints cc(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad);
+      TransferConstraints cc(grammar::ConstraintsVec{ic}, spAe, cap);
       BOOST_CHECK(cc.minRequiredCapacity() == 0U);});
     BOOST_CHECK_NO_THROW({
-      TransferConstraints notCc(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad,
-                             false);
+      TransferConstraints notCc(grammar::ConstraintsVec{ic}, spAe, cap, false);
       BOOST_CHECK(notCc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);});
 
     // asking for all available entities but one
     for(size_t i = 1ULL; i < countAvailEnts; ++i) // all except one for now
       pIc->addUnspecifiedMandatory();
     BOOST_CHECK_NO_THROW({
-      TransferConstraints cc(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad);
+      TransferConstraints cc(grammar::ConstraintsVec{ic}, spAe, cap);
       BOOST_CHECK(cc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);});
     BOOST_CHECK_NO_THROW({
-      TransferConstraints notCc(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad,
-                             false);
+      TransferConstraints notCc(grammar::ConstraintsVec{ic}, spAe, cap, false);
       BOOST_CHECK(notCc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);});
 
     // adding the last one here
     pIc->addUnspecifiedMandatory();
     BOOST_CHECK_NO_THROW({
-      TransferConstraints cc(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad);
+      TransferConstraints cc(grammar::ConstraintsVec{ic}, spAe, cap);
       BOOST_CHECK(cc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);});
     BOOST_CHECK_NO_THROW({
-      TransferConstraints notCc(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad,
-                             false);
+      TransferConstraints notCc(grammar::ConstraintsVec{ic}, spAe, cap, false);
       BOOST_CHECK(notCc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);});
 
     // asking for an extra entity
     pIc->addUnspecifiedMandatory();
     BOOST_CHECK_THROW(
-      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad),
+      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap),
       logic_error);
     BOOST_CHECK_THROW(
-      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad,
-                          false),
+      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap, false),
       logic_error);
   });
 
@@ -1210,19 +1213,17 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
     for(unsigned i = 0U; i < cap; ++i) // filling the capacity
       pIc->addUnspecifiedMandatory();
     BOOST_CHECK_NO_THROW(
-      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad));
+      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap));
     BOOST_CHECK_NO_THROW(
-      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad,
-                          false));
+      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap, false));
 
     // asking for an extra entity
     pIc->addUnspecifiedMandatory();
     BOOST_CHECK_THROW(
-      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad),
+      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap),
       logic_error);
     BOOST_CHECK_THROW(
-      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad,
-                          false),
+      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap, false),
       logic_error);
   });
 
@@ -1232,11 +1233,10 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
     pIc->addAvoidedId(50U); // not(50)
 
     BOOST_CHECK_THROW(
-      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad),
+      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap),
       logic_error);
     BOOST_CHECK_THROW(
-      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap, maxLoad,
-                          false),
+      TransferConstraints(grammar::ConstraintsVec{ic}, spAe, cap, false),
       logic_error);
   });
 
@@ -1246,11 +1246,10 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
     pTc->addTypeRange("t", 2U, 2U); // 't'{2}
 
     BOOST_CHECK_THROW(
-      TransferConstraints(grammar::ConstraintsVec{tc}, spAe, cap, maxLoad),
+      TransferConstraints(grammar::ConstraintsVec{tc}, spAe, cap),
       logic_error);
     BOOST_CHECK_THROW(
-      TransferConstraints(grammar::ConstraintsVec{tc}, spAe, cap, maxLoad,
-                          false),
+      TransferConstraints(grammar::ConstraintsVec{tc}, spAe, cap, false),
       logic_error);
   });
 
@@ -1265,17 +1264,18 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
       addTypeRange("t1", 1U, 2U); // 't1'{1, 2}
 
     BOOST_CHECK_THROW(
-      TransferConstraints(grammar::ConstraintsVec{tc}, spAe, cap, maxLoad),
+      TransferConstraints(grammar::ConstraintsVec{tc}, spAe, cap),
       logic_error);
     BOOST_CHECK_THROW(
-      TransferConstraints(grammar::ConstraintsVec{tc}, spAe, cap, maxLoad,
-                          false),
+      TransferConstraints(grammar::ConstraintsVec{tc}, spAe, cap, false),
       logic_error);
   });
 
   // heavier entities ('t4' + 't5' => 17) than the max_load=5
   BOOST_CHECK_NO_THROW({
     const double maxLoad = 5.;
+    const auto maxLoadExt =
+        make_shared<const MaxLoadTransferConstraintsExt>(maxLoad);
 
     shared_ptr<const TypesConstraint> tc = make_shared<const TypesConstraint>();
     TypesConstraint *pTc = const_cast<TypesConstraint*>(tc.get());
@@ -1284,17 +1284,20 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
       addTypeRange("t5", 1U, 1U); // 't5'{1}
 
     BOOST_CHECK_THROW(
-      TransferConstraints(grammar::ConstraintsVec{tc}, spAe, cap, maxLoad),
+      TransferConstraints(grammar::ConstraintsVec{tc}, spAe, cap,
+                          true, maxLoadExt),
       logic_error);
     BOOST_CHECK_THROW(
-      TransferConstraints(grammar::ConstraintsVec{tc}, spAe, cap, maxLoad,
-                          false),
+      TransferConstraints(grammar::ConstraintsVec{tc}, spAe, cap,
+                          false, maxLoadExt),
       logic_error);
   });
 
   BOOST_CHECK_NO_THROW({ // 2 alternative constraints
     const unsigned cap = 2U;
     const double maxLoad = 12.;
+    const auto maxLoadExt =
+        make_shared<const MaxLoadTransferConstraintsExt>(maxLoad);
 
     shared_ptr<const IdsConstraint> ic =
       make_shared<const IdsConstraint>();
@@ -1313,16 +1316,19 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
       addTypeRange("t1", 0U, 2U). // (not(2) not(3)) | 2 | 3 | (2 3)
       addTypeRange("t5", 1U);     // 8
 
-    TransferConstraints cc(grammar::ConstraintsVec{ic, tc}, spAe, cap, maxLoad);
+    TransferConstraints cc(grammar::ConstraintsVec{ic, tc}, spAe, cap,
+                           true, maxLoadExt);
     BOOST_CHECK( ! cc.empty());
     BOOST_CHECK(cc.allowed());
     BOOST_CHECK(cc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);
 
-    TransferConstraints notCc(grammar::ConstraintsVec{ic, tc}, spAe, cap, maxLoad,
-                              false);
+    TransferConstraints notCc(grammar::ConstraintsVec{ic, tc}, spAe, cap,
+                              false, maxLoadExt);
     BOOST_CHECK( ! notCc.empty());
     BOOST_CHECK( ! notCc.allowed());
     BOOST_CHECK(notCc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);
+
+    MovingEntities me(spAe, {}, make_unique<TotalLoadExt>(spAe, maxLoad));
 
     // These are some of the configurations which satisfy 1st constraint
     BOOST_CHECK(cc.check(me = vector<unsigned>({0U, 6U}))); // weight: 1+7 < 12
@@ -1354,7 +1360,7 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
     BOOST_CHECK( ! notCc.check(me)); // negated constraints still need to respect maxLoad
   });
 
-  BOOST_CHECK_NO_THROW({ //
+  BOOST_CHECK_NO_THROW({
     shared_ptr<const IdsConstraint> ic1 =
       make_shared<const IdsConstraint>();
     IdsConstraint *pIc1 = const_cast<IdsConstraint*>(ic1.get());
@@ -1389,14 +1395,12 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
        - 1 for the mandatories `(6|7|8)`
        - 1 for the unspecified mandatory `.{1}`
       */
-      TransferConstraints cc(grammar::ConstraintsVec{ic1}, spAe,
-                             cap, maxLoad);
+      TransferConstraints cc(grammar::ConstraintsVec{ic1}, spAe, cap);
       BOOST_CHECK( ! cc.empty());
       BOOST_CHECK(cc.allowed());
       BOOST_CHECK(cc.minRequiredCapacity() == 3U);
 
-      TransferConstraints notCc(grammar::ConstraintsVec{ic1}, spAe,
-                                cap, maxLoad, false);
+      TransferConstraints notCc(grammar::ConstraintsVec{ic1}, spAe, cap, false);
       BOOST_CHECK( ! notCc.empty());
       BOOST_CHECK( ! notCc.allowed());
       BOOST_CHECK(notCc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);
@@ -1410,14 +1414,12 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
        - 2 for the optionals `'t1'{,2}`
        - 1 for the mandatory `'t5'{1}`
       */
-      TransferConstraints cc(grammar::ConstraintsVec{tc}, spAe,
-                             cap, maxLoad);
+      TransferConstraints cc(grammar::ConstraintsVec{tc}, spAe, cap);
       BOOST_CHECK( ! cc.empty());
       BOOST_CHECK(cc.allowed());
       BOOST_CHECK(cc.minRequiredCapacity() == 5U);
 
-      TransferConstraints notCc(grammar::ConstraintsVec{tc}, spAe,
-                                cap, maxLoad, false);
+      TransferConstraints notCc(grammar::ConstraintsVec{tc}, spAe, cap, false);
       BOOST_CHECK( ! notCc.empty());
       BOOST_CHECK( ! notCc.allowed());
       BOOST_CHECK(notCc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);
@@ -1429,14 +1431,13 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
        which can be accommodated by a raft/bridge with a capacity of 5,
        value dictated by the first Types constraint, which is spacier.
       */
-      TransferConstraints cc(grammar::ConstraintsVec{ic1, tc}, spAe,
-                             cap, maxLoad);
+      TransferConstraints cc(grammar::ConstraintsVec{ic1, tc}, spAe, cap);
       BOOST_CHECK( ! cc.empty());
       BOOST_CHECK(cc.allowed());
       BOOST_CHECK(cc.minRequiredCapacity() == 5U);
 
       TransferConstraints notCc(grammar::ConstraintsVec{ic1, tc}, spAe,
-                                cap, maxLoad, false);
+                                cap, false);
       BOOST_CHECK( ! notCc.empty());
       BOOST_CHECK( ! notCc.allowed());
       BOOST_CHECK(notCc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);
@@ -1448,14 +1449,12 @@ BOOST_AUTO_TEST_CASE(transferConstraints_usecases) {
        by a raft/bridge with a capacity of 3 when negated:
        - anything that is less than 4 entities and doesn't contain entity 8
       */
-      TransferConstraints cc(grammar::ConstraintsVec{ic2}, spAe,
-                             cap, maxLoad);
+      TransferConstraints cc(grammar::ConstraintsVec{ic2}, spAe, cap);
       BOOST_CHECK( ! cc.empty());
       BOOST_CHECK(cc.allowed());
       BOOST_CHECK(cc.minRequiredCapacity() == (unsigned)countAvailEnts - 1U);
 
-      TransferConstraints notCc(grammar::ConstraintsVec{ic2}, spAe,
-                                cap, maxLoad, false);
+      TransferConstraints notCc(grammar::ConstraintsVec{ic2}, spAe, cap, false);
       BOOST_CHECK( ! notCc.empty());
       BOOST_CHECK( ! notCc.allowed());
       BOOST_CHECK(notCc.minRequiredCapacity() == 3U);

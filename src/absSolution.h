@@ -11,6 +11,9 @@
 #ifndef H_ABS_SOLUTION
 #define H_ABS_SOLUTION
 
+#include "scenarioDetails.h"
+#include "util.h"
+
 #include <iostream>
 #include <memory>
 
@@ -65,6 +68,113 @@ struct IStateExt /*abstract*/ {
   virtual std::string toString(bool suffixesInsteadOfPrefixes = true) const = 0;
 };
 
+/// Neutral State extension, which does nothing
+struct DefStateExt final : IStateExt {
+  /// Allows sharing the default instance
+  static const std::shared_ptr<const DefStateExt>& INST();
+
+  /// Clones the State extension
+  std::shared_ptr<const IStateExt> clone() const override final;
+
+  /// Validates the parameter state based on the constraints of the extension
+  bool validate() const override final {return true;}
+
+  /**
+  @return true if the state which is extended is not better than provided state
+    based on the constraints of the extension
+  */
+  bool isNotBetterThan(const IState&) const override final {return true;}
+
+  /**
+  @return the extension to be used by the next state,
+    based on current extension and the parameters
+  */
+  std::shared_ptr<const IStateExt>
+      extensionForNextState(const ent::MovingEntities&) const override final;
+
+  std::string toString(bool suffixesInsteadOfPrefixes/* = true*/) const override final {
+    return "";
+  }
+
+    #ifndef UNIT_TESTING // leave ctor public only for Unit tests
+protected:
+    #endif
+
+  DefStateExt() {}
+};
+
+/**
+Base class for state extensions decorators.
+Some of the new virtual methods are abstract and must be implemented
+by every derived class.
+*/
+class AbsStateExt /*abstract*/ :
+      public IStateExt,
+      public DecoratorManager<AbsStateExt, IStateExt> { // provides `selectExt` static method
+
+  friend struct DecoratorManager<AbsStateExt, IStateExt>; // for accessing nextExt
+
+    #ifdef UNIT_TESTING // leave fields public for Unit tests
+public:
+    #else // keep fields protected otherwise
+protected:
+    #endif
+
+  const ScenarioDetails &info;
+  std::shared_ptr<const IStateExt> nextExt;
+
+  AbsStateExt(const ScenarioDetails &info_,
+              const std::shared_ptr<const IStateExt> &nextExt_);
+
+  /// Clones the State extension
+  virtual std::shared_ptr<const IStateExt>
+    _clone(const std::shared_ptr<const IStateExt> &nextExt_) const = 0;
+
+  /// Validates the parameter state based on the constraints of the extension
+  virtual bool _validate() const {return true;}
+
+  /**
+  @return true if the state which is extended is not better than provided state
+    based on the constraints of the extension
+  */
+  virtual bool _isNotBetterThan(const IState&) const {return true;}
+
+  /**
+  @return the extension to be used by the next state,
+    based on current extension and the parameters
+  */
+  virtual std::shared_ptr<const IStateExt>
+      _extensionForNextState(const ent::MovingEntities&,
+                             const std::shared_ptr<const IStateExt> &fromNextExt)
+                      const = 0;
+
+  virtual std::string _toString(bool suffixesInsteadOfPrefixes = true) const {
+    return "";
+  }
+
+public:
+  /// Clones the State extension
+  std::shared_ptr<const IStateExt> clone() const override final;
+
+  /// Validates the parameter state based on the constraints of the extension
+  bool validate() const override final ;
+
+  /**
+  @return true if the state which is extended is not better than provided state
+    based on the constraints of the extension
+  */
+  bool isNotBetterThan(const IState &s2) const override final;
+
+  /**
+  @return the extension to be used by the next state,
+    based on current extension and the parameters
+  */
+  std::shared_ptr<const IStateExt>
+      extensionForNextState(const ent::MovingEntities &me) const override final;
+
+  std::string toString(bool suffixesInsteadOfPrefixes/* = true*/) const override final;
+};
+
 /// A state during solving the scenario
 struct IState /*abstract*/ {
   virtual ~IState() /*= 0*/ {}
@@ -99,15 +209,6 @@ struct IState /*abstract*/ {
   virtual std::unique_ptr<const IState> clone() const = 0;
 
   virtual std::string toString() const = 0;
-};
-
-/// Allows performing canRow, allowedLoads and other checks on raft/bridge configurations
-struct IContextValidator /*abstract*/ {
-  virtual ~IContextValidator()/* = 0 */{}
-
-  /// @return true if `ents` is a valid raft/bridge configuration within `st` context
-  virtual bool validate(const ent::MovingEntities &ents,
-                        const SymbolsTable &st) const = 0;
 };
 
 /// The moved entities and the resulted state

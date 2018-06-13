@@ -18,9 +18,64 @@
 #include <sstream>
 #include <unordered_set>
 #include <iterator>
+#include <boost/logic/tribool.hpp>
 
 namespace rc {
+
+namespace ent {
+
+// Forward declarations
+class AllEntities;
+class MovingEntities;
+
+} // namespace ent
+
 namespace cond {
+
+// Forward declarations
+class IdsConstraint;
+class TypesConstraint;
+
+/**
+Base class for extending the validation of IConfigConstraint.
+Some of the new virtual methods are abstract and must be implemented
+by every derived class.
+*/
+class AbsConfigConstraintValidatorExt /*abstract*/ :
+      public IConfigConstraintValidatorExt,
+      // provides `selectExt` static method
+      public DecoratorManager<AbsConfigConstraintValidatorExt,
+                        IConfigConstraintValidatorExt> {
+
+  // for accessing nextExt
+  friend struct DecoratorManager<AbsConfigConstraintValidatorExt,
+                          IConfigConstraintValidatorExt>;
+
+    #ifdef UNIT_TESTING // leave fields public for Unit tests
+public:
+    #else // keep fields protected otherwise
+protected:
+    #endif
+
+  std::shared_ptr<const IConfigConstraintValidatorExt> nextExt;
+
+  AbsConfigConstraintValidatorExt(
+      const std::shared_ptr<const IConfigConstraintValidatorExt> &nextExt_);
+
+  /// @throw logic_error if the types configuration does not respect current extension
+  virtual void checkTypesCfg(const TypesConstraint &cfg,
+             const std::shared_ptr<const ent::AllEntities> &allEnts) const {}
+
+  /// @throw logic_error if the ids configuration does not respect current extension
+  virtual void checkIdsCfg(const IdsConstraint &cfg,
+             const std::shared_ptr<const ent::AllEntities> &allEnts) const {}
+
+public:
+  /// @throw logic_error if cfg does not respect all the extensions
+  void check(const IConfigConstraint &cfg,
+             const std::shared_ptr<const ent::AllEntities> &allEnts)
+      const override final;
+};
 
 /**
   A collection of several configuration constraints within the context
@@ -70,6 +125,165 @@ public:
   std::string toString() const;
 };
 
+/// Allows performing canRow, allowedLoads and other checks on raft/bridge configurations
+struct IContextValidator /*abstract*/ {
+  virtual ~IContextValidator()/* = 0 */{}
+
+  /// @return true if `ents` is a valid raft/bridge configuration within `st` context
+  virtual bool validate(const ent::MovingEntities &ents,
+                        const SymbolsTable &st) const = 0;
+};
+
+/// Neutral context validator - accepts any raft/bridge configuration
+struct DefContextValidator final : IContextValidator {
+  /// Allows sharing the default instance
+  static const std::shared_ptr<const DefContextValidator>& INST();
+
+  bool validate(const ent::MovingEntities&, const SymbolsTable&) const override final {
+    return true;
+  }
+
+    #ifndef UNIT_TESTING // leave ctor public only for Unit tests
+protected:
+    #endif
+
+  DefContextValidator() {}
+};
+
+/**
+Calling `IContextValidator::validate()` might throw.
+Some valid contexts (expressed mainly by the Symbols Table)
+allow this to happen.
+In those cases there should actually be a validation result.
+
+This interface allows handling those exceptions so that
+whenever they occur, the validation will provide a result instead of throwing.
+
+The rest of the exceptions will still propagate.
+
+When an exception is caught, an instance of a derived class assesses the context.
+*/
+struct IValidatorExceptionHandler /*abstract*/ {
+  virtual ~IValidatorExceptionHandler()/* = 0*/ {}
+
+  /**
+  Assesses the context of the exception.
+  If it doesn't match the exempted cases, returns `indeterminate`.
+  If it matches the exempted cases generates a boolean validation result
+  */
+  virtual boost::logic::tribool assess(const ent::MovingEntities &ents,
+                                       const SymbolsTable &st) const = 0;
+};
+
+/// Abstract base class for the context validator decorators.
+class AbsContextValidator /*abstract*/ : public IContextValidator {
+
+    #ifdef UNIT_TESTING // leave fields public for Unit tests
+public:
+    #else // keep fields protected otherwise
+protected:
+    #endif
+
+  // using shared_ptr as more configurations might use these fields
+  std::shared_ptr<const IContextValidator> nextValidator; ///< a chained next validator
+  std::shared_ptr<const IValidatorExceptionHandler> ownValidatorExcHandler; ///< possible handler for particular contexts
+
+  AbsContextValidator(
+    const std::shared_ptr<const IContextValidator> &nextValidator_,
+    const std::shared_ptr<const IValidatorExceptionHandler> &ownValidatorExcHandler_
+      = nullptr);
+
+  /// @return true if `ents` is a valid raft/bridge configuration within `st` context
+  virtual bool doValidate(const ent::MovingEntities &ents,
+                          const SymbolsTable &st) const = 0;
+
+public:
+  /**
+  Performs local validation and then delegates to the next validator.
+  The local validation might throw and the optional handler might
+  stop the exception propagation and generate a validation result instead.
+
+  @return true if `ents` is a valid raft/bridge configuration within `st` context
+  */
+  bool validate(const ent::MovingEntities &ents,
+                const SymbolsTable &st) const override final;
+};
+
+/// Interface for the extensions for transfer constraints
+struct ITransferConstraintsExt /*abstract*/ {
+  virtual ~ITransferConstraintsExt()/* = 0 */{}
+
+  /// @return validator extensions of a configuration
+  virtual std::shared_ptr<const IConfigConstraintValidatorExt>
+    configValidatorExt() const = 0;
+
+  /// @return true only if cfg satisfies these extensions
+  virtual bool check(const ent::MovingEntities &cfg) const = 0;
+};
+
+/// Neutral TransferConstraints extension
+struct DefTransferConstraintsExt final : ITransferConstraintsExt {
+  /// Allows sharing the default instance
+  static const std::shared_ptr<const DefTransferConstraintsExt>& INST();
+
+  /// @return validator extensions of a configuration
+  std::shared_ptr<const IConfigConstraintValidatorExt> configValidatorExt()
+              const override final;
+
+  /// @return true only if cfg satisfies these extensions
+  bool check(const ent::MovingEntities&) const override final {return true;}
+
+    #ifndef UNIT_TESTING // leave ctor public only for Unit tests
+protected:
+    #endif
+
+  DefTransferConstraintsExt() {}
+};
+
+/**
+Base class for handling transfer constraints extensions.
+Some of the new virtual methods are abstract and must be implemented
+by every derived class.
+*/
+class AbsTransferConstraintsExt /*abstract*/ :
+      public ITransferConstraintsExt,
+      // provides `selectExt` static method
+      public DecoratorManager<AbsTransferConstraintsExt,
+                        ITransferConstraintsExt> {
+
+  // for accessing nextExt
+  friend struct DecoratorManager<AbsTransferConstraintsExt,
+                          ITransferConstraintsExt>;
+
+    #ifdef UNIT_TESTING // leave fields public for Unit tests
+public:
+    #else // keep fields protected otherwise
+protected:
+    #endif
+
+  std::shared_ptr<const ITransferConstraintsExt> nextExt;
+
+  AbsTransferConstraintsExt(
+      const std::shared_ptr<const ITransferConstraintsExt> &nextExt_);
+
+  /// @return validator extensions of a configuration
+  virtual std::shared_ptr<const IConfigConstraintValidatorExt>
+    _configValidatorExt(
+        const std::shared_ptr<const IConfigConstraintValidatorExt> &fromNextExt)
+                          const = 0;
+
+  /// @return true only if cfg satisfies current extension
+  virtual bool _check(const ent::MovingEntities&) const {return true;}
+
+public:
+  /// @return validator extensions of a configuration
+  std::shared_ptr<const IConfigConstraintValidatorExt> configValidatorExt()
+              const override final;
+
+  /// @return true only if cfg satisfies these extensions
+  bool check(const ent::MovingEntities &cfg) const override final;
+};
+
 /// ConfigConstraints for raft/bridge configurations
 class TransferConstraints : public ConfigConstraints {
 
@@ -79,7 +293,7 @@ public:
 protected:
     #endif
 
-  const double &_maxLoad;  ///< Overall max load of the raft/bridge
+  const std::shared_ptr<const ITransferConstraintsExt> extension;
 
   /// How many entities are allowed on the raft/bridge at once
   const unsigned &_capacity;
@@ -88,15 +302,16 @@ public:
   /// @throw logic_error for an invalid constraint
   TransferConstraints(grammar::ConstraintsVec &&constraints_,
                       const std::shared_ptr<const ent::AllEntities> &allEnts_,
-                      const unsigned &capacity, const double &maxLoad,
-                      bool allowed_ = true);
+                      const unsigned &capacity, bool allowed_ = true,
+                      const std::shared_ptr<const ITransferConstraintsExt> &extension_
+                        = DefTransferConstraintsExt::INST());
 
   /**
     For _allowed == true - are these entities respecting
-      first the capacity and max load conditions
+      first the capacity and extension conditions
       and then matching at least 1 of the allowed configurations?
     For _allowed == false - are these entities respecting
-      the capacity and max load conditions,
+      the capacity and extension conditions,
       but violating all of the forbidden configurations?
 
     @param ents the entities to be checked against these ConfigConstraints
@@ -107,6 +322,10 @@ public:
 
   /// @return the minimal capacity suitable for these constraints
   unsigned minRequiredCapacity() const;
+
+  std::shared_ptr<const ITransferConstraintsExt> getExtension() const {
+    return extension;
+  }
 };
 
 /// Valid configurations of same duration
@@ -126,7 +345,9 @@ public:
   ConfigurationsTransferDuration(
       grammar::ConfigurationsTransferDurationInitType &&initType,
       const std::shared_ptr<const ent::AllEntities> &allEnts_,
-      const unsigned &capacity, const double &maxLoad);
+      const unsigned &capacity,
+      const std::shared_ptr<const ITransferConstraintsExt> &extension_
+            = DefTransferConstraintsExt::INST());
 
   /// all configurations with the given duration
   const TransferConstraints& configConstraints() const;
@@ -172,18 +393,24 @@ public:
   std::unique_ptr<const IConfigConstraint> clone() const override;
 
   /**
-    Checks the validity of this constraint using entities information
-    @throw logic_error for an invalid constraint
+  Checks the validity of this constraint using entities information,
+  raft/bridge capacity and additional validation logic
+
+  @throw logic_error for an invalid constraint
   */
   void validate(const std::shared_ptr<const ent::AllEntities> &allEnts,
-                unsigned capacity = UINT_MAX,
-                double maxLoad = DBL_MAX) const override;
+      unsigned capacity = UINT_MAX,
+      const std::shared_ptr<const IConfigConstraintValidatorExt> &valExt
+        = DefConfigConstraintValidatorExt::INST()) const override;
 
   /// Is there a match between the provided collection and the constraint's data?
   bool matches(const ent::IsolatedEntities &ents) const override;
 
   /// @return the length of the longest possible match
   unsigned longestMatchLength() const override;
+
+  const std::unordered_map<std::string, std::pair<unsigned, unsigned>>&
+    mandatoryTypeNames() const {return mandatoryTypes;}
 
   std::string toString() const override;
 };
@@ -283,12 +510,15 @@ public:
   std::unique_ptr<const IConfigConstraint> clone() const override;
 
   /**
-    Checks the validity of this constraint using entities information
-    @throw logic_error for an invalid constraint
+  Checks the validity of this constraint using entities information,
+  raft/bridge capacity and additional validation logic
+
+  @throw logic_error for an invalid constraint
   */
   void validate(const std::shared_ptr<const ent::AllEntities> &allEnts,
-                unsigned capacity = UINT_MAX,
-                double maxLoad = DBL_MAX) const override;
+      unsigned capacity = UINT_MAX,
+      const std::shared_ptr<const IConfigConstraintValidatorExt> &valExt
+        = DefConfigConstraintValidatorExt::INST()) const override;
 
   /// Is there a match between the provided collection and the constraint's data?
   bool matches(const ent::IsolatedEntities &ents) const override;

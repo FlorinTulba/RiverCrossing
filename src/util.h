@@ -105,6 +105,31 @@ struct DecoratorManager {
 
     return nullptr;
   }
+
+  /**
+  Selects the requested `Decorator`, if any, among the collection
+  pointed by the decorator collection parameter `ext`.
+
+  @return the requested `Decorator` or NULL if `ext` does not contain it
+  */
+  template<class Decorator, typename =
+      std::enable_if_t<std::is_convertible<Decorator*, AbsDecorator*>::value>>
+  static const Decorator* selectExt(const IfDecorator *ext) {
+    const Decorator *resExt = dynamic_cast<const Decorator*>(ext);
+    if(nullptr != resExt)
+      return resExt;
+
+    const AbsDecorator *hostExt = dynamic_cast<const AbsDecorator*>(ext);
+    while(nullptr != hostExt) {
+      resExt = dynamic_cast<const Decorator*>(hostExt->nextExt.get());
+      if(nullptr != resExt)
+        return resExt;
+
+      hostExt = dynamic_cast<const AbsDecorator*>(hostExt->nextExt.get());
+    }
+
+    return nullptr;
+  }
 };
 
 } // namespace rc

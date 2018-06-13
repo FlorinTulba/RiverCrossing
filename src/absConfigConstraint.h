@@ -14,7 +14,6 @@
 #include "symbolsTable.h"
 
 #include <memory>
-#include <cfloat>
 #include <climits>
 #include <iostream>
 
@@ -32,17 +31,48 @@ class IsolatedEntities;
 
 namespace cond {
 
+struct IConfigConstraint; // forward declaration
+
+/// Allows an extension of the validation of IConfigConstraint
+struct IConfigConstraintValidatorExt /*abstract*/ {
+  virtual ~IConfigConstraintValidatorExt() /*= 0*/ {}
+
+  /// @throw logic_error if cfg does not respect all the extensions
+  virtual void check(const IConfigConstraint &cfg,
+                     const std::shared_ptr<const ent::AllEntities> &allEnts) const = 0;
+};
+
+/// Neutral IConfigConstraint validator extension
+struct DefConfigConstraintValidatorExt final : IConfigConstraintValidatorExt {
+  /// Allows sharing the default instance
+  static const std::shared_ptr<const DefConfigConstraintValidatorExt>& INST();
+
+  /// @throw logic_error if cfg does not respect all the extensions
+  void check(const IConfigConstraint &cfg,
+             const std::shared_ptr<const ent::AllEntities> &allEnts)
+      const override final {}
+
+    #ifndef UNIT_TESTING // leave ctor public only for Unit tests
+protected:
+    #endif
+
+  DefConfigConstraintValidatorExt() {}
+};
+
 /// Expresses a configuration for the raft(/bridge) / banks
 struct IConfigConstraint /*abstract*/ {
   virtual ~IConfigConstraint() /*= 0*/ {}
 
   /**
-    Checks the validity of this constraint using entities information
-    @throw logic_error for an invalid constraint
+  Checks the validity of this constraint using entities information,
+  raft/bridge capacity and additional validation logic
+
+  @throw logic_error for an invalid constraint
   */
   virtual void validate(const std::shared_ptr<const ent::AllEntities> &allEnts,
-                        unsigned capacity = UINT_MAX,
-                        double maxLoad = DBL_MAX) const = 0;
+      unsigned capacity = UINT_MAX,
+      const std::shared_ptr<const IConfigConstraintValidatorExt> &valExt
+        = DefConfigConstraintValidatorExt::INST()) const = 0;
 
   /// @return a copy of this on heap
   virtual std::unique_ptr<const IConfigConstraint> clone() const = 0;

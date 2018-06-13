@@ -13,13 +13,111 @@
 #include "mathRelated.h"
 
 #include <algorithm>
-#include <numeric>
 #include <iomanip>
 
 using namespace std;
 
 namespace rc {
 namespace cond {
+
+AbsConfigConstraintValidatorExt::AbsConfigConstraintValidatorExt(
+    const shared_ptr<const IConfigConstraintValidatorExt> &nextExt_) :
+  nextExt(VP(nextExt_)) {}
+
+void AbsConfigConstraintValidatorExt::check(const IConfigConstraint &cfg,
+           const shared_ptr<const ent::AllEntities> &allEnts) const {
+  assert(nullptr != nextExt);
+  nextExt->check(cfg, allEnts);
+
+  const TypesConstraint *pTypesCfg =
+    dynamic_cast<const TypesConstraint*>(&cfg);
+  if(nullptr != pTypesCfg) {
+    checkTypesCfg(*pTypesCfg, allEnts);
+    return;
+  }
+
+  const IdsConstraint *pIdsCfg =
+    dynamic_cast<const IdsConstraint *>(&cfg);
+  if(nullptr != pIdsCfg) {
+    checkIdsCfg(*pIdsCfg, allEnts);
+    return;
+  }
+}
+
+const shared_ptr<const DefConfigConstraintValidatorExt>&
+        DefConfigConstraintValidatorExt::INST() {
+  static const shared_ptr<const DefConfigConstraintValidatorExt>
+    inst(new DefConfigConstraintValidatorExt);
+  return inst;
+}
+
+const shared_ptr<const DefContextValidator>& DefContextValidator::INST() {
+  static const shared_ptr<const DefContextValidator>
+    inst(new DefContextValidator);
+  return inst;
+}
+
+AbsContextValidator::AbsContextValidator(
+    const shared_ptr<const IContextValidator> &nextValidator_,
+    const shared_ptr<const IValidatorExceptionHandler> &ownValidatorExcHandler_
+      /* = nullptr*/) :
+  nextValidator(VP(nextValidator_)),
+  ownValidatorExcHandler(ownValidatorExcHandler_) {}
+
+bool AbsContextValidator::validate(const ent::MovingEntities &ents,
+              const SymbolsTable &st) const {
+  bool resultOwnValidator = false;
+  try {
+    resultOwnValidator = doValidate(ents, st);
+  } catch(const exception&) {
+    if(nullptr != ownValidatorExcHandler) {
+      const boost::logic::tribool excAssessment =
+        ownValidatorExcHandler->assess(ents, st);
+
+      if(boost::logic::indeterminate(excAssessment))
+        throw; // not an exempted case
+
+      resultOwnValidator = excAssessment;
+
+    } else throw; // no saving exception handler
+  }
+
+  if( ! resultOwnValidator)
+    return false;
+
+  assert(nextValidator);
+  return nextValidator->validate(ents, st);
+}
+
+const shared_ptr<const DefTransferConstraintsExt>&
+            DefTransferConstraintsExt::INST() {
+  static const shared_ptr<const DefTransferConstraintsExt>
+    inst(new DefTransferConstraintsExt);
+  return inst;
+}
+
+shared_ptr<const IConfigConstraintValidatorExt>
+      DefTransferConstraintsExt::configValidatorExt() const {
+  return DefConfigConstraintValidatorExt::INST();
+}
+
+AbsTransferConstraintsExt::AbsTransferConstraintsExt(
+    const shared_ptr<const ITransferConstraintsExt> &nextExt_) :
+  nextExt(VP(nextExt_)) {}
+
+shared_ptr<const IConfigConstraintValidatorExt>
+        AbsTransferConstraintsExt::configValidatorExt() const {
+  assert(nullptr != nextExt);
+  return _configValidatorExt(nextExt->configValidatorExt());
+}
+
+bool AbsTransferConstraintsExt::check(const ent::MovingEntities &cfg) const {
+  if( ! _check(cfg))
+    return false;
+
+  assert(nullptr != nextExt);
+  return nextExt->check(cfg);
+}
 
 ConfigConstraints::ConfigConstraints(grammar::ConstraintsVec &&constraints_,
       const shared_ptr<const ent::AllEntities> &allEnts_,
@@ -80,12 +178,13 @@ string ConfigConstraints::toString() const {
 
 TransferConstraints::TransferConstraints(grammar::ConstraintsVec &&constraints_,
         const shared_ptr<const ent::AllEntities> &allEnts_,
-        const unsigned &capacity, const double &maxLoad,
-        bool allowed_/* = true*/) :
+        const unsigned &capacity, bool allowed_/* = true*/,
+        const shared_ptr<const ITransferConstraintsExt> &extension_
+            /* = DefTransferConstraintsExt::INST()*/) :
     ConfigConstraints(move(constraints_), allEnts_, allowed_, true),
-    _capacity(capacity), _maxLoad(maxLoad) {
+    _capacity(capacity), extension(VP(extension_)) {
   for(const auto &c : constraints)
-    c->validate(allEnts, _capacity, _maxLoad);
+    c->validate(allEnts, _capacity, extension->configValidatorExt());
 }
 
 bool TransferConstraints::check(const ent::IsolatedEntities &ents) const {
@@ -107,16 +206,9 @@ bool TransferConstraints::check(const ent::IsolatedEntities &ents) const {
     return false;
   }
 
-  const double entsWeight = pEnts->weight();
-  if(entsWeight - Eps > _maxLoad) {
-#ifndef NDEBUG
-    cout<<"violates maxWeight constraint [ "
-      <<entsWeight<<" > "<<_maxLoad<<" ] : ";
-    copy(CBOUNDS(entsIds), ostream_iterator<unsigned>(cout, " "));
-    cout<<endl;
-#endif // NDEBUG
+  assert(nullptr != extension);
+  if( ! extension->check(*pEnts))
     return false;
-  }
 
   return ConfigConstraints::check(ents);
 }
@@ -145,8 +237,11 @@ unsigned TransferConstraints::minRequiredCapacity() const {
 ConfigurationsTransferDuration::ConfigurationsTransferDuration(
       grammar::ConfigurationsTransferDurationInitType &&initType,
       const shared_ptr<const ent::AllEntities> &allEnts_,
-      const unsigned &capacity, const double &maxLoad) :
-    constraints(move(initType.moveConstraints()), allEnts_, capacity, maxLoad),
+      const unsigned &capacity,
+      const shared_ptr<const ITransferConstraintsExt> &extension_
+            /* = DefTransferConstraintsExt::INST()*/) :
+    constraints(move(initType.moveConstraints()),
+                allEnts_, capacity, true, extension_),
     _duration(initType.duration()) {}
 
 const TransferConstraints& ConfigurationsTransferDuration::configConstraints() const {
@@ -168,8 +263,11 @@ unique_ptr<const IConfigConstraint> TypesConstraint::clone() const {
 }
 
 void TypesConstraint::validate(const shared_ptr<const ent::AllEntities> &allEnts,
-                               unsigned capacity/* = UINT_MAX*/,
-                               double maxLoad/* = DBL_MAX*/) const {
+         unsigned capacity/* = UINT_MAX*/,
+         const shared_ptr<const IConfigConstraintValidatorExt> &valExt
+            /* = DefConfigConstraintValidatorExt::INST()*/) const {
+  VP(valExt);
+
   const map<string, set<unsigned>> &idsByTypes = allEnts->idsByTypes();
   const auto idsByTypesEnd = idsByTypes.cend();
 
@@ -179,7 +277,6 @@ void TypesConstraint::validate(const shared_ptr<const ent::AllEntities> &allEnts
         " - Unknown type name `"s + t + "` in constraint `"s + toString() + "`!"s);
 
   size_t minRequiredCount = 0ULL;
-  double minConfigWeight = 0.;
   for(const auto &typeAndLimits : mandatoryTypes) {
     const string &t = typeAndLimits.first;
     const set<unsigned> &matchingIds = idsByTypes.at(t);
@@ -191,14 +288,6 @@ void TypesConstraint::validate(const shared_ptr<const ent::AllEntities> &allEnts
         ") of type "s + t + " than available ("s + to_string(available) + ")!"s);
 
     minRequiredCount += minLim;
-
-    // Add the lightest minLim entities of this type
-    multiset<double> weightsOfType;
-    for(unsigned id : matchingIds)
-      weightsOfType.insert((*allEnts)[id]->weight());
-    const auto weightsOfTypeBegin = cbegin(weightsOfType);
-    minConfigWeight +=
-      accumulate(weightsOfTypeBegin, next(weightsOfTypeBegin, minLim), 0.);
   }
 
   if(minRequiredCount > (size_t)capacity)
@@ -206,10 +295,7 @@ void TypesConstraint::validate(const shared_ptr<const ent::AllEntities> &allEnts
       "` is asking for more entities ("s + to_string(minRequiredCount) +
       ") than the capacity ("s + to_string(capacity) + ")!"s);
 
-  if(minConfigWeight - Eps > maxLoad)
-    throw logic_error(string(__func__) + " - Constraint `"s + toString() +
-      "` produces a load >= "s + to_string(minConfigWeight) +
-      ", which is more than the maximum allowed load ("s + to_string(maxLoad) + ")!"s);
+  valExt->check(*this, allEnts);
 }
 
 TypesConstraint& TypesConstraint::addTypeRange(const string &newType,
@@ -330,8 +416,11 @@ unique_ptr<const IConfigConstraint> IdsConstraint::clone() const {
 }
 
 void IdsConstraint::validate(const shared_ptr<const ent::AllEntities> &allEnts,
-                             unsigned capacity/* = UINT_MAX*/,
-                             double maxLoad/* = DBL_MAX*/) const {
+         unsigned capacity/* = UINT_MAX*/,
+         const shared_ptr<const IConfigConstraintValidatorExt> &valExt
+            /* = DefConfigConstraintValidatorExt::INST()*/) const {
+  VP(valExt);
+
   const size_t requiredIdsCount = mandatoryGroups.size() + (size_t)expectedExtraIds,
     available = allEnts->count();
   if(requiredIdsCount > (size_t)capacity)
@@ -351,8 +440,7 @@ void IdsConstraint::validate(const shared_ptr<const ent::AllEntities> &allEnts,
       throw logic_error(string(__func__) + " - Unknown entity id `"s +
         to_string(id) + "` in constraint `"s + toString() + "`!"s);
 
-  // Checking the maxLoad constraint is unpractical here,
-  // because of the extra id-s (a count of mandatory unspecified entities)
+  valExt->check(*this, allEnts);
 }
 
 IdsConstraint& IdsConstraint::addMandatoryId(unsigned id) {

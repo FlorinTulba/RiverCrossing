@@ -9,7 +9,9 @@
 */
 
 #include "scenario.h"
-#include "mathRelated.h"
+#include "rowAbilityExt.h"
+#include "durationExt.h"
+#include "transferredLoadExt.h"
 
 #include <iomanip>
 
@@ -64,240 +66,9 @@ void generateCombinations(BidirIt first, BidirIt end,
 }
 
 using namespace rc;
+using namespace rc::cond;
 using namespace rc::ent;
 using namespace rc::sol;
-
-/// Fall-back context validator - accepts any raft/bridge configuration
-struct DefContextValidator final : IContextValidator {
-  /// Allows sharing the default instance
-  static const shared_ptr<const DefContextValidator>& INST() {
-    static const shared_ptr<const DefContextValidator>
-      inst(new DefContextValidator);
-    return inst;
-  }
-
-  bool validate(const MovingEntities&, const SymbolsTable&) const override {
-    return true;
-  }
-
-    #ifndef UNIT_TESTING // leave ctor public only for Unit tests
-protected:
-    #endif
-
-  DefContextValidator() {}
-};
-
-/**
-Calling `IContextValidator::validate()` might throw.
-Some valid contexts (expressed mainly by the Symbols Table)
-allow this to happen.
-In those cases there should actually be a validation result.
-
-This interface allows handling those exceptions so that
-whenever they occur, the validation will provide a result instead of throwing.
-
-The rest of the exceptions will still propagate.
-
-When an exception is caught, an instance of a derived class assesses the context.
-*/
-struct IValidatorExceptionHandler /*abstract*/ {
-  virtual ~IValidatorExceptionHandler()/* = 0*/ {}
-
-  /**
-  Assesses the context of the exception.
-  If it doesn't match the exempted cases, returns `indeterminate`.
-  If it matches the exempted cases generates a boolean validation result
-  */
-  virtual boost::logic::tribool assess(const MovingEntities &ents,
-                                       const SymbolsTable &st) const = 0;
-};
-
-/// Abstract base class for the context validator decorators.
-class AbsContextValidator /*abstract*/ : public IContextValidator {
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  // using shared_ptr as more configurations might use these fields
-  shared_ptr<const IContextValidator> nextValidator; ///< a chained next validator
-  shared_ptr<const IValidatorExceptionHandler> ownValidatorExcHandler; ///< possible handler for particular contexts
-
-  AbsContextValidator(
-    const shared_ptr<const IContextValidator> &nextValidator_
-      = DefContextValidator::INST(),
-    const shared_ptr<const IValidatorExceptionHandler> &ownValidatorExcHandler_
-      = nullptr) :
-      nextValidator(VP(nextValidator_)),
-      ownValidatorExcHandler(ownValidatorExcHandler_) {}
-
-  /// @return true if `ents` is a valid raft/bridge configuration within `st` context
-  virtual bool doValidate(const MovingEntities &ents,
-                          const SymbolsTable &st) const = 0;
-
-public:
-  /**
-  Performs local validation and then delegates to the next validator.
-  The local validation might throw and the optional handler might
-  stop the exception propagation and generate a validation result instead.
-
-  @return true if `ents` is a valid raft/bridge configuration within `st` context
-  */
-  bool validate(const MovingEntities &ents,
-                const SymbolsTable &st) const override final {
-    bool resultOwnValidator = false;
-    try {
-      resultOwnValidator = doValidate(ents, st);
-    } catch(const exception&) {
-      if(nullptr != ownValidatorExcHandler) {
-        const boost::logic::tribool excAssessment =
-          ownValidatorExcHandler->assess(ents, st);
-
-        if(boost::logic::indeterminate(excAssessment))
-          throw; // not an exempted case
-
-        resultOwnValidator = excAssessment;
-
-      } else throw; // no saving exception handler
-    }
-
-    if( ! resultOwnValidator)
-      return false;
-
-    assert(nextValidator);
-    return nextValidator->validate(ents, st);
-  }
-};
-
-/// Can row validator
-class CanRowValidator : public AbsContextValidator {
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  /// @return true if `ents` is a valid raft/bridge configuration within `st` context
-  bool doValidate(const MovingEntities &ents,
-                  const SymbolsTable &st) const override {
-    const bool valid = ents.anyRowCapableEnts(st);
-#ifndef NDEBUG
-    if( ! valid) {
-      cout<<"Nobody rows now : ";
-      copy(CBOUNDS(ents.ids()), ostream_iterator<unsigned>(cout, " "));
-      cout<<endl;
-    }
-#endif // NDEBUG
-    return valid;
-  }
-
-public:
-  CanRowValidator(
-    const shared_ptr<const IContextValidator> &nextValidator_
-      = DefContextValidator::INST(),
-    const shared_ptr<const IValidatorExceptionHandler> &ownValidatorExcHandler_
-      = nullptr) :
-    AbsContextValidator(nextValidator_, ownValidatorExcHandler_) {}
-};
-
-using namespace rc::cond;
-
-/**
-The validation of allowed loads generates an out_of_range exception
-when looking for `PreviousRaftLoad` entry in the Symbols Table
-for the initial state of the scenario to be solved.
-
-Initially and whenever the algorithm backtracks to the initial state,
-there is no previous raft load, so in those contexts
-`PreviousRaftLoad` can't appear in the Symbols Table.
-*/
-class InitiallyNoPrevRaftLoadExcHandler : public IValidatorExceptionHandler {
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  shared_ptr<const IValues<double>> _allowedLoads; ///< the allowed loads
-  bool dependsOnPreviousRaftLoad;
-
-public:
-  InitiallyNoPrevRaftLoadExcHandler(
-        const shared_ptr<const IValues<double>> &allowedLoads) :
-      _allowedLoads(VP(allowedLoads)) {
-    if(_allowedLoads->empty())
-      throw invalid_argument(string(__func__) +
-        " - doesn't accept empty allowedLoads parameter! "
-        "Some loads must be allowed!");
-
-    dependsOnPreviousRaftLoad =
-        _allowedLoads->dependsOnVariable("PreviousRaftLoad");
-  }
-
-  /**
-  Tries to detect if the algorithm is in / has back-tracked to the initial state.
-  If it isn't, it returns `indeterminate`.
-  If it is, it returns true, to validate any possible raft/bridge load.
-  */
-  boost::logic::tribool assess(const MovingEntities&,
-                               const SymbolsTable &st) const override {
-    // Ensure first that the allowed loads depend on `PreviousRaftLoad`
-    if( ! dependsOnPreviousRaftLoad)
-      return boost::logic::indeterminate;
-
-    const auto stEnd = cend(st),
-      itCrossingIndex = st.find("CrossingIndex");
-    const bool
-      isInitialState =
-        (st.find("PreviousRaftLoad") == stEnd)      // missing PreviousRaftLoad
-        && (itCrossingIndex != stEnd)               // existing CrossingIndex
-        && (itCrossingIndex->second <= 1. + Eps);   // CrossingIndex <= 1
-    if(isInitialState)
-      return true;
-
-    return boost::logic::indeterminate;
-  }
-};
-
-/// Allowed loads validator
-class AllowedLoadsValidator : public AbsContextValidator {
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  shared_ptr<const IValues<double>> _allowedLoads; ///< the allowed loads
-
-  /// @return true if `ents` is a valid raft/bridge configuration within `st` context
-  bool doValidate(const MovingEntities &ents,
-                  const SymbolsTable &st) const override {
-    const bool valid = _allowedLoads->contains(ents.weight(), st);
-#ifndef NDEBUG
-    if( ! valid) {
-      cout<<"Invalid load ["<<ents.weight()<<" outside "<<*_allowedLoads<<"] : ";
-      copy(CBOUNDS(ents.ids()), ostream_iterator<unsigned>(cout, " "));
-      cout<<endl;
-    }
-#endif // NDEBUG
-    return valid;
-  }
-
-public:
-  AllowedLoadsValidator(
-    const shared_ptr<const IValues<double>> &allowedLoads,
-    const shared_ptr<const IContextValidator> &nextValidator_
-      = DefContextValidator::INST(),
-    const shared_ptr<const IValidatorExceptionHandler> &ownValidatorExcHandler_
-      = nullptr) :
-      AbsContextValidator(nextValidator_, ownValidatorExcHandler_),
-      _allowedLoads(VP(allowedLoads)) {}
-};
 
 /// Raft/bridge configuration plus the associated validator
 class MovingConfigOption {
@@ -362,7 +133,7 @@ public:
 protected:
     #endif
 
-  const Scenario::Details &scenarioDetails; ///< the details of the scenario
+  const ScenarioDetails &scenarioDetails; ///< the details of the scenario
   const SymbolsTable &SymTb; ///< the Symbols Table
 
   /// All possible raft/bridge configurations considering all entities are on the same bank
@@ -379,7 +150,7 @@ protected:
     const unique_ptr<const TransferConstraints> &transferConstraints =
       scenarioDetails._transferConstraints;
 
-    MovingEntities me(entities, cfg);
+    MovingEntities me(entities, cfg, scenarioDetails.createMovingEntitiesExt());
 
     assert(nullptr != transferConstraints);
     if(transferConstraints->check(me)) {
@@ -396,7 +167,7 @@ public:
   Generates all possible raft/bridge configurations considering all entities
   are on the same bank. Adds all necessary context validators.
   */
-  MovingConfigsManager(const Scenario::Details &scenarioDetails_,
+  MovingConfigsManager(const ScenarioDetails &scenarioDetails_,
                        const SymbolsTable &SymTb_) :
       scenarioDetails(scenarioDetails_), SymTb(SymTb_) {
     const shared_ptr<const AllEntities> &entities = scenarioDetails.entities;
@@ -507,50 +278,6 @@ public:
     cout<<endl;
 #endif // NDEBUG
   }
-};
-
-using namespace rc::sol;
-
-/// Default State extension, which does nothing
-struct DefStateExt final : IStateExt {
-  /// Allows sharing the default instance
-  static const shared_ptr<const DefStateExt>& INST() {
-    static const shared_ptr<const DefStateExt> inst(new DefStateExt);
-    return inst;
-  }
-
-  /// Clones the State extension
-  shared_ptr<const IStateExt> clone() const override final {
-    return INST();
-  }
-
-  /// Validates the parameter state based on the constraints of the extension
-  bool validate() const override final {return true;}
-
-  /**
-  @return true if the state which is extended is not better than provided state
-    based on the constraints of the extension
-  */
-  bool isNotBetterThan(const IState&) const override final {
-    return true;
-  }
-
-  /**
-  @return the extension to be used by the next state,
-    based on current extension and the parameters
-  */
-  shared_ptr<const IStateExt>
-      extensionForNextState(const MovingEntities&) const override final {
-    return DefStateExt::INST();
-  }
-
-  string toString(bool suffixesInsteadOfPrefixes/* = true*/) const override final {return "";}
-
-    #ifndef UNIT_TESTING // leave ctor public only for Unit tests
-protected:
-    #endif
-
-  DefStateExt() {}
 };
 
 /// A state during solving the scenario
@@ -674,303 +401,6 @@ public:
     } // ensures tsm's destructor flushes to oss before the return
     return oss.str();
   }
-};
-
-/**
-Base class for state extensions decorators.
-Some of the new virtual methods are abstract and must be implemented
-by every derived class.
-*/
-class AbsStateExt /*abstract*/ :
-      public IStateExt,
-      public DecoratorManager<AbsStateExt, IStateExt> { // provides `selectExt` static method
-
-  friend struct DecoratorManager<AbsStateExt, IStateExt>; // for accessing nextExt
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  const Scenario::Details &info;
-  shared_ptr<const IStateExt> nextExt;
-
-  AbsStateExt(const Scenario::Details &info_,
-              const shared_ptr<const IStateExt> &nextExt_) :
-      info(info_), nextExt(VP(nextExt_)) {}
-
-  /// Clones the State extension
-  virtual shared_ptr<const IStateExt>
-    _clone(const shared_ptr<const IStateExt> &nextExt_) const = 0;
-
-  /// Validates the parameter state based on the constraints of the extension
-  virtual bool _validate() const {return true;}
-
-  /**
-  @return true if the state which is extended is not better than provided state
-    based on the constraints of the extension
-  */
-  virtual bool _isNotBetterThan(const IState&) const {
-    return true;
-  }
-
-  /**
-  @return the extension to be used by the next state,
-    based on current extension and the parameters
-  */
-  virtual shared_ptr<const IStateExt>
-      _extensionForNextState(const MovingEntities&,
-                             const shared_ptr<const IStateExt> &fromNextExt)
-                      const = 0;
-
-  virtual string _toString(bool suffixesInsteadOfPrefixes = true) const {
-    return "";
-  }
-
-public:
-  /// Clones the State extension
-  shared_ptr<const IStateExt> clone() const override final {
-    assert(nullptr != nextExt);
-    return _clone(nextExt->clone());
-  }
-
-  /// Validates the parameter state based on the constraints of the extension
-  bool validate() const override final {
-    assert(nullptr != nextExt);
-    return nextExt->validate() && _validate();
-  }
-
-  /**
-  @return true if the state which is extended is not better than provided state
-    based on the constraints of the extension
-  */
-  bool isNotBetterThan(const IState &s2) const override final {
-    assert(nullptr != nextExt);
-    return nextExt->isNotBetterThan(s2) && _isNotBetterThan(s2);
-  }
-
-  /**
-  @return the extension to be used by the next state,
-    based on current extension and the parameters
-  */
-  shared_ptr<const IStateExt>
-      extensionForNextState(const MovingEntities &me) const override final {
-    assert(nullptr != nextExt);
-    const shared_ptr<const IStateExt> fromNextExt =
-      nextExt->extensionForNextState(me);
-    return _extensionForNextState(me, fromNextExt);
-  }
-
-  string toString(bool suffixesInsteadOfPrefixes/* = true*/) const override final {
-    assert(nullptr != nextExt);
-    // Only the matching extension categories will return non-empty strings
-    // given suffixesInsteadOfPrefixes
-    // (some display only as prefixes, the rest only as suffixes)
-    return _toString(suffixesInsteadOfPrefixes) +
-      nextExt->toString(suffixesInsteadOfPrefixes);
-  }
-};
-
-/// Allows State to contain a time entry - the moment the state is reached
-class TimeStateExt : public AbsStateExt {
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  unsigned _time; ///< the moment this state is reached
-
-  shared_ptr<const IStateExt>
-      _clone(const shared_ptr<const IStateExt> &nextExt_) const override {
-    return make_shared<const TimeStateExt>(_time, info, nextExt_);
-  }
-
-  /// Validates the parameter state based on the constraints of the extension
-  bool _validate() const override {
-    if(_time > info._maxDuration) {
-#ifndef NDEBUG
-      cout<<"violates duration constraint ["
-        <<_time<<" > "<<info._maxDuration<<']'<<endl;
-#endif // NDEBUG
-      return false;
-    }
-    return true;
-  }
-
-  /**
-  @return true if the state which is extended is not better than provided state
-    based on the constraints of the extension
-  */
-  bool _isNotBetterThan(const IState &s2) const override {
-    const shared_ptr<const IStateExt> extensions2 = s2.getExtension();
-    assert(nullptr != extensions2);
-
-    shared_ptr<const TimeStateExt> timeExt2 =
-      AbsStateExt::selectExt<TimeStateExt>(extensions2);
-
-    // if the other state was reached earlier, it is better
-    return _time >=
-      VP_EX_MSG(timeExt2,
-                logic_error,
-                "The parameter must be a state "
-                "with a TimeStateExt extension!")->_time;
-  }
-
-  /**
-  @return the extension to be used by the next state,
-    based on current extension and the parameters
-  */
-  shared_ptr<const IStateExt>
-      _extensionForNextState(const MovingEntities &movedEnts,
-                             const shared_ptr<const IStateExt> &fromNextExt) const override {
-    unsigned timeOfNextState = _time;
-    bool foundMatch = false;
-    for(const ConfigurationsTransferDuration &ctdItem : info.ctdItems) {
-      const TransferConstraints& config = ctdItem.configConstraints();
-      if( ! config.check(movedEnts))
-        continue;
-
-      foundMatch = true;
-      timeOfNextState += ctdItem.duration();
-      break;
-    }
-
-    if( ! foundMatch)
-      throw domain_error(string(__func__) +
-        " - Provided CrossingDurationsOfConfigurations items don't cover "
-        "raft configuration: "s + movedEnts.toString());
-
-    return make_shared<const TimeStateExt>(timeOfNextState, info, fromNextExt);
-  }
-
-  string _toString(bool suffixesInsteadOfPrefixes/* = true*/) const override {
-    // This is displayed only as prefix information
-    if(suffixesInsteadOfPrefixes)
-      return "";
-
-    ostringstream oss;
-    oss<<"[Time "<<setw(4)<<_time<<"] ";
-    return oss.str();
-  }
-
-public:
-  TimeStateExt(unsigned time_, const Scenario::Details &info_,
-               const shared_ptr<const IStateExt> &nextExt_ = DefStateExt::INST()) :
-      AbsStateExt(info_, nextExt_), _time(time_) {}
-
-  unsigned time() const {return _time;}
-};
-
-/// A state decorator considering `PreviousRaftLoad` from the Symbols Table
-class PrevLoadStateExt : public AbsStateExt {
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  double previousRaftLoad;
-  unsigned crossingIndex;
-
-  /// Clones the State extension
-  shared_ptr<const IStateExt>
-      _clone(const shared_ptr<const IStateExt> &nextExt_) const override {
-    return make_shared<const PrevLoadStateExt>(crossingIndex, previousRaftLoad,
-                                               info, nextExt_);
-  }
-
-  /**
-  @return true if the state which is extended is not better than provided state
-    based on the constraints of the extension
-  */
-  bool _isNotBetterThan(const IState &s2) const override {
-    const shared_ptr<const IStateExt> extensions2 = s2.getExtension();
-    assert(nullptr != extensions2);
-
-    shared_ptr<const PrevLoadStateExt> prevLoadStateExt2 =
-      AbsStateExt::selectExt<PrevLoadStateExt>(extensions2);
-
-    const double otherPreviousRaftLoad =
-      VP_EX_MSG(prevLoadStateExt2,
-                logic_error,
-                "The parameter must be a state "
-                "with a PrevLoadStateExt extension!")->previousRaftLoad;
-
-    /*
-    PreviousRaftLoad on NaN means the initial state.
-    Whenever the algorithm reaches back to initial state
-    (by advancing, not backtracking), it should backtrack,
-    as the length of the solution would be longer (when continuing in this manner)
-    than the length of the solution starting fresh with the move about to consider
-    next from this revisited initial state.
-    */
-    if(isNaN(otherPreviousRaftLoad))
-      return true; // deciding to disallow revisiting the initial state
-
-    return abs(previousRaftLoad - otherPreviousRaftLoad) < Eps;
-  }
-
-  /**
-  @return the extension to be used by the next state,
-    based on current extension and the parameters
-  */
-  shared_ptr<const IStateExt>
-      _extensionForNextState(const MovingEntities &movedEnts,
-                             const shared_ptr<const IStateExt> &fromNextExt)
-                      const override {
-    return make_shared<const PrevLoadStateExt>(crossingIndex + 1U,
-                                               movedEnts.weight(),
-                                               info, fromNextExt);
-  }
-
-  string _toString(bool suffixesInsteadOfPrefixes/* = true*/) const override {
-    // This is displayed only as suffix information
-    if( ! suffixesInsteadOfPrefixes)
-      return "";
-
-    ostringstream oss;
-    oss<<" ; PrevRaftLoad: "<<previousRaftLoad;
-    return oss.str();
-  }
-
-public:
-  PrevLoadStateExt(unsigned crossingIndex_, double previousRaftLoad_,
-                   const Scenario::Details &info_,
-                   const shared_ptr<const IStateExt> &nextExt_
-                      = DefStateExt::INST()) :
-      AbsStateExt(info_, nextExt_),
-      crossingIndex(crossingIndex_), previousRaftLoad(previousRaftLoad_) {}
-
-  PrevLoadStateExt(const SymbolsTable &symbols,
-                   const Scenario::Details &info_,
-                   const shared_ptr<const IStateExt> &nextExt_
-                      = DefStateExt::INST()) :
-      AbsStateExt(info_, nextExt_) {
-    // PreviousRaftLoad should miss from Symbols Table when CrossingIndex <= 1
-    const auto stEnd = cend(symbols);
-    const auto itCrossingIndex = symbols.find("CrossingIndex"),
-      itPreviousRaftLoad = symbols.find("PreviousRaftLoad");
-    if(itCrossingIndex == stEnd)
-      throw logic_error(string(__func__) +
-        " - needs to get `symbols` table containing an entry for CrossingIndex!");
-
-    crossingIndex = (unsigned)floor(.5 + itCrossingIndex->second); // rounded value
-    if(itPreviousRaftLoad == stEnd) {
-      if(crossingIndex >= 2U)
-        throw logic_error(string(__func__) +
-          " - needs to get `symbols` table containing an entry for PreviousRaftLoad "
-          "when the CrossingIndex entry is >= 2 !");
-
-      previousRaftLoad = numeric_limits<double>::quiet_NaN();
-    } else previousRaftLoad = itPreviousRaftLoad->second;
-  }
-
-  double prevRaftLoad() const {return previousRaftLoad;}
-  unsigned crossingIdx() const {return crossingIndex;}
 };
 
 /// The moved entities and the resulted state
@@ -1124,7 +554,7 @@ public:
 protected:
     #endif
 
-  const Scenario::Details &scenarioDetails; ///< the details of the scenario
+  const ScenarioDetails &scenarioDetails; ///< the details of the scenario
   Scenario::Results &results; ///< the results for the scenario
 
   SymbolsTable SymTb; ///< the Symbols Table
@@ -1185,27 +615,16 @@ protected:
         return; // no need to update the rest of the information now
       }
 
-      const size_t attemptLen = solver.steps->length();
-      if(attemptLen > solver.results.longestInvestigatedPath)
-        solver.results.longestInvestigatedPath = attemptLen;
-
-      const size_t crtDistToSol = solver.steps->distToSolution();
-      if(solver.minDistToGoal > crtDistToSol) {
-        solver.minDistToGoal = crtDistToSol;
-        solver.results.closestToTargetLeftBank =
-          {move.resultedState()->leftBank()};
-
-      } else if(solver.minDistToGoal == crtDistToSol) {
-        solver.results.closestToTargetLeftBank.
-          push_back(move.resultedState()->leftBank());
-      }
-
-      const double prevRaftLoad = move.movedEntities().weight();
-      if(prevRaftLoad > 0.) solver.SymTb["PreviousRaftLoad"] = prevRaftLoad;
       ++solver.SymTb["CrossingIndex"];
+
+      assert(nullptr != move.movedEntities().getExtension());
+      move.movedEntities().getExtension()->addMovePostProcessing(solver.SymTb);
 
       const shared_ptr<const IState> crtState = move.resultedState();
       solver.examinedStates.emplace_back(crtState->clone());
+
+      solver.results.update(*solver.steps, crtState->leftBank(),
+                            solver.minDistToGoal);
     }
 
     /// Reverts the dead-end move(step)
@@ -1215,16 +634,23 @@ protected:
 
       // Dead end => backtracking
       solver.steps->pop();
-      const size_t attemptLen = solver.steps->length();
-      if(attemptLen > 0ULL) {
-        const double theLoad =
-          solver.steps->move(attemptLen-1ULL).movedEntities().weight();
-        if(theLoad > 0.)
-          solver.SymTb["PreviousRaftLoad"] = theLoad;
-      } else
-        solver.SymTb.erase("PreviousRaftLoad");
 
       --solver.SymTb["CrossingIndex"];
+
+      // Allowing the actions of the extensions
+      const size_t attemptLen = solver.steps->length();
+      if(attemptLen > 0ULL) {
+        const IMovingEntitiesExt *previousMoveExt =
+          solver.steps->move(attemptLen-1ULL).movedEntities().getExtension();
+        assert(nullptr != previousMoveExt);
+        previousMoveExt->removeMovePostProcessing(solver.SymTb);
+
+      } else { // empty attempt - no previous moves
+        const auto extOfFakePreviousMove =
+          solver.scenarioDetails.createMovingEntitiesExt();
+        assert(nullptr != extOfFakePreviousMove);
+        extOfFakePreviousMove->removeMovePostProcessing(solver.SymTb);
+      }
 
 #ifndef NDEBUG
       cout<<endl<<endl<<"UNDO move "<<solver.SymTb["CrossingIndex"]<<" : "<<_move<<endl;
@@ -1273,13 +699,14 @@ protected:
   /// Pretends the initial state is the result of a previous move (empty raft/bridge)
   bool explore(unique_ptr<const IState> initialState) {
     return explore({
-      MovingEntities(scenarioDetails.entities),
+      MovingEntities(scenarioDetails.entities, {},
+                     scenarioDetails.createMovingEntitiesExt()),
       move(initialState),
       UINT_MAX}); // UINT_MAX because the fake initial move can't have a valid index
   }
 
 public:
-  Solver(const Scenario::Details &scenarioDetails_,
+  Solver(const ScenarioDetails &scenarioDetails_,
          Scenario::Results &results_) :
       scenarioDetails(scenarioDetails_),
       results(results_),
@@ -1314,13 +741,67 @@ public:
 
 namespace rc {
 
+namespace sol {
+
+const shared_ptr<const DefStateExt>& DefStateExt::INST() {
+  static const shared_ptr<const DefStateExt> inst(new DefStateExt);
+  return inst;
+}
+
+shared_ptr<const IStateExt> DefStateExt::clone() const {
+  return INST();
+}
+
+shared_ptr<const IStateExt>
+    DefStateExt::extensionForNextState(const ent::MovingEntities&) const {
+  return DefStateExt::INST();
+}
+
+AbsStateExt::AbsStateExt(const ScenarioDetails &info_,
+            const shared_ptr<const IStateExt> &nextExt_) :
+    info(info_), nextExt(VP(nextExt_)) {}
+
+shared_ptr<const IStateExt> AbsStateExt::clone() const {
+  assert(nullptr != nextExt);
+  return _clone(nextExt->clone());
+}
+
+bool AbsStateExt::validate() const {
+  assert(nullptr != nextExt);
+  return nextExt->validate() && _validate();
+}
+
+bool AbsStateExt::isNotBetterThan(const IState &s2) const {
+  assert(nullptr != nextExt);
+  return nextExt->isNotBetterThan(s2) && _isNotBetterThan(s2);
+}
+
+shared_ptr<const IStateExt>
+    AbsStateExt::extensionForNextState(const ent::MovingEntities &me) const {
+  assert(nullptr != nextExt);
+  const shared_ptr<const IStateExt> fromNextExt =
+    nextExt->extensionForNextState(me);
+  return _extensionForNextState(me, fromNextExt);
+}
+
+string AbsStateExt::toString(bool suffixesInsteadOfPrefixes/* = true*/) const {
+  assert(nullptr != nextExt);
+  // Only the matching extension categories will return non-empty strings
+  // given suffixesInsteadOfPrefixes
+  // (some display only as prefixes, the rest only as suffixes)
+  return _toString(suffixesInsteadOfPrefixes) +
+    nextExt->toString(suffixesInsteadOfPrefixes);
+}
+
+} // namespace sol
+
 const SymbolsTable& InitialSymbolsTable(){
   static const SymbolsTable st{{"CrossingIndex", 0.}};
   return st;
 }
 
 unique_ptr<const IState>
-      Scenario::Details::createInitialState(const SymbolsTable &SymTb) const {
+      ScenarioDetails::createInitialState(const SymbolsTable &SymTb) const {
   shared_ptr<const IStateExt> stateExt = DefStateExt::INST();
 
   if(nullptr != allowedLoads &&
@@ -1335,17 +816,6 @@ unique_ptr<const IState>
             BankEntities(entities, entities->idsStartingFromRightBank()),
             true, // always start from left bank
             stateExt);
-}
-
-shared_ptr<const IContextValidator>
-      Scenario::Details::createTransferValidator() const {
-  const shared_ptr<const IContextValidator> &res = DefContextValidator::INST();
-  if(nullptr == allowedLoads)
-    return res;
-
-  return
-    make_shared<const AllowedLoadsValidator>(allowedLoads, res,
-      make_shared<const InitiallyNoPrevRaftLoadExcHandler>(allowedLoads));
 }
 
 const Scenario::Results& Scenario::solution() {

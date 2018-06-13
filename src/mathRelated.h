@@ -12,6 +12,7 @@
 #define H_MATH_RELATED
 
 #include <limits>
+#include <cstring>
 
 namespace rc {
 

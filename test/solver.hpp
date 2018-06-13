@@ -17,15 +17,20 @@ by `#ifdef UNIT_TESTING`!"
 
 #else // for SOLVER_CPP and UNIT_TESTING
 
+#include <cfloat>
 #include <boost/test/unit_test.hpp>
 
 #include "../src/util.h"
+#include "../src/mathRelated.h"
 #include "../src/entity.h"
+#include "../src/transferredLoadExt.h"
 
 #include <numeric>
 #include <cmath>
 
 using namespace rc;
+using namespace rc::ent;
+using namespace rc::cond;
 using namespace rc::sol;
 
 /// factorial function
@@ -209,8 +214,10 @@ BOOST_AUTO_TEST_CASE(contextValidation_usecases) {
   pVs->add(ValueOrRange(c)). // hold value d   (2.4)
     add(ValueOrRange(v, c2)); // hold range 'a' .. d2  (4.9 .. 6.8)
 
+  MovingEntities me1(ae, {}, make_unique<TotalLoadExt>(ae));
+
   BOOST_CHECK_THROW(AllowedLoadsValidator(vs).validate(
-                    me = vector<unsigned>{5U},
+                    me1 = vector<unsigned>{5U},
                     emptySt), out_of_range); // cannot find 'a' in emptySt
 
   BOOST_CHECK_NO_THROW({
@@ -218,7 +225,7 @@ BOOST_AUTO_TEST_CASE(contextValidation_usecases) {
 
     BOOST_CHECK( ! inprleh.dependsOnPreviousRaftLoad);
 
-    BOOST_CHECK(boost::logic::indeterminate(inprleh.assess(me, emptySt)));
+    BOOST_CHECK(boost::logic::indeterminate(inprleh.assess(me1, emptySt)));
   });
 
   // 'a' not found in emptySt.
@@ -230,7 +237,7 @@ BOOST_AUTO_TEST_CASE(contextValidation_usecases) {
                           defValid,   // next is the default validator
                           make_shared<const InitiallyNoPrevRaftLoadExcHandler>(
                             vs)).     // doesn't depend on `PreviousRaftLoad`
-      validate(me = vector<unsigned>{5U},
+      validate(me1 = vector<unsigned>{5U},
                emptySt),              // doesn't contain 'a'
     out_of_range); // missing var 'a' continues to propagate
 
@@ -267,7 +274,7 @@ BOOST_AUTO_TEST_CASE(contextValidation_usecases) {
                           make_shared<const MissingVarExcHandler>(
                             "b",      // 'b' can be missing, but is present
                             false)).  // outcome if 'b' is missing
-      validate(me = vector<unsigned>{5U},
+      validate(me1 = vector<unsigned>{5U},
                {{"b", 1000.}}),       // doesn't contain 'a', but contains 'b'
     out_of_range); // missing var 'a' continues to propagate
 
@@ -280,22 +287,22 @@ BOOST_AUTO_TEST_CASE(contextValidation_usecases) {
                               make_shared<const MissingVarExcHandler>(
                                 var,      // 'a' can be missing
                                 false)).  // outcome if 'a' is missing
-          validate(me = vector<unsigned>{5U},
+          validate(me1 = vector<unsigned>{5U},
                    emptySt));             // doesn't contain 'a'
 
     AllowedLoadsValidator alv(vs);
 
     // Entity 6 weighs 7 - outside 4.9..6.8 and different from 2.4
     BOOST_CHECK( ! alv.validate(
-                me = vector<unsigned>{6U}, st));
+                me1 = vector<unsigned>{6U}, st));
 
     // Entity 5 weighs 6 - in 4.9..6.8
     BOOST_CHECK(alv.validate(
-                me = vector<unsigned>{5U}, st));
+                me1 = vector<unsigned>{5U}, st));
 
     // Entity 1 & 3 weigh together 6 - in 4.9..6.8
     BOOST_CHECK(alv.validate(
-                me = vector<unsigned>{1U, 3U}, st));
+                me1 = vector<unsigned>{1U, 3U}, st));
   });
 
   BOOST_CHECK_NO_THROW({ // combined CanRow & AllowedLoads validator
@@ -304,28 +311,28 @@ BOOST_AUTO_TEST_CASE(contextValidation_usecases) {
     // Entities 1,3,5 don't row
     // and weigh 12 - outside 4.9..6.8 and <> 2.4
     BOOST_CHECK( ! alcrv.validate(
-                me = vector<unsigned>{1U, 3U, 5U}, st));
+                me1 = vector<unsigned>{1U, 3U, 5U}, st));
 
     // Entities with id-s 1,3,5 don't row, but 8 does,
     // but their weight is 21 - outside 4.9..6.8 and <> 2.4
     BOOST_CHECK( ! alcrv.validate(
-                me = vector<unsigned>{1U, 3U, 5U, 8U}, st));
+                me1 = vector<unsigned>{1U, 3U, 5U, 8U}, st));
 
     // Entity 6 can row, but weighs 7 - outside 4.9..6.8 and <> 2.4
     BOOST_CHECK( ! alcrv.validate(
-                me = vector<unsigned>{6U}, st));
+                me1 = vector<unsigned>{6U}, st));
 
     // Entity 5 weighs 6 - in 4.9..6.8, however it doesn't row
     BOOST_CHECK( ! alcrv.validate(
-                me = vector<unsigned>{5U}, st));
+                me1 = vector<unsigned>{5U}, st));
 
     // Entity 1 & 3 weigh together 6 - in 4.9..6.8, however they don't row
     BOOST_CHECK( ! alcrv.validate(
-                me = vector<unsigned>{1U, 3U}, st));
+                me1 = vector<unsigned>{1U, 3U}, st));
 
     // Entity 4 weighs 5 - in 4.9..6.8 and it does row
     BOOST_CHECK(alcrv.validate(
-                me = vector<unsigned>{4U}, st));
+                me1 = vector<unsigned>{4U}, st));
   });
 
   pVs->add(ValueOrRange(make_shared<const NumericVariable>("PreviousRaftLoad")));
@@ -336,45 +343,45 @@ BOOST_AUTO_TEST_CASE(contextValidation_usecases) {
 
     BOOST_CHECK(inprleh->dependsOnPreviousRaftLoad);
 
-    BOOST_CHECK(inprleh->assess(me, InitialSymbolsTable())); // idx is 0
-    BOOST_CHECK(inprleh->assess(me,
+    BOOST_CHECK(inprleh->assess(me1, InitialSymbolsTable())); // idx is 0
+    BOOST_CHECK(inprleh->assess(me1,
                                 {{"CrossingIndex",
                                 1.}})); // true for idx <=1
 
-    BOOST_CHECK(boost::logic::indeterminate(inprleh->assess(me,
+    BOOST_CHECK(boost::logic::indeterminate(inprleh->assess(me1,
                                      {{"CrossingIndex",
                                      2.}}))); // indeterminate for idx >=2
     // indeterminate as well when PreviousRaftLoad appears
-    BOOST_CHECK(boost::logic::indeterminate(inprleh->assess(me,
+    BOOST_CHECK(boost::logic::indeterminate(inprleh->assess(me1,
       {{"PreviousRaftLoad", 15.}})));
     // indeterminate as well when both CrossingIndex and PreviousRaftLoad appear
-    BOOST_CHECK(boost::logic::indeterminate(inprleh->assess(me,
+    BOOST_CHECK(boost::logic::indeterminate(inprleh->assess(me1,
       {{"CrossingIndex", 1.}, {"PreviousRaftLoad", 15.}})));
     // indeterminate as well when both CrossingIndex and PreviousRaftLoad miss
-    BOOST_CHECK(boost::logic::indeterminate(inprleh->assess(me, emptySt)));
+    BOOST_CHECK(boost::logic::indeterminate(inprleh->assess(me1, emptySt)));
 
     AllowedLoadsValidator alv(vs, defValid, inprleh);
 
     // Although 'a' is missing, validation succeeds due to inprleh
     BOOST_CHECK(alv.validate( // no `PreviousRaftLoad`; `CrossingIndex` is 0
-                me = vector<unsigned>{6U}, InitialSymbolsTable()));
+                me1 = vector<unsigned>{6U}, InitialSymbolsTable()));
 
     // Although 'a' is missing, validation succeeds due to inprleh
     BOOST_CHECK(alv.validate( // no `PreviousRaftLoad`; `CrossingIndex` is 1
-                me = vector<unsigned>{6U},
+                me1 = vector<unsigned>{6U},
                 {{"CrossingIndex", 1.}}));
 
     // for the cases below the out_of_range due to missing 'a' propagates
-    BOOST_CHECK_THROW(alv.validate(me = vector<unsigned>{6U},
+    BOOST_CHECK_THROW(alv.validate(me1 = vector<unsigned>{6U},
                 {{"CrossingIndex", 2.}}),
                 out_of_range); // idx >= 2
-    BOOST_CHECK_THROW(alv.validate(me = vector<unsigned>{6U},
+    BOOST_CHECK_THROW(alv.validate(me1 = vector<unsigned>{6U},
                 {{"PreviousRaftLoad", 15.}}),
                 out_of_range); // PreviousRaftLoad appears
-    BOOST_CHECK_THROW(alv.validate(me = vector<unsigned>{6U},
+    BOOST_CHECK_THROW(alv.validate(me1 = vector<unsigned>{6U},
                 {{"CrossingIndex", 1.}, {"PreviousRaftLoad", 15.}}),
                 out_of_range); // both CrossingIndex and PreviousRaftLoad appear
-    BOOST_CHECK_THROW(alv.validate(me = vector<unsigned>{6U}, emptySt),
+    BOOST_CHECK_THROW(alv.validate(me1 = vector<unsigned>{6U}, emptySt),
                 out_of_range); // both CrossingIndex and PreviousRaftLoad miss
   });
 }
@@ -434,7 +441,7 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
   });
   const size_t entsCantRowCount = pAe->count();
 
-  Scenario::Details sd;
+  ScenarioDetails sd;
   sd.entities = shared_ptr<const AllEntities>(pAe);
   BankEntities be(sd.entities);
 
@@ -465,9 +472,7 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
 
   // The default transfer constraints
   sd._transferConstraints = make_unique<const TransferConstraints>(
-            grammar::ConstraintsVec{}, sd.entities,
-            sd._capacity, sd._maxLoad,
-            false);
+            grammar::ConstraintsVec{}, sd.entities, sd._capacity, false);
   vector<const MovingEntities*> configsForABank;
 
   BOOST_CHECK_NO_THROW({
@@ -509,7 +514,7 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
       vector<set<unsigned>> expectedConfigs({{9}, {1, 9}, {3, 9}, {1, 3, 9}});
       mcm.configsForBank(be = vector<unsigned>({1U, 3U, 9U}), configsForABank, false);
       BOOST_CHECK(configsForABank == expectedConfigs);
-      const shared_ptr<const sol::IContextValidator> validator =
+      const shared_ptr<const IContextValidator> validator =
         sd.createTransferValidator(); // allows anything now
       bool b = false;
       BOOST_CHECK(b = (nullptr != validator));
@@ -563,6 +568,11 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
     {
       assert(sd._capacity == 2U);
       sd._maxLoad = 13.;
+
+      sd._transferConstraints = make_unique<const TransferConstraints>(
+				grammar::ConstraintsVec{}, sd.entities, sd._capacity, false,
+        make_shared<const MaxLoadTransferConstraintsExt>(sd._maxLoad));
+
       MovingConfigsManager mcm(sd, emptySt);
 
       const double maxInvestigatedRaftCombs =
@@ -597,11 +607,12 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
       IdsConstraint *pIc = new IdsConstraint;
       shared_ptr<const IdsConstraint> ic = shared_ptr<const IdsConstraint>(pIc);
       pIc->addOptionalId(9U).addUnspecifiedMandatory(); // 9? *
+      const shared_ptr<const MaxLoadTransferConstraintsExt> maxLoadExt =
+        make_shared<const MaxLoadTransferConstraintsExt>(sd._maxLoad);
       sd._transferConstraints =
         make_unique<const TransferConstraints>(grammar::ConstraintsVec{ic},
-                                               sd.entities,
-                                               sd._capacity, sd._maxLoad,
-                                               true);
+                                               sd.entities, sd._capacity, true,
+                                               maxLoadExt);
       MovingConfigsManager mcm(sd, emptySt);
 
       const double maxInvestigatedRaftCombs =
@@ -652,19 +663,21 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
                          configsForABank,
                          false);
       BOOST_CHECK(configsForABank == expectedConfigs);
-      const shared_ptr<const sol::IContextValidator> validator =
+      const shared_ptr<const IContextValidator> validator =
         sd.createTransferValidator(); // allows anything weighing 12
       bool b = false;
       BOOST_CHECK(b = (nullptr != validator));
       if(b) {
         // allows even an unexpected config weighing 12, where no entity can row
         BOOST_CHECK(validator->validate(
-          ent::MovingEntities(sd.entities, vector<unsigned>({1U, 11U})),
+          ent::MovingEntities(sd.entities, vector<unsigned>({1U, 11U}),
+                              sd.createMovingEntitiesExt()),
           emptySt));
 
         // allows 5&7 weighing 12, which violates `9? *` constraint
         BOOST_CHECK(validator->validate(
-          ent::MovingEntities(sd.entities, vector<unsigned>({5U, 7U})),
+          ent::MovingEntities(sd.entities, vector<unsigned>({5U, 7U}),
+                              sd.createMovingEntitiesExt()),
           InitialSymbolsTable()));
 
         // allow confirmed configurations
@@ -718,14 +731,18 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
   grammar::ConfigurationsTransferDurationInitType ctdit;
   ctdit.setDuration(4321U).setConstraints({ic});
 
-  Scenario::Details info;
+  ScenarioDetails info;
   info.entities = ae;
   info._capacity = cap;
   info._maxLoad = maxLoad;
   info._maxDuration = t*t;
-  info.ctdItems.emplace_back(std::move(ctdit), ae, cap, maxLoad);
 
-  MovingEntities moved(ae, vector<unsigned>({2U, 3U}));
+  const shared_ptr<const MaxLoadTransferConstraintsExt> maxLoadExt =
+    make_shared<const MaxLoadTransferConstraintsExt>(maxLoad);
+  info.ctdItems.emplace_back(std::move(ctdit), ae, cap, maxLoadExt);
+
+  MovingEntities moved(ae, vector<unsigned>({2U, 3U}),
+                       make_unique<TotalLoadExt>(ae, maxLoad));
 
   {
     BankEntities left5(left), right5(right);
@@ -927,7 +944,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
   }
 
   {
-    Scenario::Details d;
+    ScenarioDetails d;
     d.entities = ae;
     d.allowedLoads = nullptr;
 
@@ -1044,7 +1061,7 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
     *pAe += make_shared<const Entity>(3U, "c", "", false, "false");
   });
 
-  Scenario::Details d;
+  ScenarioDetails d;
   d.entities = ae;
   d._capacity = 2U;
 
@@ -1232,15 +1249,13 @@ BOOST_AUTO_TEST_CASE(solvingVariousScenarios) {
   });
 
   Scenario::Results o;
-  Scenario::Details d;
+  ScenarioDetails d;
   d.entities = ae;
   d._capacity = 2U;
 
   // Default transfer constraints
   d._transferConstraints = make_unique<const TransferConstraints>(
-            grammar::ConstraintsVec{}, d.entities,
-            d._capacity, d._maxLoad,
-            false);
+            grammar::ConstraintsVec{}, d.entities, d._capacity, false);
 
   BOOST_CHECK_NO_THROW({
     assert(d._capacity == 2U);
@@ -1265,6 +1280,9 @@ BOOST_AUTO_TEST_CASE(solvingVariousScenarios) {
   });
 
   d._maxLoad = 3.;
+  d._transferConstraints = make_unique<const TransferConstraints>(
+            grammar::ConstraintsVec{}, d.entities, d._capacity, false,
+            d.createTransferConstraintsExt());
 
   // Entity 3 doesn't row and the raft supports only its weight => no solution
   BOOST_CHECK_NO_THROW({
