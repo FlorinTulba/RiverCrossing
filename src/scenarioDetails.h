@@ -133,8 +133,16 @@ struct ScenarioDetails {
   unique features and that state is not the same for all, thus not a shared_ptr
   */
   std::unique_ptr<ent::IMovingEntitiesExt> createMovingEntitiesExt() const;
+
+	std::string toString() const; ///< displays the content
 };
 
-}
+} // namespace rc
+
+namespace std {
+
+std::ostream& operator<<(std::ostream &os, const rc::ScenarioDetails &sc);
+
+} // namespace std
 
 #endif // H_SCENARIO_DETAILS not defined

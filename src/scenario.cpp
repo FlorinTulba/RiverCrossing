@@ -522,31 +522,39 @@ const string& Scenario::description() const {
 
 string Scenario::toString() const {
 	ostringstream oss;
-	if(details.entities)
-		oss<<*details.entities<<endl;
+	oss<<details.toString();
+	return oss.str();
+}
+
+string ScenarioDetails::toString() const {
+	ostringstream oss;
+	if(nullptr != entities)
+		oss<<*entities<<endl;
 
 	oss<<"CrossingConstraints: { ";
-	if(details._capacity != UINT_MAX)
-		oss<<"Capacity = "<<details._capacity<<"; ";
-	if(details._maxLoad != DBL_MAX)
-		oss<<"MaxLoad = "<<details._maxLoad<<"; ";
-	if(details._transferConstraints && ! details._transferConstraints->empty())
-		oss<<"TransferConstraints = "<<*details._transferConstraints<<"; ";
-	if(details.allowedLoads)
-		oss<<"AllowedLoads = `"<<*details.allowedLoads<<"`; ";
-	if( ! details.ctdItems.empty()) {
+	if(_capacity != UINT_MAX)
+		oss<<"Capacity = "<<_capacity<<"; ";
+	if(_maxLoad != DBL_MAX)
+		oss<<"MaxLoad = "<<_maxLoad<<"; ";
+	if(nullptr != _transferConstraints &&
+        ! _transferConstraints->empty())
+		oss<<"TransferConstraints = "<<*_transferConstraints<<"; ";
+	if(nullptr != allowedLoads)
+		oss<<"AllowedLoads = `"<<*allowedLoads<<"`; ";
+	if( ! ctdItems.empty()) {
 		oss<<"CrossingDurations: { ";
-		copy(CBOUNDS(details.ctdItems),
+		copy(CBOUNDS(ctdItems),
 			ostream_iterator<ConfigurationsTransferDuration>(oss, " ; "));
 		oss<<"\b\b}; ";
 	}
 	oss<<"\b\b }";
-	if(details._banksConstraints && ! details._banksConstraints->empty())
-		oss<<endl<<"BanksConstraints = "<<*details._banksConstraints<<"; ";
+	if(nullptr != _banksConstraints &&
+        ! _banksConstraints->empty())
+		oss<<endl<<"BanksConstraints = "<<*_banksConstraints<<"; ";
 
-	if(details._maxDuration != UINT_MAX) {
+	if(_maxDuration != UINT_MAX) {
 		oss<<endl<<"OtherConstraints: { ";
-		oss<<"TimeLimit = "<<details._maxDuration<<"; ";
+		oss<<"TimeLimit = "<<_maxDuration<<"; ";
 		oss<<"\b\b }";
 	}
 
@@ -558,6 +566,11 @@ string Scenario::toString() const {
 namespace std {
 
 ostream& operator<<(ostream &os, const rc::Scenario &sc) {
+	os<<sc.toString();
+	return os;
+}
+
+ostream& operator<<(ostream &os, const rc::ScenarioDetails &sc) {
 	os<<sc.toString();
 	return os;
 }
