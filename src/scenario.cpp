@@ -78,12 +78,12 @@ protected:
 
   shared_ptr<const AllEntities> entities; ///< all entities of the scenario
 
-  /// Provided / deduced transfer capacity (&ScenarioDetails::_capacity)
+  /// Provided / deduced transfer capacity (&ScenarioDetails::capacity)
   unsigned &capacity;
 
 public:
   TransferCapacityManager(const shared_ptr<const AllEntities> &entities_,
-                          unsigned &capacity_) : // &ScenarioDetails::_capacity
+                          unsigned &capacity_) : // &ScenarioDetails::capacity
       entities(CP(entities_)), capacity(capacity_) {
     if(entities_->count() < 3ULL)
       throw domain_error(string(__func__) +
@@ -218,12 +218,12 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 				" - The scenario description should be an array of 1 or more strings!");
 	descr = oss.str();
 
-	unsigned &_capacity = details._capacity;
+	unsigned &capacity = details.capacity;
   shared_ptr<const AllEntities> &entities = details.entities;
 	entities = make_shared<const AllEntities>(entTree);
 	assert(entities && entities->count() > 0ULL);
 	shared_ptr<const IEntity> firstEntity = (*entities)[*cbegin(entities->ids())];
-	TransferCapacityManager capManager(entities, _capacity);
+	TransferCapacityManager capManager(entities, capacity);
 
 	banksConstraintsTree = pt.get_child("BanksConstraints", empty);
 	otherConstraintsTree = pt.get_child("OtherConstraints", empty);
@@ -248,17 +248,17 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 		++uniqueConstraints;
 	}
 
-	double &_maxLoad = details._maxLoad;
+	double &maxLoad = details.maxLoad;
 	static const vector<string> maxLoadSynonyms{"RaftMaxLoad", "BridgeMaxLoad"};
 	if(onlyOneExpected(crossingConstraintsTree, maxLoadSynonyms, key)) {
 		try {
-			_maxLoad = crossingConstraintsTree.get<double>(key);
+			maxLoad = crossingConstraintsTree.get<double>(key);
 		} catch(const ptree_bad_data &ex) {
 			throw domain_error(string(__func__) +
 				" - Bad type for the raft max load! "s + ex.what());
 		}
 
-		if(_maxLoad <= 0.)
+		if(maxLoad <= 0.)
 			throw domain_error(string(__func__) +
 				" - The raft max load cannot be negative or zero! "s);
 
@@ -269,7 +269,7 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 				" - Please specify strictly positive weights for all entities "
 				"when using the `"s + key + "` constraint!"s);
 
-    capManager.setMaxLoad(_maxLoad);
+    capManager.setMaxLoad(maxLoad);
 
 		++uniqueConstraints;
 	}
@@ -316,20 +316,20 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 			(*readConstraints).push_back(make_shared<const IdsConstraint>());
 
 		try {
-			details._transferConstraints = make_unique<const TransferConstraints>(
+			details.transferConstraints = make_unique<const TransferConstraints>(
 				move(*readConstraints), entities, capManager.getCapacity(), allowed,
         transferConstraintsExt);
 		} catch(const logic_error &e) {
 			throw domain_error(e.what());
 		}
 
-    capManager.setTransferConstraints(*details._transferConstraints);
+    capManager.setTransferConstraints(*details.transferConstraints);
 
 		++uniqueConstraints;
 
 	} else { // no [dis]allowed raft/bridge configurations constraint
     // Create a constraint checking only the capacity & maxLoad for the raft/bridge
-    details._transferConstraints = make_unique<const TransferConstraints>(
+    details.transferConstraints = make_unique<const TransferConstraints>(
             grammar::ConstraintsVec{}, entities,
             capManager.getCapacity(), false,
             transferConstraintsExt);
@@ -415,7 +415,7 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 			}
 
 			try {
-				details._banksConstraints = make_unique<const ConfigConstraints>(
+				details.banksConstraints = make_unique<const ConfigConstraints>(
 					move(*readConstraints), entities,
 					allowed);
 			} catch(const logic_error &e) {
@@ -424,7 +424,7 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 		}
   }
 
-  unsigned &_maxDuration = details._maxDuration;
+  unsigned &maxDuration = details.maxDuration;
   if( ! otherConstraintsTree.empty()) {
 		static const vector<string> timeLimitSpecifiers{"TimeLimit"};
 		if(onlyOneExpected(otherConstraintsTree, timeLimitSpecifiers, key)) {
@@ -435,7 +435,7 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 					throw domain_error(string(__func__) +
 						" - TimeLimit should be > 0!");
 
-				_maxDuration = (unsigned)readMaxDuration;
+				maxDuration = (unsigned)readMaxDuration;
 			} catch(const ptree_bad_data &ex) {
 				throw domain_error(string(__func__) +
 					" - Bad type for the time limit! "s + ex.what());
@@ -450,13 +450,13 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
   }
 
   if(firstEntity->weight() > 0. // all entities have then specified weights
-  		&& _maxLoad == DBL_MAX && nullptr == allowedLoads)
+  		&& maxLoad == DBL_MAX && nullptr == allowedLoads)
 		cout<<"[Notification] "<<__func__
 			<<": Unnecessary weights of entities when not using none of the "
 			"following constraints: "
 			"{RaftMaxLoad/BridgeMaxLoad or AllowedRaftLoads/AllowedBridgeLoads}!"<<endl;
 
-	if( ! ctdItems.empty() && _maxDuration == UINT_MAX)
+	if( ! ctdItems.empty() && maxDuration == UINT_MAX)
 		cout<<"[Notification] "<<__func__
 			<<": Unnecessary CrossingDurationsOfConfigurations "
 			"when not using the TimeLimit constraint!"<<endl;
@@ -481,11 +481,11 @@ shared_ptr<const cond::ITransferConstraintsExt>
       ScenarioDetails::createTransferConstraintsExt() const {
   const shared_ptr<const cond::ITransferConstraintsExt> &res =
       cond::DefTransferConstraintsExt::INST();
-  if(_maxLoad == DBL_MAX)
+  if(maxLoad == DBL_MAX)
     return res;
 
   return
-    make_shared<const MaxLoadTransferConstraintsExt>(_maxLoad, res);
+    make_shared<const MaxLoadTransferConstraintsExt>(maxLoad, res);
 }
 
 unique_ptr<ent::IMovingEntitiesExt>
@@ -493,7 +493,7 @@ unique_ptr<ent::IMovingEntitiesExt>
   unique_ptr<ent::IMovingEntitiesExt> res =
     make_unique<DefMovingEntitiesExt>();
 
-  if(nullptr == allowedLoads && _maxLoad == DBL_MAX)
+  if(nullptr == allowedLoads && maxLoad == DBL_MAX)
     return res;
 
   return make_unique<TotalLoadExt>(entities, 0., std::move(res));
@@ -532,13 +532,13 @@ string ScenarioDetails::toString() const {
 		oss<<*entities<<endl;
 
 	oss<<"CrossingConstraints: { ";
-	if(_capacity != UINT_MAX)
-		oss<<"Capacity = "<<_capacity<<"; ";
-	if(_maxLoad != DBL_MAX)
-		oss<<"MaxLoad = "<<_maxLoad<<"; ";
-	if(nullptr != _transferConstraints &&
-        ! _transferConstraints->empty())
-		oss<<"TransferConstraints = "<<*_transferConstraints<<"; ";
+	if(capacity != UINT_MAX)
+		oss<<"Capacity = "<<capacity<<"; ";
+	if(maxLoad != DBL_MAX)
+		oss<<"MaxLoad = "<<maxLoad<<"; ";
+	if(nullptr != transferConstraints &&
+        ! transferConstraints->empty())
+		oss<<"TransferConstraints = "<<*transferConstraints<<"; ";
 	if(nullptr != allowedLoads)
 		oss<<"AllowedLoads = `"<<*allowedLoads<<"`; ";
 	if( ! ctdItems.empty()) {
@@ -548,13 +548,13 @@ string ScenarioDetails::toString() const {
 		oss<<"\b\b}; ";
 	}
 	oss<<"\b\b }";
-	if(nullptr != _banksConstraints &&
-        ! _banksConstraints->empty())
-		oss<<endl<<"BanksConstraints = "<<*_banksConstraints<<"; ";
+	if(nullptr != banksConstraints &&
+        ! banksConstraints->empty())
+		oss<<endl<<"BanksConstraints = "<<*banksConstraints<<"; ";
 
-	if(_maxDuration != UINT_MAX) {
+	if(maxDuration != UINT_MAX) {
 		oss<<endl<<"OtherConstraints: { ";
-		oss<<"TimeLimit = "<<_maxDuration<<"; ";
+		oss<<"TimeLimit = "<<maxDuration<<"; ";
 		oss<<"\b\b }";
 	}
 

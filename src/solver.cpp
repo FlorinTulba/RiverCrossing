@@ -148,7 +148,7 @@ protected:
                     const shared_ptr<const IContextValidator> &validator) {
     const shared_ptr<const AllEntities> &entities = scenarioDetails.entities;
     const unique_ptr<const TransferConstraints> &transferConstraints =
-      scenarioDetails._transferConstraints;
+      scenarioDetails.transferConstraints;
 
     MovingEntities me(entities, cfg, scenarioDetails.createMovingEntitiesExt());
 
@@ -170,8 +170,8 @@ public:
   MovingConfigsManager(const ScenarioDetails &scenarioDetails_,
                        const SymbolsTable &SymTb_) :
       scenarioDetails(scenarioDetails_), SymTb(SymTb_) {
-    VP_EX_MSG(scenarioDetails._transferConstraints, logic_error,
-              "At this point ScenarioDetails::_transferConstraints should be not NULL!");
+    VP_EX_MSG(scenarioDetails.transferConstraints, logic_error,
+              "At this point ScenarioDetails::transferConstraints should be not NULL!");
 
     const shared_ptr<const AllEntities> &entities = scenarioDetails.entities;
     const size_t entsCount = entities->count();
@@ -191,7 +191,7 @@ public:
       throw domain_error(string(__func__) +
         " - There are no entities that can or might row!");
 
-    const unsigned capacity = scenarioDetails._capacity;
+    const unsigned capacity = scenarioDetails.capacity;
     if(capacity >= (unsigned)entsCount)
       throw logic_error(string(__func__) +
         " - expecting scenario details with a raft/bridge capacity "
@@ -687,7 +687,7 @@ protected:
       cout<<endl<<"Simulating move "<<*movingCfg<<" => "<<*nextState<<endl;
 #endif // NDEBUG
 
-      if( ! nextState->valid(scenarioDetails._banksConstraints)
+      if( ! nextState->valid(scenarioDetails.banksConstraints)
           || nextState->handledBy(examinedStates))
         continue; // check next raft/bridge config
 
@@ -811,7 +811,7 @@ unique_ptr<const IState>
           allowedLoads->dependsOnVariable("PreviousRaftLoad"))
     stateExt = make_shared<const PrevLoadStateExt>(SymTb, *this, stateExt);
 
-  if(_maxDuration != UINT_MAX)
+  if(maxDuration != UINT_MAX)
     stateExt = make_shared<const TimeStateExt>(0U, *this, stateExt);
 
   return make_unique<const State>(

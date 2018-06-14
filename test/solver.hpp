@@ -445,11 +445,11 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
   sd.entities = shared_ptr<const AllEntities>(pAe);
 
   BOOST_CHECK_THROW(MovingConfigsManager(sd, emptySt),
-                    logic_error); // sd._transferConstraints is NULL
+                    logic_error); // sd.transferConstraints is NULL
 
   // The default transfer constraints
-  sd._transferConstraints = make_unique<const TransferConstraints>(
-            grammar::ConstraintsVec{}, sd.entities, sd._capacity, false);
+  sd.transferConstraints = make_unique<const TransferConstraints>(
+            grammar::ConstraintsVec{}, sd.entities, sd.capacity, false);
 
   BankEntities be(sd.entities);
 
@@ -476,19 +476,19 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
   BOOST_CHECK_THROW(MovingConfigsManager(sd, emptySt),
                      logic_error); // capacity is UINT_MAX >= entsCount
 
-  sd._capacity = (unsigned)entsCount - 1U;
+  sd.capacity = (unsigned)entsCount - 1U;
 
   vector<const MovingEntities*> configsForABank;
 
   BOOST_CHECK_NO_THROW({
     {
-      assert(sd._capacity == (unsigned)entsCount - 1U);
+      assert(sd.capacity == (unsigned)entsCount - 1U);
       MovingConfigsManager mcm(sd, emptySt);
 
       const double investigatedRaftCombs =
         maxInvestigatedRaftConfigs((unsigned)entsCount,
                                    (unsigned)entsCantRowCount,
-                                   sd._capacity);
+                                   sd.capacity);
 
       /*
        About the expression from the test below:
@@ -501,7 +501,7 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
         or no entities
 
        Let's remark A guarantees the remaining combinations
-       miss at least 1 entity, which is what sd._capacity specifies
+       miss at least 1 entity, which is what sd.capacity specifies
       */
       BOOST_TEST(exp2(entsCount) - 1.       // A explained above
                  - exp2(entsCantRowCount)   // B explained above
@@ -544,13 +544,13 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
     }
 
     {
-      sd._capacity = 2U;
+      sd.capacity = 2U;
       MovingConfigsManager mcm(sd, emptySt);
 
       const double investigatedRaftCombs =
         maxInvestigatedRaftConfigs((unsigned)entsCount,
                                    (unsigned)entsCantRowCount,
-                                   sd._capacity);
+                                   sd.capacity);
 
       BOOST_TEST(investigatedRaftCombs == (double)mcm.allConfigs.size());
 
@@ -571,19 +571,19 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
     }
 
     {
-      assert(sd._capacity == 2U);
-      sd._maxLoad = 13.;
+      assert(sd.capacity == 2U);
+      sd.maxLoad = 13.;
 
-      sd._transferConstraints = make_unique<const TransferConstraints>(
-				grammar::ConstraintsVec{}, sd.entities, sd._capacity, false,
-        make_shared<const MaxLoadTransferConstraintsExt>(sd._maxLoad));
+      sd.transferConstraints = make_unique<const TransferConstraints>(
+				grammar::ConstraintsVec{}, sd.entities, sd.capacity, false,
+        make_shared<const MaxLoadTransferConstraintsExt>(sd.maxLoad));
 
       MovingConfigsManager mcm(sd, emptySt);
 
       const double maxInvestigatedRaftCombs =
         maxInvestigatedRaftConfigs((unsigned)entsCount,
                                    (unsigned)entsCantRowCount,
-                                   sd._capacity);
+                                   sd.capacity);
 
       BOOST_TEST(maxInvestigatedRaftCombs >= (double)mcm.allConfigs.size());
 
@@ -606,24 +606,24 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
     }
 
     {
-      assert(sd._capacity == 2U);
-      assert(sd._maxLoad == 13.);
+      assert(sd.capacity == 2U);
+      assert(sd.maxLoad == 13.);
 
       IdsConstraint *pIc = new IdsConstraint;
       shared_ptr<const IdsConstraint> ic = shared_ptr<const IdsConstraint>(pIc);
       pIc->addOptionalId(9U).addUnspecifiedMandatory(); // 9? *
       const shared_ptr<const MaxLoadTransferConstraintsExt> maxLoadExt =
-        make_shared<const MaxLoadTransferConstraintsExt>(sd._maxLoad);
-      sd._transferConstraints =
+        make_shared<const MaxLoadTransferConstraintsExt>(sd.maxLoad);
+      sd.transferConstraints =
         make_unique<const TransferConstraints>(grammar::ConstraintsVec{ic},
-                                               sd.entities, sd._capacity, true,
+                                               sd.entities, sd.capacity, true,
                                                maxLoadExt);
       MovingConfigsManager mcm(sd, emptySt);
 
       const double maxInvestigatedRaftCombs =
         maxInvestigatedRaftConfigs((unsigned)entsCount,
                                    (unsigned)entsCantRowCount,
-                                   sd._capacity);
+                                   sd.capacity);
 
       BOOST_TEST(maxInvestigatedRaftCombs >= (double)mcm.allConfigs.size());
 
@@ -645,9 +645,9 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
     }
 
     {
-      assert(sd._capacity == 2U);
-      assert(sd._maxLoad == 13.);
-      assert(sd._transferConstraints != nullptr); // 9? *
+      assert(sd.capacity == 2U);
+      assert(sd.maxLoad == 13.);
+      assert(sd.transferConstraints != nullptr); // 9? *
 
       ValueSet *pVs = new ValueSet;
       pVs->add(ValueOrRange(make_shared<const NumericConst>(12.)));
@@ -738,9 +738,9 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
 
   ScenarioDetails info;
   info.entities = ae;
-  info._capacity = cap;
-  info._maxLoad = maxLoad;
-  info._maxDuration = t*t;
+  info.capacity = cap;
+  info.maxLoad = maxLoad;
+  info.maxDuration = t*t;
 
   const shared_ptr<const MaxLoadTransferConstraintsExt> maxLoadExt =
     make_shared<const MaxLoadTransferConstraintsExt>(maxLoad);
@@ -953,7 +953,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
     d.entities = ae;
     d.allowedLoads = nullptr;
 
-    // Default extension (allowedLoads is NULL and _maxDuration is UINT_MAX)
+    // Default extension (allowedLoads is NULL and maxDuration is UINT_MAX)
     BOOST_CHECK_NO_THROW({
       unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable());
 
@@ -970,7 +970,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
     ValueSet *pVs = new ValueSet;
     d.allowedLoads = shared_ptr<const ValueSet>(pVs);
 
-    // Default extension (allowedLoads doesn't depend on PreviousRaftLoad; _maxDuration is UINT_MAX)
+    // Default extension (allowedLoads doesn't depend on PreviousRaftLoad; maxDuration is UINT_MAX)
     BOOST_CHECK_NO_THROW({
       unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable());
 
@@ -986,7 +986,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
 
     pVs->add(ValueOrRange(make_shared<const NumericVariable>("PreviousRaftLoad")));
 
-    // PrevLoadStateExt (allowedLoads depends on PreviousRaftLoad; _maxDuration is UINT_MAX)
+    // PrevLoadStateExt (allowedLoads depends on PreviousRaftLoad; maxDuration is UINT_MAX)
     BOOST_CHECK_NO_THROW({
       unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable());
 
@@ -1000,9 +1000,9 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
       }
     });
 
-    d._maxDuration = t * t;
+    d.maxDuration = t * t;
 
-    // PrevLoadStateExt & TimeStateExt (allowedLoads depends on PreviousRaftLoad; _maxDuration < UINT_MAX)
+    // PrevLoadStateExt & TimeStateExt (allowedLoads depends on PreviousRaftLoad; maxDuration < UINT_MAX)
     BOOST_CHECK_NO_THROW({
       unique_ptr<const IState> initS = d.createInitialState(InitialSymbolsTable());
 
@@ -1068,7 +1068,7 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
 
   ScenarioDetails d;
   d.entities = ae;
-  d._capacity = 2U;
+  d.capacity = 2U;
 
   BOOST_CHECK_THROW(a.append({MovingEntities(ae, vector<unsigned>({1U})),
                              d.createInitialState(InitialSymbolsTable()),
@@ -1256,15 +1256,15 @@ BOOST_AUTO_TEST_CASE(solvingVariousScenarios) {
   Scenario::Results o;
   ScenarioDetails d;
   d.entities = ae;
-  d._capacity = 2U;
+  d.capacity = 2U;
 
   // Default transfer constraints
-  d._transferConstraints = make_unique<const TransferConstraints>(
-            grammar::ConstraintsVec{}, d.entities, d._capacity, false);
+  d.transferConstraints = make_unique<const TransferConstraints>(
+            grammar::ConstraintsVec{}, d.entities, d.capacity, false);
 
   BOOST_CHECK_NO_THROW({
-    assert(d._capacity == 2U);
-    assert(d._maxLoad == DBL_MAX);
+    assert(d.capacity == 2U);
+    assert(d.maxLoad == DBL_MAX);
     Solver s(d, o);
     s.run();
     shared_ptr<const IAttempt> &sol = o.attempt;
@@ -1284,15 +1284,15 @@ BOOST_AUTO_TEST_CASE(solvingVariousScenarios) {
     }
   });
 
-  d._maxLoad = 3.;
-  d._transferConstraints = make_unique<const TransferConstraints>(
-            grammar::ConstraintsVec{}, d.entities, d._capacity, false,
+  d.maxLoad = 3.;
+  d.transferConstraints = make_unique<const TransferConstraints>(
+            grammar::ConstraintsVec{}, d.entities, d.capacity, false,
             d.createTransferConstraintsExt());
 
   // Entity 3 doesn't row and the raft supports only its weight => no solution
   BOOST_CHECK_NO_THROW({
-    assert(d._capacity == 2U);
-    assert(d._maxLoad == 3.);
+    assert(d.capacity == 2U);
+    assert(d.maxLoad == 3.);
     Solver s(d, o);
     s.run();
     shared_ptr<const IAttempt> &sol = o.attempt;

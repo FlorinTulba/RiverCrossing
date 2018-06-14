@@ -538,7 +538,7 @@ BOOST_AUTO_TEST_CASE(maxLoadValidation) {
           }
         }
       )"));
-    BOOST_CHECK(s.details._capacity == 2U);}); // maxLoad ok for Athlete & Host
+    BOOST_CHECK(s.details.capacity == 2U);}); // maxLoad ok for Athlete & Host
 
   BOOST_CHECK_NO_THROW({
     Scenario s(istringstream(R"(
@@ -565,7 +565,7 @@ BOOST_AUTO_TEST_CASE(maxLoadValidation) {
           }
         }
       )"));
-    BOOST_CHECK(s.details._capacity == 2U);}); // maxLoad ok for Athlete & Host
+    BOOST_CHECK(s.details.capacity == 2U);}); // maxLoad ok for Athlete & Host
 }
 
 BOOST_AUTO_TEST_CASE(allowedLoadsValidation) {
@@ -916,16 +916,16 @@ BOOST_AUTO_TEST_CASE(raftConfigurationsValidation) {
         }
       )"));
     bool b = false;
-    BOOST_CHECK(b = (nullptr != s.details._transferConstraints));
+    BOOST_CHECK(b = (nullptr != s.details.transferConstraints));
     if(b) {
       MovingEntities me(s.details.entities);
 
       // explicitly disallowed
-      BOOST_CHECK( ! s.details._transferConstraints->check(
+      BOOST_CHECK( ! s.details.transferConstraints->check(
                                               me = vector<unsigned>{1}));
 
       // empty configuration is implicitly disallowed
-      BOOST_CHECK( ! s.details._transferConstraints->check(
+      BOOST_CHECK( ! s.details.transferConstraints->check(
                                               me = vector<unsigned>{}));
     }
   });
@@ -1105,8 +1105,8 @@ BOOST_AUTO_TEST_CASE(crossingDurationsOfConfigurationsValidation) {
           }
         }
       )"));
-    BOOST_CHECK(nullptr != s.details._transferConstraints); // default
-    BOOST_CHECK(s.details._capacity == 2U);}); // count of entities - 1
+    BOOST_CHECK(nullptr != s.details.transferConstraints); // default
+    BOOST_CHECK(s.details.capacity == 2U);}); // count of entities - 1
 }
 
 BOOST_AUTO_TEST_CASE(bankConfigurationsValidation) {
@@ -1193,23 +1193,23 @@ BOOST_AUTO_TEST_CASE(bankConfigurationsValidation) {
         }
       )"));
     bool b = false;
-    BOOST_CHECK(b = (nullptr != s.details._transferConstraints)); // default
-    BOOST_CHECK(b = (nullptr != s.details._banksConstraints));
+    BOOST_CHECK(b = (nullptr != s.details.transferConstraints)); // default
+    BOOST_CHECK(b = (nullptr != s.details.banksConstraints));
     if(b) {
       BankEntities be(s.details.entities);
 
       // explicitly allowed
-      BOOST_CHECK(s.details._banksConstraints->check(
+      BOOST_CHECK(s.details.banksConstraints->check(
                                         be = vector<unsigned>{0, 1}));
-      BOOST_CHECK(s.details._banksConstraints->check(
+      BOOST_CHECK(s.details.banksConstraints->check(
                                         be = vector<unsigned>{0, 1, 2}));
-      BOOST_CHECK(s.details._banksConstraints->check(
+      BOOST_CHECK(s.details.banksConstraints->check(
                                         be = vector<unsigned>{2}));
 
       // next 2 configurations are implicitly allowed
-      BOOST_CHECK(s.details._banksConstraints->check(
+      BOOST_CHECK(s.details.banksConstraints->check(
                                         be = vector<unsigned>{0, 2}));
-      BOOST_CHECK(s.details._banksConstraints->check(
+      BOOST_CHECK(s.details.banksConstraints->check(
                                         be = vector<unsigned>{1}));
     }
   });

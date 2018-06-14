@@ -59,10 +59,10 @@ struct ScenarioDetails {
   When not explicitly specified, it gets a default instantiation
   that checks the capacity and the max load of the raft/bridge.
   */
-  std::unique_ptr<const cond::TransferConstraints> _transferConstraints;
+  std::unique_ptr<const cond::TransferConstraints> transferConstraints;
 
   /// Banks conditions; Unique as it is always immediately used and not stored
-  std::unique_ptr<const cond::ConfigConstraints> _banksConstraints;
+  std::unique_ptr<const cond::ConfigConstraints> banksConstraints;
 
   /**
   Crossing durations for all possible raft/bridge configurations.
@@ -80,7 +80,7 @@ struct ScenarioDetails {
   using the raft/bridge at the same time in order to have a feasible and
   non-trivial scenario.
   */
-  double _maxLoad = DBL_MAX;
+  double maxLoad = DBL_MAX;
 
   /**
   How many entities are allowed on the raft/bridge at once?
@@ -93,10 +93,10 @@ struct ScenarioDetails {
 
   When it is not specified, it gets set to the number of entities - 1.
   */
-  unsigned _capacity = UINT_MAX;
+  unsigned capacity = UINT_MAX;
 
   /// Max duration for all the entities to reach the opposite bank
-  unsigned _maxDuration = UINT_MAX;
+  unsigned maxDuration = UINT_MAX;
 
   /**
   The specific type of the initial state depends on the values above and on

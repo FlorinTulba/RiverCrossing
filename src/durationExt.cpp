@@ -27,10 +27,10 @@ shared_ptr<const IStateExt>
 }
 
 bool TimeStateExt::_validate() const {
-  if(_time > info._maxDuration) {
+  if(_time > info.maxDuration) {
 #ifndef NDEBUG
     cout<<"violates duration constraint ["
-      <<_time<<" > "<<info._maxDuration<<']'<<endl;
+      <<_time<<" > "<<info.maxDuration<<']'<<endl;
 #endif // NDEBUG
     return false;
   }

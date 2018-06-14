@@ -296,13 +296,13 @@ protected:
   const std::shared_ptr<const ITransferConstraintsExt> extension;
 
   /// How many entities are allowed on the raft/bridge at once
-  const unsigned &_capacity;
+  const unsigned &capacity;
 
 public:
   /// @throw logic_error for an invalid constraint
   TransferConstraints(grammar::ConstraintsVec &&constraints_,
                       const std::shared_ptr<const ent::AllEntities> &allEnts_,
-                      const unsigned &capacity, bool allowed_ = true,
+                      const unsigned &capacity_, bool allowed_ = true,
                       const std::shared_ptr<const ITransferConstraintsExt> &extension_
                         = DefTransferConstraintsExt::INST());
 

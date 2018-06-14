@@ -178,13 +178,13 @@ string ConfigConstraints::toString() const {
 
 TransferConstraints::TransferConstraints(grammar::ConstraintsVec &&constraints_,
         const shared_ptr<const ent::AllEntities> &allEnts_,
-        const unsigned &capacity, bool allowed_/* = true*/,
+        const unsigned &capacity_, bool allowed_/* = true*/,
         const shared_ptr<const ITransferConstraintsExt> &extension_
             /* = DefTransferConstraintsExt::INST()*/) :
     ConfigConstraints(move(constraints_), allEnts_, allowed_, true),
-    _capacity(capacity), extension(CP(extension_)) {
+    capacity(capacity_), extension(CP(extension_)) {
   for(const auto &c : constraints)
-    c->validate(allEnts, _capacity, extension->configValidatorExt());
+    c->validate(allEnts, capacity, extension->configValidatorExt());
 }
 
 bool TransferConstraints::check(const ent::IsolatedEntities &ents) const {
@@ -196,10 +196,10 @@ bool TransferConstraints::check(const ent::IsolatedEntities &ents) const {
   const auto &entsIds = ents.ids();
 #endif // NDEBUG
 
-  if((unsigned)ents.count() > _capacity) {
+  if((unsigned)ents.count() > capacity) {
 #ifndef NDEBUG
     cout<<"violates capacity constraint [ "
-      <<ents.count()<<" > "<<_capacity<<" ] : ";
+      <<ents.count()<<" > "<<capacity<<" ] : ";
     copy(CBOUNDS(entsIds), ostream_iterator<unsigned>(cout, " "));
     cout<<endl;
 #endif // NDEBUG
