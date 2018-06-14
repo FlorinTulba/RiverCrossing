@@ -256,7 +256,7 @@ AbsMovingEntitiesExt::AbsMovingEntitiesExt(
               const shared_ptr<const AllEntities> &all_,
               unique_ptr<IMovingEntitiesExt> &&nextExt_) :
       all(all_), nextExt(std::move(nextExt_)) {
-  VP(nextExt.get());
+  CP(nextExt.get());
 }
 
 void AbsMovingEntitiesExt::newGroup(const set<unsigned> &ids) {

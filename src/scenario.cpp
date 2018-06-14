@@ -84,14 +84,14 @@ protected:
 public:
   TransferCapacityManager(const shared_ptr<const AllEntities> &entities_,
                           unsigned &capacity_) : // &ScenarioDetails::_capacity
-      entities(VP(entities_)), capacity(capacity_) {
+      entities(CP(entities_)), capacity(capacity_) {
     if(entities_->count() < 3ULL)
       throw domain_error(string(__func__) +
         " - there have to be at least 3 entities!");
 
     // Not all entities are allowed to cross the river simultaneously
     // (just to keep the problem interesting)
-    capacity = (unsigned)VP(entities_)->count() - 1U;
+    capacity = (unsigned)CP(entities_)->count() - 1U;
   }
 
   /// The scenario specifies the transfer capacity

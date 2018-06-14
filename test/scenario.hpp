@@ -11,9 +11,9 @@
 #if ! defined SCENARIO_CPP || ! defined UNIT_TESTING
 
   #error \
-"Please include this file only at the end of `scenario.cpp` \
+Please include this file only at the end of `scenario.cpp` \
 after a `#define SCENARIO_CPP` and surrounding the include and the define \
-by `#ifdef UNIT_TESTING`!"
+by `#ifdef UNIT_TESTING`!
 
 #else // for SCENARIO_CPP and UNIT_TESTING
 

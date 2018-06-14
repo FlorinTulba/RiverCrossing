@@ -123,7 +123,7 @@ protected:
   template<class IdsCont = std::vector<unsigned>>
   IsolatedEntities(const std::shared_ptr<const AllEntities> &all_,
                    const IdsCont &ids_ = {}) :
-      all(VP(all_)) {
+      all(CP(all_)) {
     for(const unsigned id : ids_)
       operator+=(id);
   }
@@ -327,7 +327,7 @@ public:
                  std::unique_ptr<IMovingEntitiesExt> &&extension_
                     = std::make_unique<DefMovingEntitiesExt>()) :
       IsolatedEntities(all_, ids_), extension(std::move(extension_)) {
-    VP(extension.get())->newGroup(_ids);
+    CP(extension.get())->newGroup(_ids);
   }
 
   MovingEntities(const MovingEntities &other);

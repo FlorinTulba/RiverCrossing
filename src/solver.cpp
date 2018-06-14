@@ -86,7 +86,7 @@ public:
   MovingConfigOption(const MovingEntities &cfg_,
                      const shared_ptr<const IContextValidator> &validator_
                         = DefContextValidator::INST()) :
-      cfg(cfg_), validator(VP(validator_)) {}
+      cfg(cfg_), validator(CP(validator_)) {}
 
   /**
   Method for checking which raft/bridge configuration from all possible ones
@@ -300,7 +300,7 @@ public:
         bool nextMoveFromLeft,
         const shared_ptr<const IStateExt> &extension_ = DefStateExt::INST()) :
       _leftBank(leftBank), _rightBank(rightBank),
-      _nextMoveFromLeft(nextMoveFromLeft), extension(VP(extension_)) {
+      _nextMoveFromLeft(nextMoveFromLeft), extension(CP(extension_)) {
     if(_leftBank != ~_rightBank)
       throw invalid_argument(string(__func__) +
         " - needs complementary bank configurations!");
@@ -421,7 +421,7 @@ public:
        unique_ptr<const IState> resultedSt_,
        unsigned idx_) :
       movedEnts(movedEnts_), resultedSt(resultedSt_.release()), idx(idx_) {
-    VP(resultedSt);
+    CP(resultedSt);
 
     const BankEntities &receiverBank = (resultedSt->nextMoveFromLeft()) ?
       resultedSt->leftBank() : resultedSt->rightBank();
@@ -759,7 +759,7 @@ shared_ptr<const IStateExt>
 
 AbsStateExt::AbsStateExt(const ScenarioDetails &info_,
             const shared_ptr<const IStateExt> &nextExt_) :
-    info(info_), nextExt(VP(nextExt_)) {}
+    info(info_), nextExt(CP(nextExt_)) {}
 
 shared_ptr<const IStateExt> AbsStateExt::clone() const {
   assert(nullptr != nextExt);

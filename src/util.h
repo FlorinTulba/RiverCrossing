@@ -20,9 +20,24 @@
 #define BOUNDS(cont) std::begin(cont), std::end(cont)
 #define RBOUNDS(cont) std::rbegin(cont), std::rend(cont)
 
+/// Forwarding a checked (smart) pointer. Throwing provided exception with given message if NULL
+#define CP_EX_MSG(ptr, exc, msg) \
+  ((nullptr != (ptr)) ? (ptr) : (throw exc(std::string(__func__) + " - " + (msg))))
+
+/// Forwarding a checked (smart) pointer. Throwing provided exception if NULL
+#define CP_EX(ptr, exc) CP_EX_MSG((ptr), exc, "NULL value!")
+
+/// Forwarding a checked (smart) pointer. Throwing invalid_argument with given message if NULL
+#define CP_MSG(ptr, msg) CP_EX_MSG((ptr), std::invalid_argument, (msg))
+
+/// Forwarding a checked (smart) pointer. Throwing invalid_argument if NULL
+#define CP(ptr) CP_EX((ptr), std::invalid_argument)
+
+
 /// Validating a (smart) pointer. Throwing provided exception with given message if NULL
 #define VP_EX_MSG(ptr, exc, msg) \
-  ((nullptr != (ptr)) ? (ptr) : throw exc(std::string(__func__) + " - " + (msg)))
+  if(nullptr == (ptr)) \
+    throw exc(std::string(__func__) + " - " + (msg));
 
 /// Validating a (smart) pointer. Throwing provided exception if NULL
 #define VP_EX(ptr, exc) VP_EX_MSG((ptr), exc, "NULL value!")

@@ -22,7 +22,7 @@ namespace cond {
 
 AbsConfigConstraintValidatorExt::AbsConfigConstraintValidatorExt(
     const shared_ptr<const IConfigConstraintValidatorExt> &nextExt_) :
-  nextExt(VP(nextExt_)) {}
+  nextExt(CP(nextExt_)) {}
 
 void AbsConfigConstraintValidatorExt::check(const IConfigConstraint &cfg,
            const shared_ptr<const ent::AllEntities> &allEnts) const {
@@ -61,7 +61,7 @@ AbsContextValidator::AbsContextValidator(
     const shared_ptr<const IContextValidator> &nextValidator_,
     const shared_ptr<const IValidatorExceptionHandler> &ownValidatorExcHandler_
       /* = nullptr*/) :
-  nextValidator(VP(nextValidator_)),
+  nextValidator(CP(nextValidator_)),
   ownValidatorExcHandler(ownValidatorExcHandler_) {}
 
 bool AbsContextValidator::validate(const ent::MovingEntities &ents,
@@ -103,7 +103,7 @@ shared_ptr<const IConfigConstraintValidatorExt>
 
 AbsTransferConstraintsExt::AbsTransferConstraintsExt(
     const shared_ptr<const ITransferConstraintsExt> &nextExt_) :
-  nextExt(VP(nextExt_)) {}
+  nextExt(CP(nextExt_)) {}
 
 shared_ptr<const IConfigConstraintValidatorExt>
         AbsTransferConstraintsExt::configValidatorExt() const {
@@ -182,7 +182,7 @@ TransferConstraints::TransferConstraints(grammar::ConstraintsVec &&constraints_,
         const shared_ptr<const ITransferConstraintsExt> &extension_
             /* = DefTransferConstraintsExt::INST()*/) :
     ConfigConstraints(move(constraints_), allEnts_, allowed_, true),
-    _capacity(capacity), extension(VP(extension_)) {
+    _capacity(capacity), extension(CP(extension_)) {
   for(const auto &c : constraints)
     c->validate(allEnts, _capacity, extension->configValidatorExt());
 }
@@ -190,7 +190,7 @@ TransferConstraints::TransferConstraints(grammar::ConstraintsVec &&constraints_,
 bool TransferConstraints::check(const ent::IsolatedEntities &ents) const {
   const ent::MovingEntities *pEnts =
     dynamic_cast<const ent::MovingEntities*>(&ents);
-  VP_EX_MSG(pEnts, std::logic_error,
+  CP_EX_MSG(pEnts, std::logic_error,
             "needs a (subclass of) MovingEntities parameter!");
 #ifndef NDEBUG
   const auto &entsIds = ents.ids();
@@ -266,7 +266,7 @@ void TypesConstraint::validate(const shared_ptr<const ent::AllEntities> &allEnts
          unsigned capacity/* = UINT_MAX*/,
          const shared_ptr<const IConfigConstraintValidatorExt> &valExt
             /* = DefConfigConstraintValidatorExt::INST()*/) const {
-  VP(valExt);
+  CP(valExt);
 
   const map<string, set<unsigned>> &idsByTypes = allEnts->idsByTypes();
   const auto idsByTypesEnd = idsByTypes.cend();
@@ -419,7 +419,7 @@ void IdsConstraint::validate(const shared_ptr<const ent::AllEntities> &allEnts,
          unsigned capacity/* = UINT_MAX*/,
          const shared_ptr<const IConfigConstraintValidatorExt> &valExt
             /* = DefConfigConstraintValidatorExt::INST()*/) const {
-  VP(valExt);
+  CP(valExt);
 
   const size_t requiredIdsCount = mandatoryGroups.size() + (size_t)expectedExtraIds,
     available = allEnts->count();
@@ -624,7 +624,7 @@ string BoolConst::toString() const {
 }
 
 Not::Not(const shared_ptr<const LogicalExpr> &le) :
-    LogicalExpr(), _le(VP_EX(le, std::logic_error)) {
+    LogicalExpr(), _le(CP_EX(le, std::logic_error)) {
   if(_le->constValue())
     val = ! *_le->constValue();
 }
@@ -659,7 +659,7 @@ void ValueOrRange::validateRange(double a, double b) {
 
 void ValueOrRange::validate() const {
   const boost::optional<double> &v =
-    VP_EX(_value, std::logic_error)->constValue();
+    CP_EX(_value, std::logic_error)->constValue();
   if(v)
     validateDouble(*v);
 
@@ -681,7 +681,7 @@ ValueOrRange::ValueOrRange(const shared_ptr<const NumericExpr> &value_) :
 }
 
 ValueOrRange::ValueOrRange(const shared_ptr<const NumericExpr> &from_,
-    const shared_ptr<const NumericExpr> &to_) : _from(from_), _to(VP(to_)) {
+    const shared_ptr<const NumericExpr> &to_) : _from(from_), _to(CP(to_)) {
   validate();
 }
 

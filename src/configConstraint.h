@@ -553,7 +553,7 @@ protected:
   std::shared_ptr<const LogicalExpr> _le; ///< the expression to negate
 
 public:
-  Not(const std::shared_ptr<const LogicalExpr> &le);
+  explicit Not(const std::shared_ptr<const LogicalExpr> &le);
 
   /// Checks if there is a dependency on `varName`
   bool dependsOnVariable(const std::string &varName) const override;
@@ -676,7 +676,7 @@ protected:
 public:
   BelongToCondition(const std::shared_ptr<const AbsExpr<Type>> &e,
                     const std::shared_ptr<const IValues<Type>> &valueSet) :
-      _e(VP(e)), _valueSet(VP(valueSet)) {
+      _e(CP(e)), _valueSet(CP(valueSet)) {
     if(_e->constValue() && _valueSet->constSet())
       val = _valueSet->contains(*_e->constValue());
   }

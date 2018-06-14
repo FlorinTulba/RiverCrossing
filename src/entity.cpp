@@ -29,7 +29,7 @@ namespace {
 shared_ptr<const rc::cond::LogicalExpr> canRowSemantic(const string &canRowExpr) {
   shared_ptr<const rc::cond::LogicalExpr> semantic =
     rc::grammar::parseCanRowExpr(canRowExpr);
-  return VP_EX_MSG(semantic, domain_error,
+  return CP_EX_MSG(semantic, domain_error,
                  "CanRow parsing error! See the cause above.");
 }
 

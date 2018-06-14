@@ -11,9 +11,9 @@
 #if ! defined SOLVER_CPP || ! defined UNIT_TESTING
 
   #error \
-"Please include this file only at the end of `solver.cpp` \
+Please include this file only at the end of `solver.cpp` \
 after a `#define SOLVER_CPP` and surrounding the include and the define \
-by `#ifdef UNIT_TESTING`!"
+by `#ifdef UNIT_TESTING`!
 
 #else // for SOLVER_CPP and UNIT_TESTING
 
@@ -1096,11 +1096,11 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
     // First move
     moved = vector<unsigned>({1U, 2U});
     BOOST_CHECK_THROW(a.append({moved,
-                               VP(a.initSt)->next(moved),
+                               CP(a.initSt)->next(moved),
                                1234U}),
                       logic_error); // first move needs index 0, not 1234
     a.append({moved,
-             VP(a.initSt)->next(moved),
+             CP(a.initSt)->next(moved),
              0U});
     BOOST_CHECK( ! a.isSolution());
     BOOST_CHECK(a.length() == 1ULL);
@@ -1114,11 +1114,11 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
     // Second move
     moved = vector<unsigned>({1U});
     BOOST_CHECK_THROW(a.append({moved,
-                               VP(firstMove.resultedState())->next(moved),
+                               CP(firstMove.resultedState())->next(moved),
                                1234U}),
                       logic_error); // second move needs index 1, not 1234
     a.append({moved,
-             VP(firstMove.resultedState())->next(moved),
+             CP(firstMove.resultedState())->next(moved),
              1U});
     BOOST_CHECK( ! a.isSolution());
     BOOST_CHECK(a.length() == 2ULL);
@@ -1132,11 +1132,11 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
     // Third move
     moved = vector<unsigned>({1U, 3U});
     BOOST_CHECK_THROW(a.append({moved,
-                               VP(secondMove.resultedState())->next(moved),
+                               CP(secondMove.resultedState())->next(moved),
                                1234U}),
                       logic_error); // third move needs index 2, not 1234
     a.append({moved,
-             VP(secondMove.resultedState())->next(moved),
+             CP(secondMove.resultedState())->next(moved),
              2U});
     BOOST_CHECK(a.isSolution());
     BOOST_CHECK(a.length() == 3ULL);
@@ -1147,7 +1147,7 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
                       out_of_range); // right beyond last valid index
     const IMove &thirdMove = a.move(2ULL);
 
-    BOOST_CHECK(VP(thirdMove.resultedState())->leftBank().empty());
+    BOOST_CHECK(CP(thirdMove.resultedState())->leftBank().empty());
 
     a.pop();
     BOOST_CHECK( ! a.isSolution());
@@ -1207,21 +1207,21 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
     // First move
     moved = vector<unsigned>({1U, 2U});
     a.append({moved,
-             VP(a.initSt)->next(moved),
+             CP(a.initSt)->next(moved),
              0U});
     const IMove &firstMove = a.move(0ULL);
 
     // Second move
     moved = vector<unsigned>({1U});
     a.append({moved,
-             VP(firstMove.resultedState())->next(moved),
+             CP(firstMove.resultedState())->next(moved),
              1U});
     const IMove &secondMove = a.move(1ULL);
 
     // Third move
     moved = vector<unsigned>({1U, 3U});
     a.append({moved,
-             VP(secondMove.resultedState())->next(moved),
+             CP(secondMove.resultedState())->next(moved),
              2U});
 
     BOOST_CHECK(a.isSolution());

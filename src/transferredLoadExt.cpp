@@ -134,7 +134,7 @@ bool MaxLoadTransferConstraintsExt::_check(const ent::MovingEntities &cfg) const
     ent::AbsMovingEntitiesExt::selectExt<ent::TotalLoadExt>(cfg.getExtension());
 
   const double entsWeight =
-    VP_EX_MSG(totalLoadExt, logic_error,
+    CP_EX_MSG(totalLoadExt, logic_error,
             "expects a MovingEntities parameter extended with TotalLoadExt!")
           ->totalLoad();
   if(entsWeight - Eps > _maxLoad) {
@@ -162,7 +162,7 @@ double MaxLoadTransferConstraintsExt::maxLoad() const {return _maxLoad;}
 
 InitiallyNoPrevRaftLoadExcHandler::InitiallyNoPrevRaftLoadExcHandler(
       const shared_ptr<const IValues<double>> &allowedLoads) :
-    _allowedLoads(VP(allowedLoads)) {
+    _allowedLoads(CP(allowedLoads)) {
   if(_allowedLoads->empty())
     throw invalid_argument(string(__func__) +
       " - doesn't accept empty allowedLoads parameter! "
@@ -198,7 +198,7 @@ bool AllowedLoadsValidator::doValidate(const ent::MovingEntities &ents,
     ent::AbsMovingEntitiesExt::selectExt<ent::TotalLoadExt>(ents.getExtension());
 
   const double entsWeight =
-    VP_EX_MSG(totalLoadExt, logic_error,
+    CP_EX_MSG(totalLoadExt, logic_error,
             "expects a MovingEntities parameter extended with TotalLoadExt!")
           ->totalLoad();
   const bool valid = _allowedLoads->contains(entsWeight, st);
@@ -219,7 +219,7 @@ AllowedLoadsValidator::AllowedLoadsValidator(
   const shared_ptr<const IValidatorExceptionHandler> &ownValidatorExcHandler_
     /* = nullptr*/) :
     AbsContextValidator(nextValidator_, ownValidatorExcHandler_),
-    _allowedLoads(VP(allowedLoads)) {}
+    _allowedLoads(CP(allowedLoads)) {}
 
 } // namespace cond
 
@@ -239,7 +239,7 @@ bool PrevLoadStateExt::_isNotBetterThan(const IState &s2) const {
     AbsStateExt::selectExt<PrevLoadStateExt>(extensions2);
 
   const double otherPreviousRaftLoad =
-    VP_EX_MSG(prevLoadStateExt2,
+    CP_EX_MSG(prevLoadStateExt2,
               logic_error,
               "The parameter must be a state "
               "with a PrevLoadStateExt extension!")->previousRaftLoad;
@@ -266,7 +266,7 @@ shared_ptr<const IStateExt>
     ent::AbsMovingEntitiesExt::selectExt<ent::TotalLoadExt>(movedEnts.getExtension());
 
   const double entsWeight =
-    VP_EX_MSG(totalLoadExt, logic_error,
+    CP_EX_MSG(totalLoadExt, logic_error,
             "expects a MovingEntities parameter extended with TotalLoadExt!")
           ->totalLoad();
   return make_shared<const PrevLoadStateExt>(crossingIndex + 1U,

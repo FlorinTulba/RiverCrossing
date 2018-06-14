@@ -11,9 +11,9 @@
 #if ! defined CONFIG_PARSER_CPP || ! defined UNIT_TESTING
 
   #error \
-"Please include this file only at the end of `configParser.cpp` \
+Please include this file only at the end of `configParser.cpp` \
 after a `#define CONFIG_PARSER_CPP` and surrounding the include and the define \
-by `#ifdef UNIT_TESTING`!"
+by `#ifdef UNIT_TESTING`!
 
 #else // for CONFIG_PARSER_CPP and UNIT_TESTING
 

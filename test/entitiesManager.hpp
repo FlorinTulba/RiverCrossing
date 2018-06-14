@@ -11,9 +11,9 @@
 #if ! defined ENTITIES_MANAGER_CPP || ! defined UNIT_TESTING
 
   #error \
-"Please include this file only at the end of `entitiesManager.cpp` \
+Please include this file only at the end of `entitiesManager.cpp` \
 after a `#define ENTITIES_MANAGER_CPP` and surrounding the include and the define \
-by `#ifdef UNIT_TESTING`!"
+by `#ifdef UNIT_TESTING`!
 
 #else // for ENTITIES_MANAGER_CPP and UNIT_TESTING
 

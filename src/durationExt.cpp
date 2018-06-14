@@ -46,7 +46,7 @@ bool TimeStateExt::_isNotBetterThan(const IState &s2) const {
 
   // if the other state was reached earlier, it is better
   return _time >=
-    VP_EX_MSG(timeExt2,
+    CP_EX_MSG(timeExt2,
               logic_error,
               "The parameter must be a state "
               "with a TimeStateExt extension!")->_time;
