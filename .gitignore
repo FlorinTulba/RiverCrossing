@@ -3,6 +3,8 @@
 *.cscope_file_list
 *.depend
 *.layout
+CppCheckResults.xml
+gmon.out
 *.stackdump
 .d
 .r
