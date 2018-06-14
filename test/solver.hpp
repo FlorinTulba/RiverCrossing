@@ -443,10 +443,18 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
 
   ScenarioDetails sd;
   sd.entities = shared_ptr<const AllEntities>(pAe);
+
+  BOOST_CHECK_THROW(MovingConfigsManager(sd, emptySt),
+                    logic_error); // sd._transferConstraints is NULL
+
+  // The default transfer constraints
+  sd._transferConstraints = make_unique<const TransferConstraints>(
+            grammar::ConstraintsVec{}, sd.entities, sd._capacity, false);
+
   BankEntities be(sd.entities);
 
   BOOST_CHECK_THROW(MovingConfigsManager(sd, emptySt),
-                     domain_error); // none of the entities is/will be able to row
+                    domain_error); // none of the entities is/will be able to row
 
   BOOST_REQUIRE_NO_THROW({ // Adding several entities who all can / might row
     *pAe += make_shared<const Entity>(2U, "e2", "t1", false,
@@ -470,9 +478,6 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
 
   sd._capacity = (unsigned)entsCount - 1U;
 
-  // The default transfer constraints
-  sd._transferConstraints = make_unique<const TransferConstraints>(
-            grammar::ConstraintsVec{}, sd.entities, sd._capacity, false);
   vector<const MovingEntities*> configsForABank;
 
   BOOST_CHECK_NO_THROW({

@@ -170,6 +170,9 @@ public:
   MovingConfigsManager(const ScenarioDetails &scenarioDetails_,
                        const SymbolsTable &SymTb_) :
       scenarioDetails(scenarioDetails_), SymTb(SymTb_) {
+    VP_EX_MSG(scenarioDetails._transferConstraints, logic_error,
+              "At this point ScenarioDetails::_transferConstraints should be not NULL!");
+
     const shared_ptr<const AllEntities> &entities = scenarioDetails.entities;
     const size_t entsCount = entities->count();
 
