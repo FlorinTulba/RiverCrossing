@@ -217,7 +217,12 @@ struct IMove /*abstract*/ {
 
   virtual const ent::MovingEntities& movedEntities() const = 0;
   virtual std::shared_ptr<const IState> resultedState() const = 0;
-  virtual unsigned index() const = 0; ///< 0-based index of the move
+
+  /**
+  0-based index of the move
+  or UINT_MAX for the fake empty move producing the initial state
+  */
+  virtual unsigned index() const = 0;
 
   virtual std::string toString() const = 0;
 };
@@ -230,18 +235,36 @@ the path required to reach that solution.
 struct IAttempt /*abstract*/ {
   virtual ~IAttempt() /*= 0*/ {}
 
+  /// First call sets the initial state. Next calls are the actually moves.
+  virtual void append(const IMove &move) = 0;
+
+  /// Removes last move, if any left
+  virtual void pop() = 0;
+
+  /// Ensures the attempt won't show corrupt data after a difficult to trace exception
+  virtual void clear() = 0;
+
   virtual std::shared_ptr<const IState> initialState() const = 0;
   virtual size_t length() const = 0; ///< number of moves from the current path
-  virtual const IMove& move(size_t idx) const = 0; ///< n-th move
 
   /**
-  @return size of the symmetric difference between the entities from
-    the target left bank and current left bank
+  @return last performed move or at least the initial fake empty move
+     that set the initial state
+  @throw out_of_range when there is not even the fake initial one
   */
-  virtual size_t distToSolution() const = 0;
+  virtual const IMove& lastMove() const = 0;
+
   virtual bool isSolution() const = 0; ///< @return true for a solution path
 
   virtual std::string toString() const = 0;
+
+#ifdef UNIT_TESTING
+  /**
+  @return n-th valid move
+  @throw out_of_range for an invalid move index
+  */
+  virtual const IMove& move(size_t idx) const = 0;
+#endif // UNIT_TESTING
 };
 
 } // namespace sol

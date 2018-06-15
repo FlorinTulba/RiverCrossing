@@ -499,14 +499,12 @@ unique_ptr<ent::IMovingEntitiesExt>
   return make_unique<TotalLoadExt>(entities, 0., std::move(res));
 }
 
-void Scenario::Results::update(const sol::IAttempt &unsuccessfulAttempt,
+void Scenario::Results::update(size_t attemptLen, size_t crtDistToSol,
                                const ent::BankEntities &currentLeftBank,
                                size_t &bestMinDistToGoal) {
-  const size_t attemptLen = unsuccessfulAttempt.length();
   if(attemptLen > longestInvestigatedPath)
     longestInvestigatedPath = attemptLen;
 
-  const size_t crtDistToSol = unsuccessfulAttempt.distToSolution();
   if(bestMinDistToGoal > crtDistToSol) {
     bestMinDistToGoal = crtDistToSol;
     closestToTargetLeftBank = {currentLeftBank};
@@ -640,13 +638,28 @@ const fs::path scenariosFolder() {
   return dir;
 }
 
-void tackleScenario(const fs::path &file, unsigned &solvedScenarios) try {
+void tackleScenario(const fs::path &file,
+                    unsigned &solvedScenarios,
+                    vector<string> &BFS_DFS_notableDiffs) try {
   cout<<"Handling scenario file: "<<file<<endl;
   rc::Scenario scenario(ifstream(file.string()));
   cout<<scenario<<endl<<endl;
+
+  size_t bfsSolLen = 0ULL, dfsSolLen = 0ULL;
+
+  cout<<"---------- Breadth-first search ----------"<<endl;
   cout<<scenario.solution()<<endl<<endl<<endl;
-  if(scenario.solution().attempt->isSolution())
+  bfsSolLen = scenario.solution().attempt->length();
+
+  cout<<endl<<"||||||||||| Depth-first search |||||||||||"<<endl;
+  cout<<scenario.solution(false)<<endl<<endl<<endl;
+  dfsSolLen = scenario.solution(false).attempt->length();
+
+  if(bfsSolLen > 0ULL || dfsSolLen > 0ULL)
     ++solvedScenarios;
+
+  if(bfsSolLen != dfsSolLen)
+    BFS_DFS_notableDiffs.push_back(file.string());
 
 } catch(const domain_error &ex) {
   cerr<<ex.what()<<endl;
@@ -665,6 +678,11 @@ int main(int /*argc*/, char* /*argv*/[]) {
 
 	unsigned scenarios = 0U, solvedScenarios = 0U;
 
+	// Names of the scenarios with worth-noting differences
+	// between DFS and BFS strategies (solution length is different,
+  // or one finds a solution and the other doesn't)
+	vector<string> BFS_DFS_notableDiffs;
+
 	// Traverse the Scenarios folder and solve the puzzle from each json file
 	for(directory_iterator itEnd, it(dir); it != itEnd; ++it) {
 		const fs::path file = it->path();
@@ -672,10 +690,15 @@ int main(int /*argc*/, char* /*argv*/[]) {
 			continue;
 
     ++scenarios;
-		tackleScenario(file, solvedScenarios);
+		tackleScenario(file, solvedScenarios, BFS_DFS_notableDiffs);
 	}
 
 	cout<<"Solved "<<solvedScenarios<<'/'<<scenarios<<" scenarios."<<endl;
+	if( ! BFS_DFS_notableDiffs.empty())
+    cout<<"There were "<<BFS_DFS_notableDiffs.size()
+      <<" scenarios with notable differences between BFS and DFS:"<<endl<<'\t';
+    copy(CBOUNDS(BFS_DFS_notableDiffs), ostream_iterator<const string&>(cout, " "));
+    cout<<endl;
 
 	return 0;
 }

@@ -1070,164 +1070,147 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
   d.entities = ae;
   d.capacity = 2U;
 
-  BOOST_CHECK_THROW(a.append({MovingEntities(ae, vector<unsigned>({1U})),
+  BOOST_CHECK_THROW(a.append(Move{MovingEntities(ae, vector<unsigned>({1U})),
                              d.createInitialState(InitialSymbolsTable()),
                              UINT_MAX}),
                     logic_error); // MovingEntities for first append not empty
 
   BOOST_CHECK( ! a.isSolution());
   BOOST_CHECK(a.length() == 0ULL);
-  BOOST_CHECK(a.distToSolution() == SIZE_MAX);
   BOOST_CHECK(a.initialState() == nullptr);
   BOOST_CHECK(a.targetLeftBank == nullptr);
-  BOOST_CHECK_THROW(a.move(0ULL),
-                    out_of_range); // no moves yet
+  BOOST_CHECK_THROW(a.lastMove(),
+                    out_of_range); // no moves, nor the initial state yet
 
   BOOST_CHECK_NO_THROW({
     MovingEntities moved(ae);
+    Attempt a;
 
     // The move creating the initial state
-    a.append({moved, // empty right now
+    a.append(Move{moved, // empty right now
              d.createInitialState(InitialSymbolsTable()),
              UINT_MAX}); // doesn't need a meaningful index
     BOOST_CHECK( ! a.isSolution());
     BOOST_CHECK(a.length() == 0ULL);
-    BOOST_CHECK(a.distToSolution() == 3ULL);
     BOOST_CHECK(a.initialState() != nullptr);
     BOOST_CHECK(a.targetLeftBank != nullptr);
-    BOOST_CHECK_THROW(a.move(0ULL),
-                      out_of_range); // no moves yet
+    const IMove &fakeMove = a.lastMove();
 
     // First move
     moved = vector<unsigned>({1U, 2U});
-    BOOST_CHECK_THROW(a.append({moved,
-                               CP(a.initSt)->next(moved),
+    BOOST_CHECK_THROW(a.append(Move{moved,
+                               CP(fakeMove.resultedState())->next(moved),
                                1234U}),
                       logic_error); // first move needs index 0, not 1234
-    a.append({moved,
-             CP(a.initSt)->next(moved),
+    a.append(Move{moved,
+             CP(fakeMove.resultedState())->next(moved),
              0U});
     BOOST_CHECK( ! a.isSolution());
     BOOST_CHECK(a.length() == 1ULL);
-    BOOST_CHECK(a.distToSolution() == 1ULL);
     BOOST_CHECK(a.initialState() != nullptr);
     BOOST_CHECK(a.targetLeftBank != nullptr);
-    BOOST_CHECK_THROW(a.move(a.length()),
-                      out_of_range); // right beyond last valid index
-    const IMove &firstMove = a.move(0ULL);
+    const IMove &firstMove = a.lastMove();
 
     // Second move
     moved = vector<unsigned>({1U});
-    BOOST_CHECK_THROW(a.append({moved,
+    BOOST_CHECK_THROW(a.append(Move{moved,
                                CP(firstMove.resultedState())->next(moved),
                                1234U}),
                       logic_error); // second move needs index 1, not 1234
-    a.append({moved,
+    a.append(Move{moved,
              CP(firstMove.resultedState())->next(moved),
              1U});
     BOOST_CHECK( ! a.isSolution());
     BOOST_CHECK(a.length() == 2ULL);
-    BOOST_CHECK(a.distToSolution() == 2ULL);
     BOOST_CHECK(a.initialState() != nullptr);
     BOOST_CHECK(a.targetLeftBank != nullptr);
-    BOOST_CHECK_THROW(a.move(a.length()),
-                      out_of_range); // right beyond last valid index
-    const IMove &secondMove = a.move(1ULL);
+    const IMove &secondMove = a.lastMove();
 
     // Third move
     moved = vector<unsigned>({1U, 3U});
-    BOOST_CHECK_THROW(a.append({moved,
+    BOOST_CHECK_THROW(a.append(Move{moved,
                                CP(secondMove.resultedState())->next(moved),
                                1234U}),
                       logic_error); // third move needs index 2, not 1234
-    a.append({moved,
+    a.append(Move{moved,
              CP(secondMove.resultedState())->next(moved),
              2U});
     BOOST_CHECK(a.isSolution());
     BOOST_CHECK(a.length() == 3ULL);
-    BOOST_CHECK(a.distToSolution() == 0ULL);
     BOOST_CHECK(a.initialState() != nullptr);
     BOOST_CHECK(a.targetLeftBank != nullptr);
-    BOOST_CHECK_THROW(a.move(a.length()),
-                      out_of_range); // right beyond last valid index
-    const IMove &thirdMove = a.move(2ULL);
+    const IMove &thirdMove = a.lastMove();
 
     BOOST_CHECK(CP(thirdMove.resultedState())->leftBank().empty());
 
     a.pop();
     BOOST_CHECK( ! a.isSolution());
     BOOST_CHECK(a.length() == 2ULL);
-    BOOST_CHECK(a.distToSolution() == 2ULL);
     BOOST_CHECK(a.initialState() != nullptr);
     BOOST_CHECK(a.targetLeftBank != nullptr);
-    BOOST_CHECK_THROW(a.move(a.length()),
-                      out_of_range); // right beyond last valid index
+    a.lastMove();
 
     a.pop();
     BOOST_CHECK( ! a.isSolution());
     BOOST_CHECK(a.length() == 1ULL);
-    BOOST_CHECK(a.distToSolution() == 1ULL);
     BOOST_CHECK(a.initialState() != nullptr);
     BOOST_CHECK(a.targetLeftBank != nullptr);
-    BOOST_CHECK_THROW(a.move(a.length()),
-                      out_of_range); // right beyond last valid index
+    a.lastMove();
 
     a.pop();
     BOOST_CHECK( ! a.isSolution());
     BOOST_CHECK(a.length() == 0ULL);
-    BOOST_CHECK(a.distToSolution() == 3ULL);
     BOOST_CHECK(a.initialState() != nullptr);
     BOOST_CHECK(a.targetLeftBank != nullptr);
-    BOOST_CHECK_THROW(a.move(a.length()),
-                      out_of_range); // right beyond last valid index
+    a.lastMove();
 
+    // There are already no more registered moves, however initFakeMove remains
     a.pop();
     BOOST_CHECK( ! a.isSolution());
     BOOST_CHECK(a.length() == 0ULL);
-    BOOST_CHECK(a.distToSolution() == SIZE_MAX);
-    BOOST_CHECK(a.initialState() == nullptr);
-    BOOST_CHECK(a.targetLeftBank == nullptr);
-    BOOST_CHECK_THROW(a.move(a.length()),
-                      out_of_range); // right beyond last valid index
+    BOOST_CHECK(a.initialState() != nullptr);
+    BOOST_CHECK(a.targetLeftBank != nullptr);
+    a.lastMove();
 
-    // further pop operations don't get affected
+    // Further pop operations don't change anything
     a.pop();
     BOOST_CHECK( ! a.isSolution());
     BOOST_CHECK(a.length() == 0ULL);
-    BOOST_CHECK(a.distToSolution() == SIZE_MAX);
-    BOOST_CHECK(a.initialState() == nullptr);
-    BOOST_CHECK(a.targetLeftBank == nullptr);
-    BOOST_CHECK_THROW(a.move(a.length()),
-                      out_of_range); // right beyond last valid index
+    BOOST_CHECK(a.initialState() != nullptr);
+    BOOST_CHECK(a.targetLeftBank != nullptr);
+    a.lastMove();
   });
 
   BOOST_CHECK_NO_THROW({ // checking `clear`
     MovingEntities moved(ae);
+    Attempt a;
 
     // The move creating the initial state
-    a.append({moved, // empty right now
+    a.append(Move{moved, // empty right now
              d.createInitialState(InitialSymbolsTable()),
              UINT_MAX}); // doesn't need a meaningful index
+    const IMove &fakeMove = a.lastMove();
 
     // First move
     moved = vector<unsigned>({1U, 2U});
-    a.append({moved,
-             CP(a.initSt)->next(moved),
+    a.append(Move{moved,
+             CP(fakeMove.resultedState())->next(moved),
              0U});
-    const IMove &firstMove = a.move(0ULL);
+    const IMove &firstMove = a.lastMove();
 
     // Second move
     moved = vector<unsigned>({1U});
-    a.append({moved,
+    a.append(Move{moved,
              CP(firstMove.resultedState())->next(moved),
              1U});
-    const IMove &secondMove = a.move(1ULL);
+    const IMove &secondMove = a.lastMove();
 
     // Third move
     moved = vector<unsigned>({1U, 3U});
-    a.append({moved,
+    a.append(Move{moved,
              CP(secondMove.resultedState())->next(moved),
              2U});
+    a.lastMove();
 
     BOOST_CHECK(a.isSolution());
 
@@ -1235,11 +1218,9 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
 
     BOOST_CHECK( ! a.isSolution());
     BOOST_CHECK(a.length() == 0ULL);
-    BOOST_CHECK(a.distToSolution() == SIZE_MAX);
-    BOOST_CHECK(a.initialState() == nullptr);
-    BOOST_CHECK(a.targetLeftBank == nullptr);
-    BOOST_CHECK_THROW(a.move(a.length()),
-                      out_of_range); // right beyond last valid index
+    BOOST_CHECK(a.initialState() != nullptr);
+    BOOST_CHECK(a.targetLeftBank != nullptr);
+    a.lastMove();
   });
 }
 
@@ -1253,7 +1234,6 @@ BOOST_AUTO_TEST_CASE(solvingVariousScenarios) {
     *pAe += make_shared<const Entity>(3U, "c", "", false, "false", 3.);
   });
 
-  Scenario::Results o;
   ScenarioDetails d;
   d.entities = ae;
   d.capacity = 2U;
@@ -1265,9 +1245,10 @@ BOOST_AUTO_TEST_CASE(solvingVariousScenarios) {
   BOOST_CHECK_NO_THROW({
     assert(d.capacity == 2U);
     assert(d.maxLoad == DBL_MAX);
-    Solver s(d, o);
-    s.run();
-    shared_ptr<const IAttempt> &sol = o.attempt;
+    Scenario::Results oBfs;
+    Solver s(d, oBfs);
+    s.run(true);
+    shared_ptr<const IAttempt> &sol = oBfs.attempt;
     BOOST_REQUIRE(nullptr != sol);
     BOOST_CHECK(sol->isSolution());
     bool b = false;
@@ -1275,7 +1256,30 @@ BOOST_AUTO_TEST_CASE(solvingVariousScenarios) {
     if(b) {
       const IMove &firstMove = sol->move(0ULL);
       const IMove &secondMove = sol->move(1ULL);
-      const IMove &thirdMove = sol->move(2ULL);
+      const IMove &thirdMove = sol->lastMove();
+      BOOST_CHECK(firstMove.movedEntities() == set<unsigned>({1U, 2U}) ||
+                  firstMove.movedEntities() == set<unsigned>({1U, 3U}));
+      BOOST_CHECK(secondMove.movedEntities() == set<unsigned>({1U}));
+      BOOST_CHECK(thirdMove.movedEntities() == set<unsigned>({1U, 2U}) ||
+                  thirdMove.movedEntities() == set<unsigned>({1U, 3U}));
+    }
+  });
+
+  BOOST_CHECK_NO_THROW({
+    assert(d.capacity == 2U);
+    assert(d.maxLoad == DBL_MAX);
+    Scenario::Results oDfs;
+    Solver s(d, oDfs);
+    s.run(false);
+    shared_ptr<const IAttempt> &sol = oDfs.attempt;
+    BOOST_REQUIRE(nullptr != sol);
+    BOOST_CHECK(sol->isSolution());
+    bool b = false;
+    BOOST_CHECK(b = (sol->length() == 3ULL));
+    if(b) {
+      const IMove &firstMove = sol->move(0ULL);
+      const IMove &secondMove = sol->move(1ULL);
+      const IMove &thirdMove = sol->lastMove();
       BOOST_CHECK(firstMove.movedEntities() == set<unsigned>({1U, 2U}) ||
                   firstMove.movedEntities() == set<unsigned>({1U, 3U}));
       BOOST_CHECK(secondMove.movedEntities() == set<unsigned>({1U}));
@@ -1293,20 +1297,42 @@ BOOST_AUTO_TEST_CASE(solvingVariousScenarios) {
   BOOST_CHECK_NO_THROW({
     assert(d.capacity == 2U);
     assert(d.maxLoad == 3.);
-    Solver s(d, o);
-    s.run();
-    shared_ptr<const IAttempt> &sol = o.attempt;
+    Scenario::Results oBfs;
+    Solver s(d, oBfs);
+    s.run(true);
+    shared_ptr<const IAttempt> &sol = oBfs.attempt;
     BOOST_REQUIRE(nullptr != sol);
     BOOST_CHECK( ! sol->isSolution());
 
     // abc - empty (initial state not counted), then c - ab, then ac - b
-    BOOST_CHECK(o.longestInvestigatedPath == 2ULL);
+    BOOST_CHECK(oBfs.longestInvestigatedPath == 2ULL);
 
     // abc - empty ; bc - a ; c - ab ; ac - b
-    BOOST_CHECK(o.investigatedStates == 4ULL);
+    BOOST_CHECK(oBfs.investigatedStates == 4ULL);
 
     // c - ab
-    BOOST_CHECK(o.closestToTargetLeftBank.size() == 1ULL);
+    BOOST_CHECK(oBfs.closestToTargetLeftBank.size() == 1ULL);
+  });
+
+  // Entity 3 doesn't row and the raft supports only its weight => no solution
+  BOOST_CHECK_NO_THROW({
+    assert(d.capacity == 2U);
+    assert(d.maxLoad == 3.);
+    Scenario::Results oDfs;
+    Solver s(d, oDfs);
+    s.run(false);
+    shared_ptr<const IAttempt> &sol = oDfs.attempt;
+    BOOST_REQUIRE(nullptr != sol);
+    BOOST_CHECK( ! sol->isSolution());
+
+    // abc - empty (initial state not counted), then c - ab, then ac - b
+    BOOST_CHECK(oDfs.longestInvestigatedPath == 2ULL);
+
+    // abc - empty ; bc - a ; c - ab ; ac - b
+    BOOST_CHECK(oDfs.investigatedStates == 4ULL);
+
+    // c - ab
+    BOOST_CHECK(oDfs.closestToTargetLeftBank.size() == 1ULL);
   });
 }
 

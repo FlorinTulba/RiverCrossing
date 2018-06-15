@@ -13,6 +13,7 @@
 #include "durationExt.h"
 #include "transferredLoadExt.h"
 
+#include <queue>
 #include <iomanip>
 
 using namespace std;
@@ -437,6 +438,22 @@ public:
         throw logic_error(string(__func__) +
           " - Not all moved entities were found on the receiver bank!");
   }
+  Move(const IMove &other) : ///< copy-ctor from the base IMove, not from Move
+    Move(other.movedEntities(), other.resultedState()->clone(), other.index()) {}
+  Move(const Move&) = default;
+  Move(Move&&) = default;
+
+  ///< copy assignment operator from the base IMove, not from Move
+  Move& operator=(const IMove &other) {
+    if(this != &other) {
+      movedEnts = other.movedEntities();
+      resultedSt = other.resultedState()->clone();
+      idx = other.index();
+    }
+    return *this;
+  }
+  Move& operator=(const Move&) = default;
+  Move& operator=(Move&&) = default;
 
   const MovingEntities& movedEntities() const override {return movedEnts;}
   shared_ptr<const IState> resultedState() const override {return resultedSt;}
@@ -457,12 +474,8 @@ public:
   }
 };
 
-/**
-The current states from the path of the backtracking algorithm.
-If the algorithm finds a solution, the attempt will express
-the path required to reach that solution.
-*/
-class Attempt : public IAttempt {
+/// A move plus a link to the previous move
+class ChainedMove : public Move {
 
     #ifdef UNIT_TESTING // leave fields public for Unit tests
 public:
@@ -470,7 +483,40 @@ public:
 protected:
     #endif
 
-  shared_ptr<const IState> initSt; ///< initial state
+  shared_ptr<const ChainedMove> prev; ///< the link to the previous move or NULL if first move
+
+public:
+  ChainedMove(const MovingEntities &movedEnts_,
+              unique_ptr<const IState> resultedSt_,
+              unsigned idx_,
+              const shared_ptr<const ChainedMove> &prevMove = nullptr) :
+    Move(movedEnts_, std::move(resultedSt_), idx_), prev(prevMove) {}
+  ChainedMove(const ChainedMove&) = default;
+  ChainedMove(ChainedMove&&) = default;
+  ChainedMove& operator=(const ChainedMove&) = default;
+  ChainedMove& operator=(ChainedMove&&) = default;
+
+  shared_ptr<const ChainedMove> prevMove() const {return prev;}
+};
+
+/**
+The current states from the path of the search algorithm.
+If the algorithm finds a solution, the attempt will express
+the path required to reach that solution.
+*/
+class Attempt : public IAttempt {
+
+    #ifdef UNIT_TESTING // leave fields public for Unit tests
+public:
+
+  const IMove& move(size_t idx) const override {return moves.at(idx);}
+
+    #else // keep fields protected otherwise
+protected:
+    #endif
+
+  /// Initial fake empty move setting the initial state
+  unique_ptr<const Move> initFakeMove;
 
   /// The configuration of the left bank for a solution
   unique_ptr<const BankEntities> targetLeftBank;
@@ -478,70 +524,92 @@ protected:
   vector<Move> moves; ///< the moves to be extended by the algorithm
 
 public:
+  Attempt() {} ///< used by Depth-First search
+
+  /// Builds the chronological Breadth-First solution based on the last move
+  Attempt(const ChainedMove &chainedMove) {
+    // Calling below Attempt instead of _Attempt would just create temporary
+    // objects and won't create the desired effects of the recursion.
+
+    // Function that must be called only within this ctor, so kept as a lambda:
+    function<void(const ChainedMove&)>
+      _Attempt = [&_Attempt, // cannot refer to itself below without capturing its own name
+                  this](const ChainedMove &chMove) {
+        if(nullptr != chMove.prevMove())
+          _Attempt(*chMove.prevMove()); // this required the mentioned capture
+        append(chMove);
+      };
+    _Attempt(chainedMove);
+  }
+
   /// First call sets the initial state. Next calls are the actually moves.
-  void append(const Move &move) {
-    if(nullptr == initSt) {
+  void append(const IMove &move) override {
+    if(nullptr == initFakeMove) {
       if( ! move.movedEntities().empty())
         throw logic_error(string(__func__) +
           " should be called the first time with a `move` parameter "
           "using an empty `movedEntities`!");
-      initSt = move.resultedState();
-      targetLeftBank = make_unique<const BankEntities>(~initSt->leftBank());
+      initFakeMove = make_unique<const Move>(move);
+      targetLeftBank =
+        make_unique<const BankEntities>(initFakeMove->resultedState()->rightBank());
       return;
     }
     if(move.index() != (unsigned)moves.size())
       throw logic_error(string(__func__) +
         " - Expecting move index "s + to_string(moves.size()) +
         ", but the provided move has index "s + to_string(move.index()));
-    moves.push_back(move);
+    moves.emplace_back(move);
   }
 
-  /// Removes last move, if any left, or even the initial state when called again
-  void pop() {
-    if(moves.empty()) {
-      initSt = nullptr;
-      targetLeftBank = nullptr;
+  /// Removes last move, if any left
+  void pop() override {
+    if(moves.empty())
       return;
-    }
     moves.pop_back();
   }
 
   /// Ensures the attempt won't show corrupt data after a difficult to trace exception
-  void clear() {
+  void clear() override {
     moves.clear();
-    initSt = nullptr;
-    targetLeftBank = nullptr;
   }
 
-  shared_ptr<const IState> initialState() const {return initSt;}
-  size_t length() const override {return moves.size();} ///< number of moves from the current path
-  const IMove& move(size_t idx) const override { ///< n-th move
-    return moves.at(idx);
+  shared_ptr<const IState> initialState() const override {
+    if(nullptr != initFakeMove)
+      return initFakeMove->resultedState();
+
+    return nullptr;
   }
+
+  size_t length() const override {return moves.size();} ///< number of moves from the current path
 
   /**
-  @return size of the symmetric difference between the entities from
-    the target left bank and current left bank
+  @return last performed move or at least the initial fake empty move
+     that set the initial state
+  @throw out_of_range when there is not even the fake initial one
   */
-  size_t distToSolution() const override {
-    if(nullptr == initSt)
-      return SIZE_MAX;
+  const IMove& lastMove() const override {
+    if( ! moves.empty())
+      return moves.back();
 
-    const BankEntities &crtLeftBank = moves.empty() ?
-      initSt->leftBank() : moves[length() - 1ULL].resultedState()->leftBank();
-    return initSt->rightBank().differencesCount(crtLeftBank);
+    if(nullptr != initFakeMove)
+      return *initFakeMove;
+
+    throw out_of_range(string(__func__) +
+      " - Called when there are no moves yet and not even the initial state!");
   }
 
   bool isSolution() const override { ///< @return true for a solution path
-    return (nullptr != initSt) && ( ! moves.empty())
+    // Timing, bank and raft/bridge (capacity & load) constraints all conform here
+    // Now it matters only if everyone reached the opposite bank
+    return ( ! moves.empty())
       && (*targetLeftBank == moves.back().resultedState()->leftBank());
   }
 
   string toString() const override {
-    if(nullptr == initSt)
+    if(nullptr == initFakeMove)
       return "";
     ostringstream oss;
-    oss<<*initSt;
+    oss<<*initFakeMove->resultedState();
     for(const Move &m : moves)
       oss<<m;
     return oss.str();
@@ -567,7 +635,9 @@ protected:
 
   /// Ensures the algorithm doesn't retry a path twice
   vector<unique_ptr<const IState>> examinedStates;
-  shared_ptr<Attempt> steps; ///< the current evolution of the algorithm
+  shared_ptr<IAttempt> steps; ///< the current evolution of the algorithm
+
+  unique_ptr<const BankEntities> targetLeftBank;
 
   /**
   Absolute difference between the expected entities on the target left bank
@@ -575,6 +645,36 @@ protected:
   The value is the size of the symmetric difference between the 2 bank configurations.
   */
   size_t minDistToGoal = SIZE_MAX;
+
+  /// Updates examined states and the statistics to report and Symbols Table if necessary
+  void commonTasksAddMove(const Move &move) {
+    // wraps around for UINT_MAX
+    SymTb["CrossingIndex"] = double(move.index() + 2U);
+
+    assert(nullptr != move.movedEntities().getExtension());
+    move.movedEntities().getExtension()->addMovePostProcessing(SymTb);
+
+    const shared_ptr<const IState> crtState = move.resultedState();
+    examinedStates.emplace_back(crtState->clone());
+
+    results.update(size_t(move.index() + 1U), // wraps around for UINT_MAX
+                   targetLeftBank->differencesCount(move.resultedState()->leftBank()),
+                   crtState->leftBank(), minDistToGoal);
+  }
+
+  /**
+  Provides the raft/bridge configurations which are allowed in a given state
+  sorted by the number of entities are on each raft/bridge config.
+
+  When moving from left to right, larger configs are favored, while at return,
+  smaller configs are preferred.
+  */
+  void allowedMovingConfigurations(const IState &s,
+                                   vector<const MovingEntities*> &allowedCfgs) {
+    const BankEntities &crtBank = s.nextMoveFromLeft() ?
+      s.leftBank() : s.rightBank();
+    movingCfgsManager.configsForBank(crtBank, allowedCfgs, s.nextMoveFromLeft());
+  }
 
   /**
   Prepares the exploration of a move.
@@ -604,12 +704,23 @@ protected:
         {
 #ifndef NDEBUG
       cout<<endl<<endl;
-      const int moveIdx = (int)solver.SymTb["CrossingIndex"] - 2;
-      if(moveIdx >= 0 && moveIdx < (int)solver.steps->length())
-        cout<<*solver.steps->move(moveIdx).resultedState()<<endl;
-      else if(nullptr != solver.steps->initialState())
-        cout<<*solver.steps->initialState()<<endl;
-      cout<<"  DO move "<<(moveIdx + 2)<<" : "<<move<<endl;
+
+      const unsigned moveIdx = move.index();
+      if(UINT_MAX != moveIdx) { // a normal move
+        assert( ! move.movedEntities().empty());
+        assert((unsigned)solver.steps->length() == moveIdx);
+        assert(solver.steps->initialState() != nullptr);
+
+        cout<<*solver.steps->lastMove().resultedState()<<endl;
+        cout<<"  DO move "<<(moveIdx + 1U)<<" : "<<move<<endl;
+
+      } else { // about to set the initial state through a fake empty move
+        assert(move.movedEntities().empty());
+        assert(solver.steps->length() == 0ULL);
+        assert(solver.steps->initialState() == nullptr);
+
+        cout<<"  DO initial fake empty move : "<<move<<endl;
+      }
 #endif // NDEBUG
 
       solver.steps->append(move);
@@ -618,16 +729,7 @@ protected:
         return; // no need to update the rest of the information now
       }
 
-      ++solver.SymTb["CrossingIndex"];
-
-      assert(nullptr != move.movedEntities().getExtension());
-      move.movedEntities().getExtension()->addMovePostProcessing(solver.SymTb);
-
-      const shared_ptr<const IState> crtState = move.resultedState();
-      solver.examinedStates.emplace_back(crtState->clone());
-
-      solver.results.update(*solver.steps, crtState->leftBank(),
-                            solver.minDistToGoal);
+      solver.commonTasksAddMove(move);
     }
 
     /// Reverts the dead-end move(step)
@@ -641,22 +743,15 @@ protected:
       --solver.SymTb["CrossingIndex"];
 
       // Allowing the actions of the extensions
-      const size_t attemptLen = solver.steps->length();
-      if(attemptLen > 0ULL) {
-        const IMovingEntitiesExt *previousMoveExt =
-          solver.steps->move(attemptLen-1ULL).movedEntities().getExtension();
-        assert(nullptr != previousMoveExt);
-        previousMoveExt->removeMovePostProcessing(solver.SymTb);
-
-      } else { // empty attempt - no previous moves
-        const auto extOfFakePreviousMove =
-          solver.scenarioDetails.createMovingEntitiesExt();
-        assert(nullptr != extOfFakePreviousMove);
-        extOfFakePreviousMove->removeMovePostProcessing(solver.SymTb);
-      }
+      const IMovingEntitiesExt *previousMoveExt =
+        solver.steps->lastMove().movedEntities().getExtension();
+      assert(nullptr != previousMoveExt);
+      previousMoveExt->removeMovePostProcessing(solver.SymTb);
 
 #ifndef NDEBUG
-      cout<<endl<<endl<<"UNDO move "<<solver.SymTb["CrossingIndex"]<<" : "<<_move<<endl;
+      // _move.index() might return UINT_MAX, while CrossingIndex is reliable
+      cout<<endl<<endl<<"UNDO move "<<solver.SymTb["CrossingIndex"]<<" : "
+        <<_move<<endl;
 #endif // NDEBUG
     }
 
@@ -666,18 +761,80 @@ protected:
 
   friend class StepManager;
 
-  /// @return true if a solution was found
-  bool explore(Move &&move) {
+  /// @return true if a solution was found using BFS
+  bool bfsExplore(unique_ptr<const IState> initialState) {
+    queue<shared_ptr<const ChainedMove>> movesToExplore;
+
+    // The initial entry is the fake move producing initial state
+    movesToExplore.push(make_shared<const ChainedMove>(
+      MovingEntities(scenarioDetails.entities, {},
+                     scenarioDetails.createMovingEntitiesExt()),
+      std::move(initialState),
+      UINT_MAX)); // UINT_MAX index required for the fake initial move
+
+    assert(nullptr == initialState); // moved to movesToExplore[0]
+
+    do {
+      const shared_ptr<const ChainedMove> move = movesToExplore.front();
+      movesToExplore.pop();
+
+#ifndef NDEBUG
+      cout<<endl<<"Discovering successors of move:"<<endl<<*move<<endl;
+#endif // NDEBUG
+
+      commonTasksAddMove(*move);
+
+      const shared_ptr<const IState> crtState = move->resultedState();
+      vector<const MovingEntities*> allowedMovingConfigs;
+      allowedMovingConfigurations(*crtState, allowedMovingConfigs);
+
+      for(const MovingEntities *movingCfg : allowedMovingConfigs) {
+        assert(movingCfg);
+        unique_ptr<const IState> nextState = crtState->next(*movingCfg);
+
+#ifndef NDEBUG
+        cout<<endl<<"Probing move "<<*movingCfg<<" => "<<*nextState<<endl;
+#endif // NDEBUG
+
+        if( ! nextState->valid(scenarioDetails.banksConstraints)
+            || nextState->handledBy(examinedStates))
+          continue; // check next raft/bridge config
+
+        const shared_ptr<const ChainedMove> validNextMove
+          = make_shared<const ChainedMove>(
+            MovingEntities(scenarioDetails.entities, movingCfg->ids(),
+                           movingCfg->getExtension()->clone()),
+            std::move(nextState),
+            1U + move->index(), // wraps around for UINT_MAX
+            move);
+
+        assert(nullptr == nextState); // moved to validNextMove
+
+        // Checking if the new state is a solution.
+        // Timing, bank and raft/bridge (capacity & load) constraints all conform here
+        // Now it matters only if everyone reached the opposite bank
+        if(validNextMove->resultedState()->leftBank() == *targetLeftBank) {
+          // Found an optimal solution
+          steps = make_shared<Attempt>(*validNextMove);
+          return true;
+        }
+
+        movesToExplore.push(validNextMove);
+      }
+    } while( ! movesToExplore.empty());
+
+    return false;
+  }
+
+  /// @return true if a solution was found using DFS
+  bool dfsExplore(Move &&move) {
     StepManager stepManager(*this, move);
     if(stepManager.committedStep())
       return true; // discovered solution and committed the given final move
 
     const shared_ptr<const IState> crtState = move.resultedState();
-    const BankEntities &crtBank = crtState->nextMoveFromLeft() ?
-      crtState->leftBank() : crtState->rightBank();
     vector<const MovingEntities*> allowedMovingConfigs;
-    movingCfgsManager.configsForBank(crtBank, allowedMovingConfigs,
-                                     crtState->nextMoveFromLeft());
+    allowedMovingConfigurations(*crtState, allowedMovingConfigs);
 
     for(const MovingEntities *movingCfg : allowedMovingConfigs) {
       assert(movingCfg);
@@ -691,7 +848,7 @@ protected:
           || nextState->handledBy(examinedStates))
         continue; // check next raft/bridge config
 
-      if(explore({*movingCfg, std::move(nextState), (unsigned)steps->length()})) {
+      if(dfsExplore({*movingCfg, std::move(nextState), (unsigned)steps->length()})) {
         stepManager.commitStep();
         return true;
       }
@@ -700,12 +857,13 @@ protected:
     return false;
   }
   /// Pretends the initial state is the result of a previous move (empty raft/bridge)
-  bool explore(unique_ptr<const IState> initialState) {
-    return explore({
+  bool dfsExplore(unique_ptr<const IState> initialState) {
+    steps = make_shared<Attempt>();
+    return dfsExplore({
       MovingEntities(scenarioDetails.entities, {},
                      scenarioDetails.createMovingEntitiesExt()),
       move(initialState),
-      UINT_MAX}); // UINT_MAX because the fake initial move can't have a valid index
+      UINT_MAX}); // UINT_MAX index required for the fake initial move
   }
 
 public:
@@ -714,29 +872,39 @@ public:
       scenarioDetails(scenarioDetails_),
       results(results_),
       SymTb(InitialSymbolsTable()),
-      movingCfgsManager(scenarioDetails_, SymTb),
-      steps(make_shared<Attempt>()) {}
+      movingCfgsManager(scenarioDetails_, SymTb) {}
 
-  /// Looks for a solution
-  void run() {
+  /// Looks for a solution either through BFS or through DFS
+  void run(bool usingBFS) {
 #ifndef NDEBUG
     cout<<"Exploring:"<<endl;
 #endif // NDEBUG
 
-		try {
-      explore(scenarioDetails.createInitialState(SymTb));
-		} catch(const exception &e) {
-		  cerr<<"Couldn't solve the scenario due to: "<<e.what()<<endl;
-		  steps->clear();
-		}
+    try {
+      unique_ptr<const IState> initSt
+        = scenarioDetails.createInitialState(SymTb);
+      targetLeftBank = make_unique<const BankEntities>(initSt->rightBank());
+
+      if(usingBFS)
+        bfsExplore(std::move(initSt));
+      else
+        dfsExplore(std::move(initSt));
+    } catch(const exception &e) {
+      cerr<<"Couldn't solve the scenario due to: "<<e.what()<<endl;
+      if(nullptr != steps)
+        steps->clear();
+    }
+
 #ifndef NDEBUG
     cout<<"Finished exploring."<<endl<<endl;
 #endif // NDEBUG
 
     results.investigatedStates = examinedStates.size();
 
-    assert(nullptr != steps);
-    results.attempt = steps;
+    if(nullptr != steps)
+      results.attempt = steps;
+    else
+      results.attempt = make_shared<const Attempt>();
   }
 };
 
@@ -821,15 +989,26 @@ unique_ptr<const IState>
             stateExt);
 }
 
-const Scenario::Results& Scenario::solution() {
-	if( ! investigated) {
-    Solver solver(details, results);
-    solver.run();
+const Scenario::Results& Scenario::solution(bool usingBFS/* = true*/) {
+	if(usingBFS) {
+    if( ! investigatedByBFS) {
+      Solver solver(details, resultsBFS);
+      solver.run(usingBFS);
 
-		investigated = true;
+      investigatedByBFS = true;
+    }
+
+    return resultsBFS;
 	}
 
-	return results;
+	if( ! investigatedByDFS) {
+    Solver solver(details, resultsDFS);
+    solver.run(usingBFS);
+
+		investigatedByDFS = true;
+	}
+
+	return resultsDFS;
 }
 
 } // namespace rc

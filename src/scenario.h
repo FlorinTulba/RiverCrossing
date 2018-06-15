@@ -47,7 +47,7 @@ public:
     size_t investigatedStates = 0ULL;
 
     /// Updates the fields based on a new unsuccessful attempt
-    void update(const sol::IAttempt &unsuccessfulAttempt,
+    void update(size_t attemptLen, size_t crtDistToSol,
                 const ent::BankEntities &currentLeftBank,
                 size_t &bestMinDistToGoal);
   };
@@ -62,14 +62,19 @@ protected:
 
 	ScenarioDetails details; ///< relevant details of the scenario
 
-  Results results; ///< the results
+  Results resultsBFS; ///< the results obtained with Breadth-First search
+  Results resultsDFS; ///< the results obtained with Depth-First search
 
-	bool investigated = false; ///< ensures solving is performed only once
+  /// Ensures solving is performed only once with Breadth-First search
+	bool investigatedByBFS = false;
+
+  /// Ensures solving is performed only once with Depth-First search
+	bool investigatedByDFS = false;
 
 public:
 	/**
   Builds a scenario based on the input from the provided stream.
-  If solveNow is true, it attempts to also solve this scenario
+  If solveNow is true, it attempts to also solve this scenario using Breadth-First search
   @throw domain_error if there is a problem with the given scenario
 	*/
 	Scenario(std::istream &&scenarioStream, bool solveNow = false);
@@ -87,7 +92,7 @@ public:
 
   @return the solution or an unsuccessful attempt
 	*/
-	const Results& solution();
+	const Results& solution(bool usingBFS = true);
 
 	std::string toString() const; ///< data apart from the description
 };
