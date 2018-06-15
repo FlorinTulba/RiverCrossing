@@ -646,20 +646,34 @@ protected:
   */
   size_t minDistToGoal = SIZE_MAX;
 
-  /// Updates examined states and the statistics to report and Symbols Table if necessary
+  /**
+  This should be a newer / better state than the examined ones.
+  However, previous states that are inferior to this one should be removed.
+  Since this purge is executed for each new addition, there can be only 1
+  dominated state for each call - all previous states
+  were independent and dominant and now at most one of them
+  can become inferior to the provided state.
+  */
+  void addExaminedState(unique_ptr<const IState> &&s) {
+    auto it = begin(examinedStates), itEnd = end(examinedStates);
+    while((it != itEnd) && ( ! (*it)->handledBy(*s))) ++it;
+
+    if(it == itEnd)
+      examinedStates.push_back(std::move(s));
+    else
+      *it = std::move(s);
+  }
+
+  /// Updates the statistics to report and Symbols Table if necessary
   void commonTasksAddMove(const Move &move) {
     // wraps around for UINT_MAX
     SymTb["CrossingIndex"] = double(move.index() + 2U);
 
     assert(nullptr != move.movedEntities().getExtension());
     move.movedEntities().getExtension()->addMovePostProcessing(SymTb);
-
-    const shared_ptr<const IState> crtState = move.resultedState();
-    examinedStates.emplace_back(crtState->clone());
-
     results.update(size_t(move.index() + 1U), // wraps around for UINT_MAX
                    targetLeftBank->differencesCount(move.resultedState()->leftBank()),
-                   crtState->leftBank(), minDistToGoal);
+                   move.resultedState()->leftBank(), minDistToGoal);
   }
 
   /**
@@ -730,6 +744,7 @@ protected:
       }
 
       solver.commonTasksAddMove(move);
+      solver.addExaminedState(move.resultedState()->clone());
     }
 
     /// Reverts the dead-end move(step)
@@ -763,6 +778,8 @@ protected:
 
   /// @return true if a solution was found using BFS
   bool bfsExplore(unique_ptr<const IState> initialState) {
+    addExaminedState(initialState->clone());
+
     queue<shared_ptr<const ChainedMove>> movesToExplore;
 
     // The initial entry is the fake move producing initial state
@@ -820,6 +837,7 @@ protected:
         }
 
         movesToExplore.push(validNextMove);
+        addExaminedState(validNextMove->resultedState()->clone());
       }
     } while( ! movesToExplore.empty());
 
@@ -897,9 +915,21 @@ public:
 
 #ifndef NDEBUG
     cout<<"Finished exploring."<<endl<<endl;
-#endif // NDEBUG
 
     results.investigatedStates = examinedStates.size();
+    for(size_t i=0ULL, lim = results.investigatedStates-1ULL; i<lim; ++i) {
+      const auto &oneState = examinedStates[i];
+      for(size_t j=i+1ULL; j<=lim; ++j) {
+        const auto &otherState = examinedStates[j];
+        if(otherState->handledBy(*oneState) || oneState->handledBy(*otherState)) {
+          cout<<"Found duplicate/redundancy among the examined states:"<<endl;
+          cout<<*oneState<<endl;
+          cout<<*otherState<<endl;
+          assert(false);
+        }
+      }
+    }
+#endif // NDEBUG
 
     if(nullptr != steps)
       results.attempt = steps;
