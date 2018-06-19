@@ -655,6 +655,8 @@ protected:
   can become inferior to the provided state.
   */
   void addExaminedState(unique_ptr<const IState> &&s) {
+    ++results.investigatedStates; // needs to be counted in any case
+
     auto it = begin(examinedStates), itEnd = end(examinedStates);
     while((it != itEnd) && ( ! (*it)->handledBy(*s))) ++it;
 
@@ -916,8 +918,13 @@ public:
 #ifndef NDEBUG
     cout<<"Finished exploring."<<endl<<endl;
 
-    results.investigatedStates = examinedStates.size();
-    for(size_t i=0ULL, lim = results.investigatedStates-1ULL; i<lim; ++i) {
+    /*
+    Testing duplicate/redundancy among the examined states.
+    This part wasn't moved to Unit tests on purpose, to capture such problems
+    even in dynamic, more complex scenarios which weren't reproduced in Unit tests.
+    */
+    assert(results.investigatedStates > 0ULL);
+    for(size_t i=0ULL, lim = examinedStates.size()-1ULL; i<lim; ++i) {
       const auto &oneState = examinedStates[i];
       for(size_t j=i+1ULL; j<=lim; ++j) {
         const auto &otherState = examinedStates[j];
