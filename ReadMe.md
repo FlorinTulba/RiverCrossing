@@ -19,7 +19,7 @@ Below are several such scenarios whose solutions are visualized as web pages (fu
 |![Puzzle about pairs of lions, raccoons and squirrels](doc/lionsRaccoonsAndSquirrels.jpg)|![A step from the solution](doc/lionsRaccoonsAndSquirrelsPDay.jpg)|![A step from the solution](doc/lionsRaccoonsAndSquirrelsLNight.jpg)|
 |![Puzzle about 4 different weights](doc/weights.jpg)|![A step from the solution](doc/weightsP.jpg)|![A step from the solution](doc/weightsL.jpg)|
 
-One visualization like this **might be examined** opening [html/viewSolution.html](html/viewSolution.html).
+One visualization like this **might be examined** opening [html/viewSolution.html](https://cdn.rawgit.com/FlorinTulba/RiverCrossing/5f3731a6/html/viewSolution.html).
 
 Folder [Scenarios](./Scenarios/) contains the puzzles used for testing in *json* format.
 
