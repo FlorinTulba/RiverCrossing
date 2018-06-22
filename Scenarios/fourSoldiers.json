@@ -9,18 +9,35 @@
 "Entities" : [
 	{"Id": 0,
 	"Name": "Arrogant_Soldier",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/arrogantSoldier.png",
+		"Origin": "https://pngimg.com/uploads/soldier/soldier_PNG16048.png"
+		}},
 
 	{"Id": 1,
-	"Name": "Lazy_Soldier"},
+	"Name": "Lazy_Soldier",
+	"Image" : {
+		"Url": "../Scenarios/images/lazySoldier.png",
+		"Size": -1,
+		"Origin": "https://pngimg.com/uploads/soldier/soldier_PNG16048.png"
+		}},
 
 	{"Id": 2,
 	"Name": "Brave_Soldier1",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/braveSoldier.png",
+		"Origin": "https://pngimg.com/uploads/soldier/soldier_PNG16048.png"
+		}},
 
 	{"Id": 3,
 	"Name": "Brave_Soldier2",
-	"CanRow": "true"}
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/braveSoldier.png",
+		"Origin": "https://pngimg.com/uploads/soldier/soldier_PNG16048.png"
+		}}
 	],
 
 "CrossingConstraints" : {

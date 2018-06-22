@@ -12,35 +12,55 @@
 	{"Id": 0,
 	"Name": "Lion1",
 	"CanRow": "true",
-	"Type": "lion"},
+	"Type": "lion",
+	"Image" : {
+		"Url": "../Scenarios/images/lion.png",
+		"Origin": "https://pngimg.com/uploads/lion/lion_PNG23293.png"
+		}},
 
 	{"Id": 1,
 	"Name": "Lion2",
 	"CanRow": "true",
-	"Type": "lion"},
+	"Type": "lion",
+	"Image" : {"Url": "../Scenarios/images/lion.png"}},
 
 	{"Id": 2,
 	"Name": "Raccoon1",
 	"CanRow": "if (%CrossingIndex% mod 4) in {0, 3}",
-	"Type": "raccoon"},
+	"Type": "raccoon",
+	"Image" : {
+		"Url": "../Scenarios/images/raccoon.png",
+		"Origin": "https://pngimg.com/uploads/raccoon/raccoon_PNG16978.png"
+		}},
 
 	{"Id": 3,
 	"Name": "Raccoon2",
 	"CanRow": "if (%CrossingIndex% mod 4) in {0, 3}",
-	"Type": "raccoon"},
+	"Type": "raccoon",
+	"Image" : {"Url": "../Scenarios/images/raccoon.png"}},
 
 	{"Id": 4,
 	"Name": "Squirrel1",
 	"CanRow": "if (%CrossingIndex% mod 4) in {1, 2}",
-	"Type": "squirrel"},
+	"Type": "squirrel",
+	"Image" : {
+		"Url": "../Scenarios/images/squirrel.png",
+		"Origin": "https://pngimg.com/uploads/squirrel/squirrel_PNG15806.png"
+		}},
 
 	{"Id": 5,
 	"Name": "Squirrel2",
 	"CanRow": "if (%CrossingIndex% mod 4) in {1, 2}",
-	"Type": "squirrel"}
+	"Type": "squirrel",
+	"Image" : {"Url": "../Scenarios/images/squirrel.png"}}
 	],
 
 "CrossingConstraints" : {
 	"AllowedRaftConfigurations": "* ; 2 x lion ; 2 x raccoon ; 2 x squirrel"
+	},
+
+"OtherConstraints" : {
+	"NightMode": "if (%CrossingIndex% mod 4) in {0, 3}"
 	}
+
 }

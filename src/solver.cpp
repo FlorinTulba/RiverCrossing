@@ -508,9 +508,6 @@ class Attempt : public IAttempt {
 
     #ifdef UNIT_TESTING // leave fields public for Unit tests
 public:
-
-  const IMove& move(size_t idx) const override {return moves.at(idx);}
-
     #else // keep fields protected otherwise
 protected:
     #endif
@@ -581,6 +578,8 @@ public:
   }
 
   size_t length() const override {return moves.size();} ///< number of moves from the current path
+
+  const IMove& move(size_t idx) const override {return moves.at(idx);}
 
   /**
   @return last performed move or at least the initial fake empty move
@@ -992,6 +991,11 @@ shared_ptr<const IStateExt>
   return _extensionForNextState(me, fromNextExt);
 }
 
+string AbsStateExt::detailsForDemo() const {
+  assert(nullptr != nextExt);
+  return _detailsForDemo() + nextExt->detailsForDemo();
+}
+
 string AbsStateExt::toString(bool suffixesInsteadOfPrefixes/* = true*/) const {
   assert(nullptr != nextExt);
   // Only the matching extension categories will return non-empty strings
@@ -1026,7 +1030,9 @@ unique_ptr<const IState>
             stateExt);
 }
 
-const Scenario::Results& Scenario::solution(bool usingBFS/* = true*/) {
+const Scenario::Results& Scenario::solution(bool usingBFS/* = true*/,
+                                            bool visualize/* = false*/) {
+  const Results *results = nullptr;
 	if(usingBFS) {
     if( ! investigatedByBFS) {
       Solver solver(details, resultsBFS);
@@ -1035,17 +1041,29 @@ const Scenario::Results& Scenario::solution(bool usingBFS/* = true*/) {
       investigatedByBFS = true;
     }
 
-    return resultsBFS;
+    results = &resultsBFS;
+
+	} else {
+    if( ! investigatedByDFS) {
+      Solver solver(details, resultsDFS);
+      solver.run(usingBFS);
+
+      investigatedByDFS = true;
+    }
+
+    results = &resultsDFS;
 	}
 
-	if( ! investigatedByDFS) {
-    Solver solver(details, resultsDFS);
-    solver.run(usingBFS);
-
-		investigatedByDFS = true;
+	if(results->attempt->isSolution() && visualize
+      && ! demoPrepFile.empty()&& ! visualizer.empty()) try {
+    prepareDemo(*results);
+    const int retCode = system(visualizer.c_str());
+    cout<<"The launched visualizer returned: "<<retCode<<endl;
+	} catch(const exception&) {
+	  cerr<<"Unable to launch the visualizer!"<<endl;
 	}
 
-	return resultsDFS;
+	return *results;
 }
 
 } // namespace rc

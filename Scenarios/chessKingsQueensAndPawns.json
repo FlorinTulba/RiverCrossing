@@ -9,26 +9,50 @@
 
 "Entities" : [
 	{"Id": 0,
-	"Name": "WhiteKing"},
+	"Name": "WhiteKing",
+	"Image" : {
+		"Url": "../Scenarios/images/whiteKing.png",
+		"Origin": "https://pngimg.com/uploads/chess/chess_PNG8431.png"
+		}},
 
 	{"Id": 1,
 	"Name": "WhiteQueen",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/whiteQueen.png",
+		"Origin": "https://pngimg.com/uploads/chess/chess_PNG8431.png"
+		}},
 
 	{"Id": 2,
 	"Name": "WhitePawn",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/whitePawn.png",
+		"Origin": "https://pngimg.com/uploads/chess/chess_PNG8431.png"
+		}},
 
 	{"Id": 3,
-	"Name": "BlackKing"},
+	"Name": "BlackKing",
+	"Image" : {
+		"Url": "../Scenarios/images/blackKing.png",
+		"Origin": "https://pngimg.com/uploads/chess/chess_PNG8431.png"
+		}},
 
 	{"Id": 4,
 	"Name": "BlackQueen",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/blackQueen.png",
+		"Origin": "https://pngimg.com/uploads/chess/chess_PNG8431.png"
+		}},
 
 	{"Id": 5,
 	"Name": "BlackPawn",
-	"CanRow": "true"}
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/blackPawn.png",
+		"Origin": "https://pngimg.com/uploads/chess/chess_PNG8431.png"
+		}}
 	],
 
 "CrossingConstraints" : {

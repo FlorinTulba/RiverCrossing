@@ -55,6 +55,13 @@ public:
 };
 
 /**
+Read a NightMode syntax.
+@param s the string to parse
+@return the contained logical expression or NULL when reporting errors
+*/
+std::shared_ptr<const cond::LogicalExpr> parseNightModeExpr(const std::string &s);
+
+/**
 Read a CanRow syntax.
 @param s the string to parse
 @return the contained logical expression or NULL when reporting errors

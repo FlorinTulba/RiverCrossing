@@ -10,24 +10,52 @@
 "Entities" : [
 	{"Id": 0,
 	"Name": "Robber1",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/thief3000USD.png",
+		"Size": -2,
+		"Origin": "https://pngimg.com/uploads/thief/thief_PNG47.png"
+		}},
 
 	{"Id": 1,
 	"Name": "Robber2",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/thief5000USD.png",
+		"Size": -1,
+		"Origin": "https://pngimg.com/uploads/thief/thief_PNG47.png"
+		}},
 
 	{"Id": 2,
 	"Name": "Robber3",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/thief8000USD.png",
+		"Origin": "https://pngimg.com/uploads/thief/thief_PNG47.png"
+		}},
 
 	{"Id": 3,
-	"Name": "Bag$3000"},
+	"Name": "Bag$3000",
+	"Image" : {
+		"Url": "../Scenarios/images/bag3000USD.png",
+		"Size": -2,
+		"Origin": "https://pngimg.com/uploads/luggage/luggage_PNG10725.png"
+		}},
 
 	{"Id": 4,
-	"Name": "Bag$5000"},
+	"Name": "Bag$5000",
+	"Image" : {
+		"Url": "../Scenarios/images/bag5000USD.png",
+		"Size": -1,
+		"Origin": "https://pngimg.com/uploads/luggage/luggage_PNG10725.png"
+		}},
 
 	{"Id": 5,
-	"Name": "Bag$8000"}
+	"Name": "Bag$8000",
+	"Image" : {
+		"Url": "../Scenarios/images/bag8000USD.png",
+		"Origin": "https://pngimg.com/uploads/luggage/luggage_PNG10725.png"
+		}}
 	],
 
 "CrossingConstraints" : {

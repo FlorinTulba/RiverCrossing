@@ -26,6 +26,40 @@ by `#ifdef UNIT_TESTING`!
 using namespace rc;
 using namespace rc::sol;
 
+namespace {
+
+void tackleScenario(const fs::path &file,
+                    unsigned &solved,
+                    unsigned &BFS_DFS_notableDiffs) try {
+  rc::Scenario scenario(ifstream(file.string()), false);
+  // Defer solving to allow displaying its details first:
+  cout<<"Handling scenario file: "<<file<<endl;
+  cout<<scenario<<endl<<endl;
+
+  size_t bfsSolLen = 0ULL, dfsSolLen = 0ULL;
+
+  bfsSolLen = scenario.solution(true).attempt->length();
+  if(bfsSolLen > 0ULL)
+    ++solved;
+
+  dfsSolLen = scenario.solution(false).attempt->length();
+
+  if(dfsSolLen > 0ULL)
+    ++solved;
+
+  if(bfsSolLen != dfsSolLen) {
+    ++BFS_DFS_notableDiffs;
+    if(bfsSolLen > 0ULL && dfsSolLen > 0ULL)
+      BOOST_CHECK(bfsSolLen <= dfsSolLen);
+  }
+
+} catch(const domain_error &ex) {
+  cerr<<ex.what()<<endl;
+  BOOST_CHECK(false);
+}
+
+} // anonymous namespace
+
 BOOST_AUTO_TEST_SUITE(scenario, *boost::unit_test::tolerance(Eps))
 
 BOOST_AUTO_TEST_CASE(invalidJSON) {
@@ -264,7 +298,7 @@ BOOST_AUTO_TEST_CASE(capacityValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Name": "Athlete"},
         {"Id": 1,
         "Name": "Coach"},
@@ -283,7 +317,7 @@ BOOST_AUTO_TEST_CASE(capacityValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Name": "Athlete"},
         {"Id": 1,
         "Name": "Coach"},
@@ -322,7 +356,7 @@ BOOST_AUTO_TEST_CASE(capacityValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Name": "Athlete"},
         {"Id": 1,
         "Name": "Coach"},
@@ -343,7 +377,7 @@ BOOST_AUTO_TEST_CASE(maxLoadValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Weight": 60,
         "Name": "Athlete"},
         {"Id": 1,
@@ -387,7 +421,7 @@ BOOST_AUTO_TEST_CASE(maxLoadValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Weight": 60,
         "Name": "Athlete"},
         {"Id": 1,
@@ -409,7 +443,7 @@ BOOST_AUTO_TEST_CASE(maxLoadValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Weight": 60,
         "Name": "Athlete"},
         {"Id": 1,
@@ -453,7 +487,7 @@ BOOST_AUTO_TEST_CASE(maxLoadValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Name": "Athlete"},
         {"Id": 1,
         "Name": "Coach"},
@@ -546,7 +580,7 @@ BOOST_AUTO_TEST_CASE(maxLoadValidation) {
 
         "Entities" : [
           {"Id": 0,
-          "AllowedToCross": "true",
+          "CanTackleBridgeCrossing": "true",
           "Weight": 60,
           "Name": "Athlete"},
           {"Id": 1,
@@ -574,7 +608,7 @@ BOOST_AUTO_TEST_CASE(allowedLoadsValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Weight": 60,
         "Name": "Athlete"},
         {"Id": 1,
@@ -596,7 +630,7 @@ BOOST_AUTO_TEST_CASE(allowedLoadsValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Weight": 60,
         "Name": "Athlete"},
         {"Id": 1,
@@ -640,7 +674,7 @@ BOOST_AUTO_TEST_CASE(allowedLoadsValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Name": "Athlete"},
         {"Id": 1,
         "Name": "Coach"},
@@ -681,7 +715,7 @@ BOOST_AUTO_TEST_CASE(allowedLoadsValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Weight": 60,
         "Name": "Athlete"},
         {"Id": 1,
@@ -882,7 +916,7 @@ BOOST_AUTO_TEST_CASE(raftConfigurationsValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Name": "Athlete"},
         {"Id": 1,
         "Name": "Coach"},
@@ -935,7 +969,7 @@ BOOST_AUTO_TEST_CASE(raftConfigurationsValidation) {
 
       "Entities" : [
         {"Id": 0,
-        "AllowedToCross": "true",
+        "CanTackleBridgeCrossing": "true",
         "Name": "Athlete"},
         {"Id": 1,
         "Name": "Coach"},
@@ -1375,6 +1409,38 @@ BOOST_AUTO_TEST_CASE(timeLimitValidation) {
         }
       }
     )")));
+}
+
+BOOST_AUTO_TEST_CASE(checkAllScenarioFiles) {
+	fs::path dir = projectFolder();
+	BOOST_REQUIRE( ! dir.empty());
+	BOOST_REQUIRE(exists(dir /= "Scenarios"));
+
+	unsigned scenarios = 0U, solved = 0U;
+
+	// Count of the scenarios with worth-noting differences
+	// between DFS and BFS strategies (solution length is different,
+  // or one finds a solution and the other doesn't)
+	unsigned BFS_DFS_notableDiffs;
+
+	// Traverse the Scenarios folder and solve the puzzle from each json file
+	for(directory_iterator itEnd, it(dir); it != itEnd; ++it) {
+		const fs::path file = it->path();
+		if(file.extension().string().compare(".json") != 0)
+			continue;
+
+    ++scenarios;
+
+    BOOST_TEST_CONTEXT("for puzzle: `"<<file<<'`') {
+      tackleScenario(file, solved, BFS_DFS_notableDiffs);
+    }
+	}
+
+	BOOST_CHECK(solved == 2*scenarios);
+
+	if(BFS_DFS_notableDiffs > 0U)
+    cout<<"There were "<<BFS_DFS_notableDiffs
+      <<" scenarios with notable differences between BFS and DFS:"<<endl;
 }
 
 BOOST_AUTO_TEST_SUITE_END()

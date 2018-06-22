@@ -13,30 +13,54 @@
 	"Name": "Merchant1",
 	"Type": "merchant",
 	"CanRow": "true",
-	"StartsFromRightBank": true},
+	"StartsFromRightBank": true,
+	"Image" : {
+		"Url": "../Scenarios/images/groom.png",
+		"Origin": "https://pngimg.com/uploads/groom/groom_PNG19611.png"
+		}},
 
 	{"Id": 1,
 	"Name": "Merchant2",
 	"Type": "merchant",
-	"StartsFromRightBank": true},
+	"StartsFromRightBank": true,
+	"Image" : {
+		"Url": "../Scenarios/images/groom.png",
+		"Size": -1
+		}},
 
 	{"Id": 2,
 	"Name": "Merchant3",
 	"Type": "merchant",
-	"StartsFromRightBank": true},
+	"StartsFromRightBank": true,
+	"Image" : {
+		"Url": "../Scenarios/images/groom.png",
+		"Size": -1
+		}},
 
 	{"Id": 3,
 	"Name": "Robber1",
 	"Type": "robber",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/thief.png",
+		"Origin": "https://pngimg.com/uploads/thief/thief_PNG47.png"
+		}},
 
 	{"Id": 4,
 	"Name": "Robber2",
-	"Type": "robber"},
+	"Type": "robber",
+	"Image" : {
+		"Url": "../Scenarios/images/thief.png",
+		"Size": -1
+		}},
 
 	{"Id": 5,
 	"Name": "Robber3",
-	"Type": "robber"}
+	"Type": "robber",
+	"Image" : {
+		"Url": "../Scenarios/images/thief.png",
+		"Size": -1
+		}}
 	],
 
 "CrossingConstraints" : {

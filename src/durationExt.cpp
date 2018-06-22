@@ -75,6 +75,12 @@ shared_ptr<const IStateExt>
   return make_shared<const TimeStateExt>(timeOfNextState, info, fromNextExt);
 }
 
+string TimeStateExt::_detailsForDemo() const {
+  ostringstream oss;
+  oss<<"; Elapsed: "<<_time<<" min";
+  return oss.str();
+}
+
 string TimeStateExt::_toString(bool suffixesInsteadOfPrefixes/* = true*/) const {
   // This is displayed only as prefix information
   if(suffixesInsteadOfPrefixes)

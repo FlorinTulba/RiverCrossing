@@ -10,26 +10,46 @@
 	{"Id": 0,
 	"Name": "Father",
 	"CanRow": "true",
-	"Weight": 90},
+	"Weight": 90,
+	"Image" : {
+		"Url": "../Scenarios/images/groom90kg.png",
+		"Origin": "https://pngimg.com/uploads/groom/groom_PNG19611.png"
+		}},
 
 	{"Id": 1,
 	"Name": "Mother",
 	"CanRow": "true",
-	"Weight": 80},
+	"Weight": 80,
+	"Image" : {
+		"Url": "../Scenarios/images/bride80kg.png",
+		"Origin": "https://pngimg.com/uploads/bride/bride_PNG19533.png"
+		}},
 
 	{"Id": 2,
 	"Name": "Boy",
 	"CanRow": "true",
-	"Weight": 60},
+	"Weight": 60,
+	"Image" : {
+		"Url": "../Scenarios/images/boy60kg.png",
+		"Origin": "https://pngimg.com/uploads/children/children_PNG18069.png"
+		}},
 
 	{"Id": 3,
 	"Name": "Girl",
 	"CanRow": "true",
-	"Weight": 40},
+	"Weight": 40,
+	"Image" : {
+		"Url": "../Scenarios/images/girl40kg.png",
+		"Origin": "https://pngimg.com/uploads/girls/girls_PNG6491.png"
+		}},
 
 	{"Id": 4,
 	"Name": "Bag",
-	"Weight": 20}
+	"Weight": 20,
+	"Image" : {
+		"Url": "../Scenarios/images/bag20kg.png",
+		"Origin": "https://pngimg.com/uploads/luggage/luggage_PNG10725.png"
+		}}
 	],
 
 "CrossingConstraints" : {

@@ -10,6 +10,17 @@ Each problem comes with various constraints, like:
 * which / how many entities should remain on each bank
 * a time limit for getting all entities to the other side, based on the speed of every required crossing of the river
 
+Below are several such scenarios whose solutions are visualized as web pages (functional for mobile devices, as well). The first column presents the puzzle description and the other 2 columns show various stages of the animated solutions. The second column illustrates the `portrait` orientation (when the height of the view is larger than the width), while the third column shows what appears in `landscape` views (width larger than height).
+
+|Description|Portrait view|Landscape view|
+|:-:|:-:|:-:|
+|![Puzzle about a bear, 2 gorillas a chicken and a mouse](doc/bearGorillasChickenAndMouse.jpg)|![A step from the solution](doc/bearGorillasChickenAndMouseP.jpg)|![A step from the solution](doc/bearGorillasChickenAndMouseL.jpg)|
+|![Puzzle about 4 people crossing a bridge using a dying torch](doc/bridgeAndTorch.jpg)|![A step from the solution](doc/bridgeAndTorchP.jpg)|![A step from the solution](doc/bridgeAndTorchL.jpg)|
+|![Puzzle about pairs of lions, raccoons and squirrels](doc/lionsRaccoonsAndSquirrels.jpg)|![A step from the solution](doc/lionsRaccoonsAndSquirrelsPDay.jpg)|![A step from the solution](doc/lionsRaccoonsAndSquirrelsLNight.jpg)|
+|![Puzzle about 4 different weights](doc/weights.jpg)|![A step from the solution](doc/weightsP.jpg)|![A step from the solution](doc/weightsL.jpg)|
+
+One visualization like this **might be examined** opening [html/viewSolution.html](html/viewSolution.html).
+
 Folder [Scenarios](./Scenarios/) contains the puzzles used for testing in *json* format.
 
 Each puzzle file contains a description of the problem.
@@ -20,9 +31,10 @@ The entities should appear as follows:
 	{"Id": <entity id - mandatory>,
 	"Name": <entity name - mandatory>,
 	"Type": <entity type - optional>,
-	"CanRow": <boolean expression - optional; default: false; same as AllowedToCross>,
+	"CanRow": <boolean expression - optional; default: false; same as CanTackleBridgeCrossing>,
 	"StartsFromRightBank": <boolean - optional; default: false>,
-	"Weight": <entity weight - optional>},
+	"Weight": <entity weight - optional>,
+	"Image": <details for an image of this entity, used when simulating the solution - optional>},
 	
 	... - other entities
 	]
@@ -51,7 +63,8 @@ These are the specifiers for the constraints for each river bank:
 Sometimes, some other constraints are needed:
 ```
 "OtherConstraints" : {
-	"TimeLimit": <max duration for transfering all entities to the other bank - optional>
+	"TimeLimit": <max duration for transfering all entities to the other bank - optional>,
+	"NightMode": <selects which solution steps happen during the night; boolean expression - optional; default: false>,
 	}
 ```
 
@@ -123,14 +136,16 @@ The fictitious scenario from below covers the syntax used so far:
 	},
 
 "OtherConstraints" : {
-	"TimeLimit": 1000
+	"TimeLimit": 1000,
+	"NightMode": "if (%CrossingIndex% mod 3) in {0}"
 	}
 }
 ```
 Explanations of the example scenario:
 
 - there are 3 types of entities: *employee*, *manager* and *visitor*
-- the employee JohnDoe who weighs 82kg is initially on the other bank (the right one, so at the end he needs to be on the left bank). He can row, but won't row every third crossing (third, sixth, ninth ...): ```CanRow if (%CrossingIndex% mod 3) in {1, 2}```
+- every third crossing (third, sixth, ninth ...) happen during the night shift ```NightMode if (%CrossingIndex% mod 3) in {0}```
+- the employee JohnDoe who weighs 82kg is initially on the other bank (the right one, so at the end he needs to be on the left bank). He can row, but won&#39;t row during the night - every third crossing (third, sixth, ninth ...): ```CanRow if (%CrossingIndex% mod 3) in {1, 2}```
 - the manager Jane weighs 45kg and cannot row
 - the visitor Vincent weighs 75kg and can row (without restrictions)
 - the raft supports a maximum load of 160kg and carries only 2 passengers at once. Besides, any consecutive raft loads cannot vary with more than 10kg: ```AllowedRaftLoads add(%PreviousRaftLoad%, -10) .. add(%PreviousRaftLoad%, 10)```
@@ -160,23 +175,25 @@ The raft / bridge capacity might be deduced or reduced based on several differen
 The project was compiled with g++ for C++14 under Cygwin platform, as reported by the unit tests:
 
 ```
-Running 182 test cases...
+Running 183 test cases...
 Platform: Cygwin
 Compiler: GNU C++ version 6.4.0
 STL     : GNU libstdc++ version 20170704
 Boost   : 1.67.0
 Entering test module "RiverCrossing_tests"
 .........................................
-Leaving test module "RiverCrossing_tests"; testing time: 343ms
+Leaving test module "RiverCrossing_tests"; testing time: 4633ms
 
 Test module "RiverCrossing_tests" has passed with:
-  182 test cases out of 182 passed
-  2089 assertions out of 2089 passed
+  183 test cases out of 183 passed
+  2102 assertions out of 2102 passed
 ```
 
 The solutions are provided either using a Breadth-First search (default strategy - BFS), or they are generated with a Depth-First (DFS) approach. 10 out of the 23 studied scenarios show that the optimal solutions generated by BFS are shorter than those obtained with DFS.
 
-So far, the results are simply displayed within the console. Here is the output for the classical [*Farmer - Wolf - Goat - Cabbage*](./Scenarios/wolfGoatCabbage.json) puzzle:
+The results can be displayed within the console, or a browser can be automatically launched to visualize such a solution in an interactive fashion. When the scenario doesn&#39;t specify a valid image for a certain entity, its name will appear as the alternative text. Property `Image.Url` (of an entity) points to the desired image; `Image.Origin` [optional] is used to specify where from a certain image file was copied (before using it as it was or adapting it); `Image.Size` [optional] is a property taking small negative integer values or 0 - 0 means displaying the largest size of the image, -1 means a little smaller, -2 even smaller a.s.o. This helps differentiating among similar looking entities, for instance the single entity able to row from a scenario might appear as the largest. At the other end, the cabbage (from the puzzle mentioned right below) might need to appear rather small compared to the animals and the farmer.
+
+Here is the output for the classical [*Farmer - Wolf - Goat - Cabbage*](./Scenarios/wolfGoatCabbage.json) puzzle:
 
 ```
 Handling scenario file: "Scenarios\wolfGoatCabbage.json"
@@ -216,11 +233,25 @@ Left bank: [ Farmer(0), Goat(2) ] ; Right bank: [ Wolf(1), Cabbage(3) ] ; Next m
 Left bank: [] ; Right bank: [ Farmer(0), Wolf(1), Goat(2), Cabbage(3) ]
 ```
 
+When no solution is found, like when setting maximum raft load to 99 instead of 100 for the [familiy with a bag](Scenarios/familyAndBag.json), this is the displayed information:
+
+```
+Considered scenario:
+Entities: [ Entity 0 {Name: `Father`, Weight: 90, CanRow: `true`}, Entity 1 {Name: `Mother`, Weight: 80, CanRow: `true`}, Entity 2 {Name: `Boy`, Weight: 60, CanRow: `true` ] Entity 3 {Name: `Girl`, Weight: 40, CanRow: `true`}, Entity 4 {Name: `Bag`, Weight: 20},
+CrossingConstraints: { Capacity = 2; MaxLoad = 99 }
+
+Found no solution. Longest investigated path: 3. Investigated states: 10. Nearest states to the solution:
+[ Father(0), Mother(1), Girl(3) ] - [ Boy(2), Bag(4) ]
+[ Father(0), Mother(1), Boy(2) ] - [ Girl(3), Bag(4) ]
+[ Mother(1), Boy(2), Girl(3) ] - [ Father(0), Bag(4) ]
+[ Father(0), Boy(2), Girl(3) ] - [ Mother(1), Bag(4) ]
+```
+
 The provided [Makefile](./Makefile) allows generating the binaries for the release / debug and for the unit tests. The executables can then be launched using the corresponding *run&lt;Configuration&gt;.sh* command.
 
 - - -
 
-The puzzles from the [Scenarios](./Scenarios/) folder are from a [River Crossing game](https://play.google.com/store/apps/details?id=com.androyal.rivercrossing.complete) from Google Play Store. The [bridge and torch problem](./Scenarios/bridgeAndTorch.json) is from [Wikipedia](https://en.wikipedia.org/wiki/Bridge_and_torch_problem). The puzzle [parents with 4 children, a policeman and a thief](./Scenarios/parents4ChildrenCopAndThief.json) is from [here](http://www.japaneseiqtest.net/).
+The [bridge and torch problem](./Scenarios/bridgeAndTorch.json) is from [Wikipedia](https://en.wikipedia.org/wiki/Bridge_and_torch_problem). The puzzle [parents with 4 children, a policeman and a thief](./Scenarios/parents4ChildrenCopAndThief.json) is from [here](http://www.japaneseiqtest.net/). The rest of the puzzles from the [Scenarios](./Scenarios/) folder are from a [River Crossing game](https://play.google.com/store/apps/details?id=com.androyal.rivercrossing.complete) from Google Play Store.
 
 * * *
 

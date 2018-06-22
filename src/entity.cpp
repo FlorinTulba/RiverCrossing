@@ -89,10 +89,10 @@ Entity::Entity(const ptree &ent) :
 
 	string canRowExpr = ent.get("CanRow", ""s);
 	if(canRowExpr.empty())
-		canRowExpr = ent.get("AllowedToCross", "false"s);
-	else if( ! ent.get("AllowedToCross", ""s).empty())
+		canRowExpr = ent.get("CanTackleBridgeCrossing", "false"s);
+	else if( ! ent.get("CanTackleBridgeCrossing", ""s).empty())
 		throw domain_error(string(__func__) +
-			"Only one from the keys {CanRow, AllowedToCross} can appear. "
+			"Only one from the keys {CanRow, CanTackleBridgeCrossing} can appear. "
 			"Please correct entity with id="s + to_string(_id)
 			);
 	_canRow = canRowSemantic(canRowExpr);

@@ -8,24 +8,49 @@
 "Entities" : [
 	{"Id": 0,
 	"Name": "Traveler1",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/groom1.png",
+		"Origin": "https://pngimg.com/uploads/groom/groom_PNG19611.png"
+		}},
 
 	{"Id": 1,
 	"Name": "Traveler2",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/groom2.png",
+		"Origin": "https://pngimg.com/uploads/groom/groom_PNG19611.png"
+		}},
 
 	{"Id": 2,
 	"Name": "Traveler3",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/groom3.png",
+		"Origin": "https://pngimg.com/uploads/groom/groom_PNG19611.png"
+		}},
 
 	{"Id": 3,
-	"Name": "Bag1_of_Traveler1"},
+	"Name": "Bag1_of_Traveler1",
+	"Image" : {
+		"Url": "../Scenarios/images/bagOwnedBy1.png",
+		"Size": -1,
+		"Origin": "https://pngimg.com/uploads/luggage/luggage_PNG10725.png"
+		}},
 
 	{"Id": 4,
-	"Name": "Bag2_of_Traveler1"},
+	"Name": "Bag2_of_Traveler1",
+	"Image" : {
+		"Url": "../Scenarios/images/bagOwnedBy1.png",
+		"Size": -1,
+		"Origin": "https://pngimg.com/uploads/luggage/luggage_PNG10725.png"
+		}},
 
 	{"Id": 5,
-	"Name": "Bag_of_Traveler2"}
+	"Name": "Bag_of_Traveler2",
+	"Image" : {
+		"Url": "../Scenarios/images/bagOwnedBy2.png",
+		"Origin": "https://pngimg.com/uploads/luggage/luggage_PNG10725.png"}}
 	],
 
 "CrossingConstraints" : {

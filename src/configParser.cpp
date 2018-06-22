@@ -440,6 +440,14 @@ unsigned ConfigurationsTransferDurationInitType::duration() const {
   return _duration;
 }
 
+std::shared_ptr<const LogicalExpr> parseNightModeExpr(const std::string &s) {
+  std::shared_ptr<const LogicalExpr> result;
+  if(tackle(s, logicalExpr, result))
+    return result;
+
+  return nullptr;
+}
+
 std::shared_ptr<const LogicalExpr> parseCanRowExpr(const std::string &s) {
   std::shared_ptr<const LogicalExpr> result;
   if(tackle(s, logicalExpr, result))

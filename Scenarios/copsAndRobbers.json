@@ -9,32 +9,44 @@
 	{"Id": 0,
 	"Name": "Cop1",
 	"Type": "cop",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/policeman.png",
+		"Origin": "https://pngimg.com/uploads/policeman/_PNG15917.png"
+		}},
 
 	{"Id": 1,
 	"Name": "Cop2",
 	"Type": "cop",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {"Url": "../Scenarios/images/policeman.png"}},
 
 	{"Id": 2,
 	"Name": "Cop3",
 	"Type": "cop",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {"Url": "../Scenarios/images/policeman.png"}},
 
 	{"Id": 3,
 	"Name": "Robber1",
 	"Type": "robber",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/thief.png",
+		"Origin": "https://pngimg.com/uploads/thief/thief_PNG47.png"
+		}},
 
 	{"Id": 4,
 	"Name": "Robber2",
 	"Type": "robber",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {"Url": "../Scenarios/images/thief.png"}},
 
 	{"Id": 5,
 	"Name": "Robber3",
 	"Type": "robber",
-	"CanRow": "true"}
+	"CanRow": "true",
+	"Image" : {"Url": "../Scenarios/images/thief.png"}}
 	],
 
 "CrossingConstraints" : {

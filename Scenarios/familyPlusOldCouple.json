@@ -12,29 +12,53 @@
 	{"Id": 0,
 	"Name": "Father",
 	"CanRow": "true",
-	"Type": "parent"},
+	"Type": "parent",
+	"Image" : {
+		"Url": "../Scenarios/images/groom.png",
+		"Origin": "https://pngimg.com/uploads/groom/groom_PNG19611.png"
+		}},
 
 	{"Id": 1,
 	"Name": "Mother",
 	"CanRow": "true",
-	"Type": "parent"},
+	"Type": "parent",
+	"Image" : {
+		"Url": "../Scenarios/images/bride.png",
+		"Origin": "https://pngimg.com/uploads/bride/bride_PNG19533.png"
+		}},
 
 	{"Id": 2,
 	"Name": "Son",
-	"Type": "child"},
+	"Type": "child",
+	"Image" : {
+		"Url": "../Scenarios/images/boy.png",
+		"Origin": "https://pngimg.com/uploads/children/children_PNG18069.png"
+		}},
 
 	{"Id": 3,
 	"Name": "Daughter",
-	"Type": "child"},
+	"Type": "child",
+	"Image" : {
+		"Url": "../Scenarios/images/girl.png",
+		"Origin": "https://pngimg.com/uploads/girls/girls_PNG6491.png"
+		}},
 
 	{"Id": 4,
 	"Name": "OldMan",
 	"CanRow": "true",
-	"Type": "stranger"},
+	"Type": "stranger",
+	"Image" : {
+		"Url": "../Scenarios/images/oldMan.png",
+		"Origin": "https://pngimg.com/uploads/running_man/running_man_PNG11658.png"
+		}},
 
 	{"Id": 5,
 	"Name": "OldLady",
-	"Type": "stranger"}
+	"Type": "stranger",
+	"Image" : {
+		"Url": "../Scenarios/images/oldLady.png",
+		"Origin": "https://pngimg.com/uploads/running_man/running_man_PNG11658.png"
+		}}
 	],
 
 "CrossingConstraints" : {

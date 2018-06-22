@@ -61,6 +61,12 @@ struct IStateExt /*abstract*/ {
     extensionForNextState(const ent::MovingEntities&) const = 0;
 
   /**
+  The browser visualizer shows various state information.
+  The extensions may add some more.
+  */
+  virtual std::string detailsForDemo() const {return "";}
+
+  /**
   Display either only suffix (most of them), or only prefix extensions.
   It needs to be called before (with param false) and after (with param true)
   the state information
@@ -148,6 +154,12 @@ protected:
                              const std::shared_ptr<const IStateExt> &fromNextExt)
                       const = 0;
 
+  /**
+  The browser visualizer shows various state information.
+  The extensions may add some more.
+  */
+  virtual std::string _detailsForDemo() const {return "";}
+
   virtual std::string _toString(bool suffixesInsteadOfPrefixes = true) const {
     return "";
   }
@@ -171,6 +183,12 @@ public:
   */
   std::shared_ptr<const IStateExt>
       extensionForNextState(const ent::MovingEntities &me) const override final;
+
+  /**
+  The browser visualizer shows various state information.
+  The extensions may add some more.
+  */
+  std::string detailsForDemo() const override final;
 
   std::string toString(bool suffixesInsteadOfPrefixes/* = true*/) const override final;
 };
@@ -248,6 +266,12 @@ struct IAttempt /*abstract*/ {
   virtual size_t length() const = 0; ///< number of moves from the current path
 
   /**
+  @return n-th valid move
+  @throw out_of_range for an invalid move index
+  */
+  virtual const IMove& move(size_t idx) const = 0;
+
+  /**
   @return last performed move or at least the initial fake empty move
      that set the initial state
   @throw out_of_range when there is not even the fake initial one
@@ -257,14 +281,6 @@ struct IAttempt /*abstract*/ {
   virtual bool isSolution() const = 0; ///< @return true for a solution path
 
   virtual std::string toString() const = 0;
-
-#ifdef UNIT_TESTING
-  /**
-  @return n-th valid move
-  @throw out_of_range for an invalid move index
-  */
-  virtual const IMove& move(size_t idx) const = 0;
-#endif // UNIT_TESTING
 };
 
 } // namespace sol

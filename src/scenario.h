@@ -16,6 +16,8 @@
 #include "configConstraint.h"
 #include "absSolution.h"
 
+#include <boost/property_tree/ptree.hpp>
+
 namespace rc {
 
 /**
@@ -58,6 +60,17 @@ public:
 protected:
     #endif
 
+  /// Path to the file needed to prepare visualizations; Empty when no visualization is desired
+  std::string demoPrepFile;
+
+  /// Shell command to visualize a found solution; Empty when no visualization is desired
+  std::string visualizer;
+
+  // Read in ctor and reused by prepareDemo()
+  boost::property_tree::ptree entTree, descrTree;
+
+  std::shared_ptr<const cond::LogicalExpr> nightMode;
+
 	std::string descr;	///< provided description of the scenario
 
 	ScenarioDetails details; ///< relevant details of the scenario
@@ -71,13 +84,25 @@ protected:
   /// Ensures solving is performed only once with Depth-First search
 	bool investigatedByDFS = false;
 
+	/// Some scenarios use bridges instead of rafts
+	bool bridgeInsteadOfRaft = false;
+
+	/// Prepares html/js/solution.js for visualizing the solution
+	void prepareDemo(const Results& res) const;
+
 public:
 	/**
   Builds a scenario based on the input from the provided stream.
   If solveNow is true, it attempts to also solve this scenario using Breadth-First search
+
+  demoPrepFile_ and visualizer_ are used when intending to visualize the solution
+  within a browser.
+
   @throw domain_error if there is a problem with the given scenario
 	*/
-	Scenario(std::istream &&scenarioStream, bool solveNow = false);
+	Scenario(std::istream &&scenarioStream, bool solveNow = false,
+          const std::string &demoPrepFile_ = "",
+          const std::string &visualizer_ = "");
 	Scenario(const Scenario&) = delete;
 	Scenario(Scenario&&) = default;
 	void operator=(const Scenario&) = delete;
@@ -90,9 +115,14 @@ public:
   Solves the scenario if possible.
   Subsequent calls use the obtained attempt / solution.
 
+  @param usingBFS true when a Breadth-First solution is wanted (default)
+    false for a Depth-First solution
+  @param visualize true when a visualization of the solution is requested and possible
+    false by default
+
   @return the solution or an unsuccessful attempt
 	*/
-	const Results& solution(bool usingBFS = true);
+	const Results& solution(bool usingBFS = true, bool visualize = false);
 
 	std::string toString() const; ///< data apart from the description
 };

@@ -10,19 +10,38 @@
 "Entities" : [
 	{"Id": 0,
 	"Name": "Person1",
-	"AllowedToCross": "true"},
+	"CanTackleBridgeCrossing": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/anonymous1min.png",
+		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
+		}},
 
 	{"Id": 1,
 	"Name": "Person2",
-	"AllowedToCross": "true"},
+	"CanTackleBridgeCrossing": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/anonymous2min.png",
+		"Size": -1,
+		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
+		}},
 
 	{"Id": 2,
 	"Name": "Person3",
-	"AllowedToCross": "true"},
+	"CanTackleBridgeCrossing": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/anonymous5min.png",
+		"Size": -2,
+		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
+		}},
 
 	{"Id": 3,
 	"Name": "Person4",
-	"AllowedToCross": "true"}
+	"CanTackleBridgeCrossing": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/anonymous8min.png",
+		"Size": -3,
+		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
+		}}
 	],
 
 "CrossingConstraints" : {
@@ -36,6 +55,7 @@
 	},
 
 "OtherConstraints" : {
-	"TimeLimit": 15
+	"TimeLimit": 15,
+	"NightMode": true
 	}
 }

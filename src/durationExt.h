@@ -48,6 +48,12 @@ protected:
                              const std::shared_ptr<const IStateExt> &fromNextExt)
               const override;
 
+  /**
+  The browser visualizer shows various state information.
+  This extension adds elapsed time information.
+  */
+  std::string _detailsForDemo() const override;
+
   std::string _toString(bool suffixesInsteadOfPrefixes/* = true*/) const override;
 
 public:

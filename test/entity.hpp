@@ -106,11 +106,11 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
       BOOST_CHECK( ! e.canRow(SymbolsTable{{"CrossingIndex", 6}})));
   });
 
-  // using the synonym of CanRow: AllowedToCross
+  // using the synonym of CanRow: CanTackleBridgeCrossing
   BOOST_REQUIRE_NO_THROW(read_json((iss.str(R"(
       {"Id": 123,
         "Name": "abc",
-        "AllowedToCross": "true"
+        "CanTackleBridgeCrossing": "true"
       }
     )"), iss), entTree));
   BOOST_CHECK_NO_THROW({
@@ -124,12 +124,12 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
     BOOST_CHECK_NO_THROW(BOOST_CHECK(e.canRow(SymbolsTable{})));
   });
 
-  // using both synonyms CanRow and AllowedToCross
+  // using both synonyms CanRow and CanTackleBridgeCrossing
   BOOST_REQUIRE_NO_THROW(read_json((iss.str(R"(
       {"Id": 123,
         "Name": "abc",
         "CanRow": "false",
-        "AllowedToCross": "true"
+        "CanTackleBridgeCrossing": "true"
       }
     )"), iss), entTree));
   BOOST_CHECK_THROW(Entity e(entTree), domain_error);

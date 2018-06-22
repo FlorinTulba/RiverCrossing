@@ -13,32 +13,56 @@
 	{"Id": 0,
 	"Name": "BigDog",
 	"CanRow": "true",
-	"Type": "dog"},
+	"Type": "dog",
+	"Image" : {
+		"Url": "../Scenarios/images/dog.png",
+		"Origin": "https://pngimg.com/uploads/dog/dog_PNG2454.png"
+		}},
 
 	{"Id": 1,
 	"Name": "MediumDog",
 	"CanRow": "true",
-	"Type": "dog"},
+	"Type": "dog",
+	"Image" : {
+		"Url": "../Scenarios/images/dog.png",
+		"Size": -1
+		}},
 
 	{"Id": 2,
 	"Name": "SmallDog",
 	"CanRow": "true",
-	"Type": "dog"},
+	"Type": "dog",
+	"Image" : {
+		"Url": "../Scenarios/images/dog.png",
+		"Size": -2
+		}},
 
 	{"Id": 3,
 	"Name": "BigCat",
 	"CanRow": "true",
-	"Type": "cat"},
+	"Type": "cat",
+	"Image" : {
+		"Url": "../Scenarios/images/cat.png",
+		"Origin": "https://pngimg.com/uploads/cat/cat_PNG50511.png"
+		}},
 
 	{"Id": 4,
 	"Name": "MediumCat",
 	"CanRow": "true",
-	"Type": "cat"},
+	"Type": "cat",
+	"Image" : {
+		"Url": "../Scenarios/images/cat.png",
+		"Size": -1
+		}},
 
 	{"Id": 5,
 	"Name": "SmallCat",
 	"CanRow": "true",
-	"Type": "cat"}
+	"Type": "cat",
+	"Image" : {
+		"Url": "../Scenarios/images/cat.png",
+		"Size": -2
+		}}
 	],
 
 "CrossingConstraints" : {

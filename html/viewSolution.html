@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Solution for a River-Crossing puzzle</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Part of the RiverCrossing project, which allows to describe and solve River Crossing puzzles: https://en.wikipedia.org/wiki/River_crossing_puzzle">
+  <meta name="author" content="Florin Tulba">
+  <link rel="stylesheet prefetch" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet prefetch" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="css/viewSolution.css">
+</head>
+<body>
+  <div id="infoWindow" class="modal fade" role="dialog" data-backdrop="static">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+            <h3 class="modal-title">Puzzle's Description</h3>
+        </div>
+        <span id="infoText" class="modal-body">
+        </span>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="main" class="diurnal">
+    <img id="sunImg" class="diurnal" src="../Scenarios/images/sun.png" data-toggle="tooltip" data-placement="right" title="Diurnal period" alt="Diurnal period">
+    <img id="moonImg" class="diurnal" src="../Scenarios/images/moon.png" data-toggle="tooltip" data-placement="right" title="Nocturnal period" alt="Nocturnal period">
+    <img id="cloudImg" src="../Scenarios/images/cloud.png" alt="Cloud">
+    <div id="report">
+      Performed transfers:&nbsp;<span id="stepIdx"></span>/<span id="stepsCount"></span><span id="otherDetails"></span>
+    </div>
+    <div id="land">
+      <img id="road" src="../Scenarios/images/road.png" alt="A road">
+      <img id="riverLandscape" class="landscape" src="../Scenarios/images/waterLandscape.png" alt="The river to cross">
+      <img id="riverPortrait" class="portrait" src="../Scenarios/images/waterPortrait.png" alt="The river to cross">      
+      <a id="houselink" data-toggle="modal" href="#infoWindow"><img id="house" src="../Scenarios/images/house.png" alt="A house" data-toggle="tooltip" title="Explain this puzzle"></a>
+      <img id="raft" class="landscape" src="../Scenarios/images/boat.png" alt="The raft" data-toggle="tooltip" title="The raft / boat">
+      <img id="bridgeLandscape" class="landscape" src="../Scenarios/images/bridgeLandscape.png" alt="The bridge" data-toggle="tooltip" title="The bridge">
+      <img id="bridgePortrait" class="portrait" src="../Scenarios/images/bridgePortrait.png" alt="The bridge" data-toggle="tooltip" title="The bridge">
+      <button id='undo' class='btn btn-secondary landscape' data-toggle="tooltip" title="Go to the state before the last transfer"><i class="fa fa-undo"></i>&nbsp;Undo</button>
+      <button id='next' class='btn btn-secondary landscape' data-toggle="tooltip" title="Perform the next transfer">Next&nbsp;<i class="fa fa-chevron-circle-right"></i></button>
+      <i id="fromLeft" class="fa fa-long-arrow-right landscape" data-toggle="tooltip" title="Move direction"></i>
+      <i id="fromLeft" class="fa fa-long-arrow-up portrait" data-toggle="tooltip" title="Move direction"></i>
+      <i id="towardsLeft" class="fa fa-long-arrow-left landscape" data-toggle="tooltip" title="Move direction"></i>
+      <i id="towardsLeft" class="fa fa-long-arrow-down portrait" data-toggle="tooltip" title="Move direction"></i>
+    </div>    
+  </div>
+  <div id="footer">
+    &copy;2018 Florin Tulba (florintulba@yahoo.com)
+  </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="js/solution.js"></script>
+  <script src="js/viewSolution.js"></script>
+</body>
+</html>

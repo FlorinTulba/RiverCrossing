@@ -222,6 +222,12 @@ protected:
                              const std::shared_ptr<const IStateExt> &fromNextExt)
                       const override;
 
+  /**
+  The browser visualizer shows various state information.
+  This extensions add information about the previous raft load.
+  */
+  std::string _detailsForDemo() const override;
+
   std::string _toString(bool suffixesInsteadOfPrefixes/* = true*/) const override;
 
 public:

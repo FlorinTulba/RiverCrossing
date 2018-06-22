@@ -9,16 +9,33 @@
 "Entities" : [
 	{"Id": 0,
 	"Name": "Farmer",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/farmer.png",
+		"Origin": "https://pngimg.com/uploads/farmer/farmer_PNG34.png"
+		}},
 
 	{"Id": 1,
-	"Name": "Wolf"},
+	"Name": "Wolf",
+	"Image" : {
+		"Url": "../Scenarios/images/wolf.png",
+		"Origin": "https://pngimg.com/uploads/wolf/wolf_PNG23212.png"
+		}},
 
 	{"Id": 2,
-	"Name": "Goat"},
+	"Name": "Goat",
+	"Image" : {
+		"Url": "../Scenarios/images/goat.png",
+		"Origin": "https://pngimg.com/uploads/goat/goat_PNG13150.png"
+		}},
 
 	{"Id": 3,
-	"Name": "Cabbage"}
+	"Name": "Cabbage",
+	"Image" : {
+		"Url": "../Scenarios/images/cabbage.png",
+		"Size": -4,
+		"Origin": "https://pngimg.com/uploads/cabbage/cabbage_PNG8804.png"
+		}}
 	],
 
 "CrossingConstraints" : {

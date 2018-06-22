@@ -13,13 +13,42 @@
 #include "transferredLoadExt.h"
 
 #include <cfloat>
-#include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/filesystem/operations.hpp>
 
 using namespace std;
+namespace fs = boost::filesystem;
+using namespace fs;
 using namespace boost::property_tree;
 
 namespace {
+
+/**
+  Takes the working directory and hopes
+  it is (a subfolder of) RiverCrossing directory.
+
+  @return RiverCrossing folder if found; otherwise an empty path
+*/
+const fs::path projectFolder() {
+  fs::path dir = absolute(".");
+  bool found = false;
+  for(;;) {
+    if(dir.filename().compare(fs::path("RiverCrossing")) == 0) {
+      found = true;
+      break;
+    }
+
+    if(dir.has_parent_path())
+      dir = dir.parent_path();
+    else
+      break;
+  }
+  if( ! found)
+    return fs::path();
+
+  return dir;
+}
+
 
 /// @throw domain_error mentioning the set of keys to choose only one from
 void duplicateKeyExc(const vector<string> &keys) {
@@ -53,6 +82,18 @@ bool onlyOneExpected(const ptree &pt, const vector<string> &keyNames,
   }
 
   return keysCount == 1ULL;
+}
+
+/**
+  @return the semantic from nightModeExpr
+  @throw domain_error if nightModeExpr is incorrect
+*/
+shared_ptr<const rc::cond::LogicalExpr> nightModeSemantic(
+                                                const string &nightModeExpr) {
+  shared_ptr<const rc::cond::LogicalExpr> semantic =
+    rc::grammar::parseNightModeExpr(nightModeExpr);
+  return CP_EX_MSG(semantic, domain_error,
+                 "NightMode parsing error! See the cause above.");
 }
 
 using namespace rc;
@@ -184,8 +225,11 @@ public:
 
 namespace rc {
 
-Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
-	ptree pt, descrTree, entTree, crossingConstraintsTree,
+Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/,
+          const string &demoPrepFile_/* = ""*/,
+          const string &visualizer_/* = ""*/) :
+    demoPrepFile(demoPrepFile_), visualizer(visualizer_) {
+	ptree pt, crossingConstraintsTree,
 		banksConstraintsTree, otherConstraintsTree;
 	const ptree empty;
 	try {
@@ -245,6 +289,9 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 				" - Bad type for the raft capacity! "s + ex.what());
 		}
 
+		if( ! bridgeInsteadOfRaft && key[0] == 'B')
+      bridgeInsteadOfRaft = true;
+
 		++uniqueConstraints;
 	}
 
@@ -271,6 +318,9 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 
     capManager.setMaxLoad(maxLoad);
 
+		if( ! bridgeInsteadOfRaft && key[0] == 'B')
+      bridgeInsteadOfRaft = true;
+
 		++uniqueConstraints;
 	}
 
@@ -290,6 +340,9 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 			throw domain_error(string(__func__) +
 				" - Please specify strictly positive weights for all entities "
 				"when using the `"s + key + "` constraint!"s);
+
+		if( ! bridgeInsteadOfRaft && key[7] == 'B')
+      bridgeInsteadOfRaft = true;
 
 		++uniqueConstraints;
 	}
@@ -324,6 +377,10 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 		}
 
     capManager.setTransferConstraints(*details.transferConstraints);
+
+		if( ! bridgeInsteadOfRaft &&
+        ((allowed && key[7] == 'B') || ( ! allowed && key[10] == 'B')))
+      bridgeInsteadOfRaft = true;
 
 		++uniqueConstraints;
 
@@ -425,6 +482,8 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
   }
 
   unsigned &maxDuration = details.maxDuration;
+
+  string nightModeExpr = "false";
   if( ! otherConstraintsTree.empty()) {
 		static const vector<string> timeLimitSpecifiers{"TimeLimit"};
 		if(onlyOneExpected(otherConstraintsTree, timeLimitSpecifiers, key)) {
@@ -447,7 +506,12 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 					" - Please specify a CrossingDurationsOfConfigurations section "
 					"when using the `TimeLimit` constraint!"s);
 		}
+
+		static const vector<string> nightModeSpecifiers{"NightMode"};
+		if(onlyOneExpected(otherConstraintsTree, nightModeSpecifiers, key))
+      nightModeExpr = otherConstraintsTree.get<string>(key);
   }
+  nightMode = nightModeSemantic(nightModeExpr);
 
   if(firstEntity->weight() > 0. // all entities have then specified weights
   		&& maxLoad == DBL_MAX && nullptr == allowedLoads)
@@ -462,7 +526,87 @@ Scenario::Scenario(istream &&scenarioStream, bool solveNow/* = false*/) {
 			"when not using the TimeLimit constraint!"<<endl;
 
   if(solveNow)
-  	solution();
+  	solution(true, ! visualizer.empty() && ! demoPrepFile.empty());
+}
+
+void Scenario::prepareDemo(const Results& res) const {
+  if(visualizer.empty() || demoPrepFile.empty())
+    throw logic_error(string(__func__) +
+      " - cannot be called when visualizer and demoPrepFile weren't set in ctor!");
+
+  if(nullptr == res.attempt || ! res.attempt->isSolution())
+    throw logic_error(string(__func__) +
+      " - cannot be called when the scenario wasn't / couldn't be solved "
+      "based on the requested algorithm!");
+
+  const unsigned solLen = (unsigned)res.attempt->length();
+  const shared_ptr<const sol::IState> initialState = res.attempt->initialState();
+  SymbolsTable st(InitialSymbolsTable());
+
+  ptree root, movesTree;
+
+  root.put_child("ScenarioDescription", descrTree);
+
+  if(bridgeInsteadOfRaft)
+    root.put("Bridge", "true");
+
+  root.put_child("Entities", entTree);
+
+  const auto addEntsSet = [](ptree &pt, const IsolatedEntities &ents,
+                          const string &propName) {
+    ptree idsTree;
+    for(unsigned id : ents.ids()) {
+      ptree idTree;
+      idTree.put_value(id);
+      idsTree.push_back(make_pair("", idTree));
+    }
+    pt.put_child(propName, idsTree);
+  };
+
+  const auto addMove = [this, &addEntsSet, &movesTree, &st](
+                    shared_ptr<const sol::IState> state,
+                    const IsolatedEntities *moved = nullptr) {
+    const string otherDetails = state->getExtension()->detailsForDemo();
+
+    ptree moveTree;
+    moveTree.put("Idx", st["CrossingIndex"]++);
+    if(nightMode->eval(st)) moveTree.put("NightMode", true);
+    if(nullptr != moved) addEntsSet(moveTree, *moved, "Transferred");
+    addEntsSet(moveTree, state->leftBank(), "LeftBank");
+    addEntsSet(moveTree, state->rightBank(), "RightBank");
+    if( ! otherDetails.empty()) moveTree.put("OtherDetails", otherDetails);
+    movesTree.push_back(make_pair("", moveTree));
+  };
+
+  addMove(initialState);
+
+  for(unsigned step = 0U; step < solLen; ++step) {
+    const sol::IMove &aMove = res.attempt->move(step);
+    const shared_ptr<const sol::IState> resultedState = aMove.resultedState();
+
+    addMove(aMove.resultedState(), &aMove.movedEntities());
+  }
+
+  root.put_child("Moves", movesTree);
+
+  try {
+    ofstream ofs(demoPrepFile);
+    // prepends the json to create a JavaScript variable
+    ofs<<"// This file was generated and is not one of the sources of the project"<<endl;
+    ofs<<"// RiverCrossing (https://github.com/FlorinTulba/RiverCrossing)."<<endl;
+    ofs<<"// It contains the solution for a River-Crossing puzzle and is used"<<endl;
+    ofs<<"// during the visualization of that solution within a browser"<<endl;
+    ofs<<"var solution = ";
+    write_json(ofs, root);
+  } catch(const exception &e) {
+    cerr<<"Couldn't write `"<<demoPrepFile
+      <<"` required by the solution visualizer!"<<endl;
+#ifndef NDEBUG
+    cout<<"The JSON content that couldn't be written to the file is:"<<endl;
+    write_json(cout, root);
+#endif // NDEBUG
+    throw;
+  }
 }
 
 shared_ptr<const cond::IContextValidator>
@@ -604,103 +748,137 @@ ostream& operator<<(ostream &os, const rc::Scenario::Results &o) {
 
 #include <fstream>
 
-#include <boost/filesystem/operations.hpp>
-
-namespace fs = boost::filesystem;
-using namespace fs;
-
-
 namespace {
 
-/**
-  Takes the working directory and hopes
-  it is (a subfolder of) RiverCrossing directory.
+/// Settings for the project
+class Config {
+  fs::path projDir;
+  fs::path scenariosDir;
+  fs::path cfgFile;
+  fs::path viewSolutionFile;
+  string _demoPrepFile;
 
-  @return RiverCrossing/Scenarios folder if found; otherwise an empty path
-*/
-const fs::path scenariosFolder() {
-  fs::path dir = absolute(".");
-  bool found = false;
-  for(;;) {
-    if(dir.filename().compare(fs::path("RiverCrossing")) == 0) {
-      found = true;
-      break;
+  /// The browser used to visualize solutions; empty if no visualization desired
+  string browserPath;
+
+  /// The shell command used for visualizations; empty if no visualization desired
+  string _visualizer;
+
+  vector<fs::path> _scenarios;
+
+public:
+  Config() : projDir(projectFolder()),
+      scenariosDir(projDir / "Scenarios"), cfgFile(projDir / "config.json"),
+      viewSolutionFile(projDir / "html" / "viewSolution.html") {
+    if(projDir.empty())
+      throw runtime_error(string(__func__) +
+        "Couldn't locate the base folder of the project or the Scenarios folder! "
+        "Please launch the program within (a subfolder of) RiverCrossing directory!");
+
+    if( ! exists(scenariosDir))
+      throw runtime_error(string(__func__) +
+        "Couldn't locate the Scenarios folder!");
+
+    if( ! exists(cfgFile))
+      throw runtime_error(string(__func__) +
+        "Couldn't locate 'config.json'!");
+
+    if( ! exists(viewSolutionFile))
+      throw runtime_error(string(__func__) +
+        "Couldn't locate 'html/viewSolution.html'!");
+
+    ptree pt;
+    try {
+      read_json(cfgFile.string(), pt);
+    } catch(const json_parser_error &ex) {
+      throw domain_error(string(__func__) +
+        " - Couldn't parse json file: `"s + cfgFile.string() +
+                         "` ! Reason: "s + ex.what());
     }
 
-    if(dir.has_parent_path())
-      dir = dir.parent_path();
-    else
-      break;
+    browserPath = pt.get("BROWSER_PATH", "");
+
+    if( ! browserPath.empty()) {
+      ostringstream oss;
+      oss<<'"'<<browserPath<<"\" "<<viewSolutionFile<<" &";
+      _visualizer = oss.str();
+    }
+
+    for(directory_iterator itEnd, it(scenariosDir); it != itEnd; ++it) {
+      fs::path file = it->path();
+      if(file.extension().string().compare(".json") != 0)
+        continue;
+
+      _scenarios.emplace_back(std::move(file));
+    }
+
+    _demoPrepFile = fs::path(projDir/"html"/"js"/"solution.js").string();
   }
-  if( ! found || ! exists(dir /= "Scenarios"))
-    return fs::path();
 
-  return dir;
-}
-
-void tackleScenario(const fs::path &file,
-                    unsigned &solvedScenarios,
-                    vector<string> &BFS_DFS_notableDiffs) try {
-  cout<<"Handling scenario file: "<<file<<endl;
-  rc::Scenario scenario(ifstream(file.string()));
-  cout<<scenario<<endl<<endl;
-
-  size_t bfsSolLen = 0ULL, dfsSolLen = 0ULL;
-
-  cout<<"---------- Breadth-first search ----------"<<endl;
-  cout<<scenario.solution()<<endl<<endl<<endl;
-  bfsSolLen = scenario.solution().attempt->length();
-
-  cout<<endl<<"||||||||||| Depth-first search |||||||||||"<<endl;
-  cout<<scenario.solution(false)<<endl<<endl<<endl;
-  dfsSolLen = scenario.solution(false).attempt->length();
-
-  if(bfsSolLen > 0ULL || dfsSolLen > 0ULL)
-    ++solvedScenarios;
-
-  if(bfsSolLen != dfsSolLen)
-    BFS_DFS_notableDiffs.push_back(file.string());
-
-} catch(const domain_error &ex) {
-  cerr<<ex.what()<<endl;
-}
+  const string& visualizer() const {return _visualizer;}
+  const string& demoPrepFile() const {return _demoPrepFile;}
+  const vector<fs::path>& scenarios() const {return _scenarios;}
+};
 
 } // anonymous namespace
 
-int main(int /*argc*/, char* /*argv*/[]) {
-	const fs::path dir = scenariosFolder();
-	if(dir.empty()) {
-		cerr<<"Couldn't locate the base folder of the project or the Scenarios folder! "
-			"Please launch the program within (a subfolder of) RiverCrossing directory!"
-			<<endl;
-		return -1;
-	}
+int main(int /*argc*/, char* /*argv*/[]) try {
+  Config cfg;
+  const vector<fs::path> &scenarios = cfg.scenarios();
+  unsigned scenariosCount = (unsigned)scenarios.size();
 
-	unsigned scenarios = 0U, solvedScenarios = 0U;
-
-	// Names of the scenarios with worth-noting differences
-	// between DFS and BFS strategies (solution length is different,
-  // or one finds a solution and the other doesn't)
-	vector<string> BFS_DFS_notableDiffs;
-
-	// Traverse the Scenarios folder and solve the puzzle from each json file
-	for(directory_iterator itEnd, it(dir); it != itEnd; ++it) {
-		const fs::path file = it->path();
-		if(file.extension().string() != ".json")
-			continue;
-
-    ++scenarios;
-		tackleScenario(file, solvedScenarios, BFS_DFS_notableDiffs);
-	}
-
-	cout<<"Solved "<<solvedScenarios<<'/'<<scenarios<<" scenarios."<<endl;
-	if( ! BFS_DFS_notableDiffs.empty())
-    cout<<"There were "<<BFS_DFS_notableDiffs.size()
-      <<" scenarios with notable differences between BFS and DFS:"<<endl<<'\t';
-    copy(CBOUNDS(BFS_DFS_notableDiffs), ostream_iterator<const string&>(cout, " "));
+  bool leaving = false;
+  fs::path pickedScenario;
+  string line;
+  for(;;) {
+    for(unsigned idx = 0U; idx < scenariosCount; ++idx)
+      cout<<setw(2)<<right<<idx<<" - "<<scenarios[idx].stem().string()<<endl;
     cout<<endl;
 
+    for(;;) {
+      cout<<"Choose below the index of a scenario to run or enter the path to one different scenario. (Empty for leaving) : ";
+      getline(cin, line);
+      if(line.empty()) {
+        leaving = true;
+        break;
+      }
+
+      istringstream iss(line);
+      int selectedScenario = -1;
+      if(iss>>selectedScenario) {
+        if(selectedScenario >= 0 && (unsigned)selectedScenario < scenariosCount) {
+          pickedScenario = scenarios[selectedScenario];
+          break;
+        }
+        cerr<<"Invalid index: "<<selectedScenario<<endl;
+        continue;
+      }
+
+      pickedScenario = line;
+      if(exists(pickedScenario) &&
+         pickedScenario.extension().string().compare(".json") == 0)
+        break;
+
+      cerr<<"Couldn't find `"<<pickedScenario<<"` or not a json file!"<<endl;
+    }
+    if(leaving)
+      break;
+
+    Scenario scenario(ifstream(pickedScenario.string()), true,
+                      cfg.demoPrepFile(), cfg.visualizer());
+    const Scenario::Results &sol = scenario.solution(true);
+    if( ! sol.attempt->isSolution()) {
+      cout<<endl<<"Considered scenario:"<<endl;
+      cout<<scenario<<endl<<endl;
+      cout<<sol<<endl<<endl;
+    }
+  }
+
 	return 0;
+
+} catch(const exception &e) {
+  cerr<<e.what()<<endl;
+  return -1;
 }
 
 #endif // UNIT_TESTING not defined

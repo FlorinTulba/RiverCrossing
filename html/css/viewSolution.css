@@ -1,0 +1,279 @@
+/*
+ Part of the RiverCrossing project,
+ which allows to describe and solve River Crossing puzzles:
+  https://en.wikipedia.org/wiki/River_crossing_puzzle
+
+ (c) 2018 Florin Tulba (florintulba@yahoo.com)
+*/
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+#main {
+  position: absolute;
+  margin: 0;
+  padding: 0 0 25px;
+  bottom: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 0;
+}
+
+.diurnal {
+  background: linear-gradient(powderblue, white);
+  color: darkblue;
+}
+
+.nocturnal {
+  background: linear-gradient(olive, black);
+  color: silver;
+}
+
+a {
+  background: transparent !important;
+  position: relative;
+  left: 0;
+}
+
+#sunImg {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  top: 2%;
+  max-width: 10%;
+  max-height: 10%;
+  background: transparent;
+  z-index: 0;
+}
+
+#moonImg {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  top: 4%;
+  left: 1%;
+  max-width: 5%;
+  max-height: 5%;
+  background: transparent;
+  z-index: 0;
+}
+
+#sunImg.nocturnal {display: none;}
+
+#moonImg.diurnal {display: none;}
+
+#cloudImg {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  right: 10%;
+  width: 25%;
+  max-height: 5%;
+  background: transparent;
+  z-index: 0;
+}
+
+#report {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  top: 5%;
+  width: 100%;
+  background: transparent;
+  text-align: center;
+  font-size: larger;
+  font-weight: bolder;
+  z-index: 50;
+}
+
+#road {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  bottom: 49%;
+  right: 0;
+  height: 51%;
+  width: 6%;
+  z-index: 0;
+}
+
+#houselink {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  bottom: 45%;
+  left: auto;
+  right: 0;
+  width: 10% !important;
+  z-index: 50;
+}
+
+#house {
+  width: 100%;
+}
+
+#infoWindow {
+  font-size: large;
+}
+
+.modal-content {
+  color: yellow;
+  background-color: olive;
+  padding: 0 15px;
+}
+
+.modal-title, .modal-footer {
+  text-align: center;
+}
+
+#riverLandscape {
+  width: 40%;
+  height: 100%;
+  display: block;
+  margin: 0 auto;
+  z-index: 0;
+}
+
+#riverPortrait {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  bottom: 20%;
+  max-height: 20%;
+  width: 100%;
+  z-index: 0;
+}
+
+#raft {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  max-height: 10%;
+}
+
+#bridgeLandscape {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  bottom: 20%;
+  left: 30%;
+  height: 12%;
+  width: 40%;
+  z-index: 50;
+}
+
+#bridgePortrait {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  bottom: 20%;
+  height: 20%;
+  width: 16%;
+  left: 42%;
+  z-index: 1;
+}
+
+#undo {
+  position: absolute;
+  padding: 2px;
+  left: 32%;
+  right: auto;
+  background-color: aquamarine !important;
+  color: darkblue !important;
+  z-index: 101;
+}
+
+#next {
+  position: absolute;
+  padding: 2px;
+  right: 32%;
+  left: auto;
+  background-color: aquamarine !important;
+  color: darkblue !important;
+  z-index: 101;
+}
+
+#undo.landscape, #next.landscape {
+  bottom: 10%;
+}
+
+#undo.portrait, #next.portrait {
+  bottom: 32%;
+}
+
+#fromLeft.landscape, #towardsLeft.landscape {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  bottom: 28%;
+  left: 30%;
+  max-height: 5%;
+  width: 40%;
+  text-align: center;
+  font-size: xx-large;
+  color: aquamarine;
+  z-index: 101;
+}
+
+#fromLeft.portrait, #towardsLeft.portrait {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  bottom: 28%;
+  max-height: 5%;
+  width: 5%;
+  left: 47.5%;
+  text-align: center;
+  font-size: xx-large;
+  color: aquamarine;
+  z-index: 101;
+}
+
+#land {
+  background: linear-gradient(#4D3542, #805A28);
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  bottom: 25px;
+  height: 80%;
+  width: 100%;
+  z-index: 0;
+}
+
+.portrait {
+  display: none;
+}
+
+.landscape {
+  display: block;
+}
+
+#tree1.landscape {
+
+}
+
+#footer {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  bottom: 0;
+  height: 25px;
+  width: 100%;
+  background: navy;
+  text-align: center;
+  color: lime;
+}
+
+a.nocturnal:link {
+  color: powderblue;
+}
+
+a.nocturnal:visited {color: pink;}
+
+a.nocturnal:hover {color: white;}
+
+a.nocturnal:active {color: yellow;}
+

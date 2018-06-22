@@ -9,23 +9,42 @@
 "Entities" : [
 	{"Id": 0,
 	"Name": "Mouse",
-	"CanRow": true},
+	"CanRow": true,
+	"Image" : {
+		"Url": "../Scenarios/images/mouse.png",
+		"Origin": "https://pngimg.com/uploads/rat_mouse/rat_mouse_PNG23540.png"
+		}},
 
 	{"Id": 1,
 	"Name": "Chicken",
-	"CanRow": true},
+	"CanRow": true,
+	"Image" : {
+		"Url": "../Scenarios/images/chicken.png",
+		"Origin": "https://pngimg.com/uploads/chicken/chicken_PNG2163.png"
+		}},
 
 	{"Id": 2,
 	"Name": "Bear",
-	"CanRow": true},
+	"CanRow": true,
+	"Image" : {
+		"Url": "../Scenarios/images/bear.png",
+		"Origin": "https://pngimg.com/uploads/bear/bear_PNG1192.png"
+		}},
 
 	{"Id": 3,
 	"Name": "Gorilla1",
-	"CanRow": true},
+	"CanRow": true,
+	"Image" : {
+		"Url": "../Scenarios/images/gorilla.png",
+		"Origin": "https://pngimg.com/uploads/gorilla/gorilla_PNG18713.png"
+		}},
 
 	{"Id": 4,
 	"Name": "Gorilla2",
-	"CanRow": true}
+	"CanRow": true,
+	"Image" : {
+		"Url": "../Scenarios/images/gorilla.png"
+		}}
 	],
 
 "CrossingConstraints" : {

@@ -274,6 +274,15 @@ shared_ptr<const IStateExt>
                                              info, fromNextExt);
 }
 
+string PrevLoadStateExt::_detailsForDemo() const {
+  if(isNaN(previousRaftLoad))
+    return "";
+
+  ostringstream oss;
+  oss<<"; Previous transferred load: "<<previousRaftLoad;
+  return oss.str();
+}
+
 string PrevLoadStateExt::_toString(bool suffixesInsteadOfPrefixes/* = true*/) const {
   // This is displayed only as suffix information
   if( ! suffixesInsteadOfPrefixes)

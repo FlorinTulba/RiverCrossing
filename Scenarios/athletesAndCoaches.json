@@ -10,32 +10,56 @@
 	{"Id": 0,
 	"Name": "Athlete1",
 	"Type": "athlete",
-	"CanRow": true},
+	"CanRow": true,
+	"Image" : {
+		"Url": "../Scenarios/images/muscle1.png",
+		"Origin": "https://pngimg.com/uploads/muscle/muscle_PNG49.png"
+		}},
 
 	{"Id": 1,
 	"Name": "Coach1",
 	"Type": "coach",
-	"CanRow": true},
+	"CanRow": true,
+	"Image" : {
+		"Url": "../Scenarios/images/anonymous1.png",
+		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
+		}},
 
 	{"Id": 2,
 	"Name": "Athlete2",
 	"Type": "athlete",
-	"CanRow": true},
+	"CanRow": true,
+	"Image" : {
+		"Url": "../Scenarios/images/muscle2.png",
+		"Origin": "https://pngimg.com/uploads/muscle/muscle_PNG49.png"
+		}},
 
 	{"Id": 3,
 	"Name": "Coach2",
 	"Type": "coach",
-	"CanRow": true},
+	"CanRow": true,
+	"Image" : {
+		"Url": "../Scenarios/images/anonymous2.png",
+		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
+		}},
 
 	{"Id": 4,
 	"Name": "Athlete3",
 	"Type": "athlete",
-	"CanRow": true},
+	"CanRow": true,
+	"Image" : {
+		"Url": "../Scenarios/images/muscle3.png",
+		"Origin": "https://pngimg.com/uploads/muscle/muscle_PNG49.png"
+		}},
 
 	{"Id": 5,
 	"Name": "Coach3",
 	"Type": "coach",
-	"CanRow": true}
+	"CanRow": true,
+	"Image" : {
+		"Url": "../Scenarios/images/anonymous3.png",
+		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
+		}}
 	],
 
 "CrossingConstraints" : {

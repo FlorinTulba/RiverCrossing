@@ -9,22 +9,41 @@
 	{"Id": 0,
 	"Name": "1kg",
 	"CanRow": "true",
-	"Weight": 1},
+	"Weight": 1,
+	"Image" : {
+		"Url": "../Scenarios/images/weight1kg.png",
+		"Size": -3,
+		"Origin": "https://pngimg.com/uploads/barbell/barbell_PNG16352.png"
+		}},
 
 	{"Id": 1,
 	"Name": "2kg",
 	"CanRow": "true",
-	"Weight": 2},
+	"Weight": 2,
+	"Image" : {
+		"Url": "../Scenarios/images/weight2kg.png",
+		"Size": -2,
+		"Origin": "https://pngimg.com/uploads/barbell/barbell_PNG16352.png"
+		}},
 
 	{"Id": 2,
 	"Name": "3kg",
 	"CanRow": "true",
-	"Weight": 3},
+	"Weight": 3,
+	"Image" : {
+		"Url": "../Scenarios/images/weight3kg.png",
+		"Size": -1,
+		"Origin": "https://pngimg.com/uploads/barbell/barbell_PNG16352.png"
+		}},
 
 	{"Id": 3,
 	"Name": "4kg",
 	"CanRow": "true",
-	"Weight": 4}
+	"Weight": 4,
+	"Image" : {
+		"Url": "../Scenarios/images/weight4kg.png",
+		"Origin": "https://pngimg.com/uploads/barbell/barbell_PNG16352.png"
+		}}
 	],
 
 "CrossingConstraints" : {

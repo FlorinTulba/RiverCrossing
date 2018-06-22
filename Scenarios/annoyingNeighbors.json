@@ -8,11 +8,45 @@
 	],
 
 "Entities" : [
-	{"Id":0, "Name":"Person1", "CanRow":true},
-	{"Id":1, "Name":"Person2", "CanRow":true},
-	{"Id":2, "Name":"Person3", "CanRow":true},
-	{"Id":3, "Name":"Person4", "CanRow":true},
-	{"Id":4, "Name":"Person5", "CanRow":true}
+	{"Id":0,
+	"Name":"Person1",
+	"CanRow":true,
+	"Image" : {
+		"Url": "../Scenarios/images/anonymous1.png",
+		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
+		}},
+	
+	{"Id":1,
+	"Name":"Person2",
+	"CanRow":true,
+	"Image" : {
+		"Url": "../Scenarios/images/anonymous2.png",
+		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
+		}},
+	
+	{"Id":2,
+	"Name":"Person3",
+	"CanRow":true,
+	"Image" : {
+		"Url": "../Scenarios/images/anonymous3.png",
+		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
+		}},
+	
+	{"Id":3,
+	"Name":"Person4",
+	"CanRow":true,
+	"Image" : {
+		"Url": "../Scenarios/images/anonymous4.png",
+		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
+		}},
+	
+	{"Id":4,
+	"Name":"Person5",
+	"CanRow":true,
+	"Image" : {
+		"Url": "../Scenarios/images/anonymous5.png",
+		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
+		}}
 	],
 
 "CrossingConstraints" : {

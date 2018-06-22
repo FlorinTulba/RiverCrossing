@@ -9,22 +9,38 @@
 	{"Id": 0,
 	"Name": "Worker1",
 	"Type": "worker",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/worker1.png",
+		"Origin": "https://pngimg.com/uploads/industrial_worker/industrial_worker_PNG11450.png"
+		}},
 
 	{"Id": 1,
 	"Name": "Worker2",
 	"Type": "worker",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/worker2.png",
+		"Origin": "https://pngimg.com/uploads/industrial_worker/industrial_worker_PNG11462.png"
+		}},
 
 	{"Id": 2,
 	"Name": "Child1",
 	"Type": "child",
-	"CanRow": "true"},
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/girl.png",
+		"Origin": "https://pngimg.com/uploads/girls/girls_PNG6491.png"
+		}},
 
 	{"Id": 3,
 	"Name": "Child2",
 	"Type": "child",
-	"CanRow": "true"}
+	"CanRow": "true",
+	"Image" : {
+		"Url": "../Scenarios/images/boy.png",
+		"Origin": "https://pngimg.com/uploads/children/children_PNG18069.png"
+		}}
 	],
 
 "CrossingConstraints" : {
