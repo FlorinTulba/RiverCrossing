@@ -3,9 +3,11 @@
 	"and help an old man with his wife to get to the other side as well.",
 	"Constraints:",
 	"- the raft can hold a maximum of 2 people",
-	"- only father, mother and the old man can row, but the old man refuses to be accompanied on the raft",
+	"- only father, mother and the old man can row",
+	"- the old man refuses to be accompanied on the raft",
 	"- the children cannot stay with anyone without one of their parents",
-	"- the son can only row with his father and the daughter can only row with her mother"
+	"- the son can only row with his father",
+	"- the daughter can only row with her mother"
 	],
 
 "Entities" : [
@@ -67,6 +69,6 @@
 	},
 
 "BanksConstraints" : {
-	"DisallowedBankConfigurations": "1+ x child + 0 x parent + 1+ x stranger"
+	"DisallowedBankConfigurations": "1+ x child + 1+ x stranger"
 	}
 }

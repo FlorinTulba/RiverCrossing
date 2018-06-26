@@ -3,7 +3,8 @@
 	"Constraints:",
 	"- no child can be with another mother on a bank or on the raft without his or her mother",
 	"- a child can be left alone or with other children, but not with a different mother",
-	"- the raft can hold maximum 2 people. Only one of the mothers and his son can row"
+	"- the raft can hold maximum 2 people",
+	"- only one of the mothers and her son can row"
 	],
 
 "Entities" : [
@@ -57,6 +58,7 @@
 	},
 
 "BanksConstraints" : {
-	"DisallowedBankConfigurations": "0 (4 | 5) !3 ... ; 3 (1 | 2) !0 ..."
+	"DisallowedBankConfigurations":
+		"0 (4 | 5) !3 ... ; 0 4 5 !3 ... ; 3 (1 | 2) !0 ... ; 3 1 2 !0 ..."
 	}
 }

@@ -1,5 +1,5 @@
 {"ScenarioDescription": [
-	"On an early morning 6 animals (2 lions, 2 raccoons and 2 squirrels) need to cross the river.",
+	"2 lions, 2 raccoons and 2 squirrels must cross a river. The crossing will take several days and will start the following morning.",
 	"Constraints:",
 	"- squirrels are diurnal animals, they can only row during the day",
 	"- raccoons are nocturnal animals, they can only row during the night",
@@ -62,5 +62,4 @@
 "OtherConstraints" : {
 	"NightMode": "if (%CrossingIndex% mod 4) in {0, 3}"
 	}
-
 }
