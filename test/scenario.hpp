@@ -36,6 +36,7 @@ void tackleScenario(const fs::path &file,
   cout<<"Handling scenario file: "<<file<<endl;
   cout<<scenario<<endl<<endl;
 
+  BFS_DFS_notableDiffs = 0U;
   size_t bfsSolLen = 0ULL, dfsSolLen = 0ULL;
 
   bfsSolLen = scenario.solution(true).attempt->length();
@@ -1421,7 +1422,7 @@ BOOST_AUTO_TEST_CASE(checkAllScenarioFiles) {
 	// Count of the scenarios with worth-noting differences
 	// between DFS and BFS strategies (solution length is different,
   // or one finds a solution and the other doesn't)
-	unsigned BFS_DFS_notableDiffs;
+	unsigned BFS_DFS_notableDiffs = 0U;
 
 	// Traverse the Scenarios folder and solve the puzzle from each json file
 	for(directory_iterator itEnd, it(dir); it != itEnd; ++it) {
