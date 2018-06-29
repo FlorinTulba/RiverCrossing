@@ -177,8 +177,8 @@ The project was compiled with g++ for C++14 under Cygwin platform, as reported b
 ```
 Running 183 test cases...
 Platform: Cygwin
-Compiler: GNU C++ version 6.4.0
-STL     : GNU libstdc++ version 20170704
+Compiler: GNU C++ version 7.3.0
+STL     : GNU libstdc++ version 20180125
 Boost   : 1.67.0
 Entering test module "RiverCrossing_tests"
 .........................................
