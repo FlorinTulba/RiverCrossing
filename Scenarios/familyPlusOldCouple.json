@@ -16,7 +16,7 @@
 	"CanRow": "true",
 	"Type": "parent",
 	"Image" : {
-		"Url": "../Scenarios/images/groom.png",
+		"Url": "images/groom.png",
 		"Origin": "https://pngimg.com/uploads/groom/groom_PNG19611.png"
 		}},
 
@@ -25,7 +25,7 @@
 	"CanRow": "true",
 	"Type": "parent",
 	"Image" : {
-		"Url": "../Scenarios/images/bride.png",
+		"Url": "images/bride.png",
 		"Origin": "https://pngimg.com/uploads/bride/bride_PNG19533.png"
 		}},
 
@@ -33,7 +33,7 @@
 	"Name": "Son",
 	"Type": "child",
 	"Image" : {
-		"Url": "../Scenarios/images/boy.png",
+		"Url": "images/boy.png",
 		"Origin": "https://pngimg.com/uploads/children/children_PNG18069.png"
 		}},
 
@@ -41,7 +41,7 @@
 	"Name": "Daughter",
 	"Type": "child",
 	"Image" : {
-		"Url": "../Scenarios/images/girl.png",
+		"Url": "images/girl.png",
 		"Origin": "https://pngimg.com/uploads/girls/girls_PNG6491.png"
 		}},
 
@@ -50,7 +50,7 @@
 	"CanRow": "true",
 	"Type": "stranger",
 	"Image" : {
-		"Url": "../Scenarios/images/oldMan.png",
+		"Url": "images/oldMan.png",
 		"Origin": "https://pngimg.com/uploads/running_man/running_man_PNG11658.png"
 		}},
 
@@ -58,7 +58,7 @@
 	"Name": "OldLady",
 	"Type": "stranger",
 	"Image" : {
-		"Url": "../Scenarios/images/oldLady.png",
+		"Url": "images/oldLady.png",
 		"Origin": "https://pngimg.com/uploads/running_man/running_man_PNG11658.png"
 		}}
 	],

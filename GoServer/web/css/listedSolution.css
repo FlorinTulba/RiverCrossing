@@ -1,0 +1,37 @@
+/*
+ This RiverCrossing project (https://github.com/FlorinTulba/RiverCrossing)
+ allows describing and solving River Crossing puzzles:
+  https://en.wikipedia.org/wiki/River_crossing_puzzle
+
+ Required libraries:
+ - Boost (>=1.67) - https://www.boost.org
+ - Microsoft GSL (>=4.0) - https://github.com/microsoft/GSL
+
+ (c) 2018-2025 Florin Tulba (florintulba@yahoo.com)
+*/
+
+html {
+  text-size-adjust: 100%;
+}
+
+body {
+  background-color: #e8edf3;
+  color: #22264b;
+  padding: 5px 10px 0;
+}
+
+#title {
+  text-align: center;
+  font-weight: bold;
+}
+
+#theSolution {
+  display: block;
+  max-width: 1000px;
+  margin: 0 auto 10px auto;
+}
+
+#footer {
+  text-align: center;
+  font-size: x-small;
+}

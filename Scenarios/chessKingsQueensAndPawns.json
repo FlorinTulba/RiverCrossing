@@ -11,7 +11,7 @@
 	{"Id": 0,
 	"Name": "WhiteKing",
 	"Image" : {
-		"Url": "../Scenarios/images/whiteKing.png",
+		"Url": "images/whiteKing.png",
 		"Origin": "https://pngimg.com/uploads/chess/chess_PNG8431.png"
 		}},
 
@@ -19,7 +19,7 @@
 	"Name": "WhiteQueen",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/whiteQueen.png",
+		"Url": "images/whiteQueen.png",
 		"Origin": "https://pngimg.com/uploads/chess/chess_PNG8431.png"
 		}},
 
@@ -27,14 +27,14 @@
 	"Name": "WhitePawn",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/whitePawn.png",
+		"Url": "images/whitePawn.png",
 		"Origin": "https://pngimg.com/uploads/chess/chess_PNG8431.png"
 		}},
 
 	{"Id": 3,
 	"Name": "BlackKing",
 	"Image" : {
-		"Url": "../Scenarios/images/blackKing.png",
+		"Url": "images/blackKing.png",
 		"Origin": "https://pngimg.com/uploads/chess/chess_PNG8431.png"
 		}},
 
@@ -42,7 +42,7 @@
 	"Name": "BlackQueen",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/blackQueen.png",
+		"Url": "images/blackQueen.png",
 		"Origin": "https://pngimg.com/uploads/chess/chess_PNG8431.png"
 		}},
 
@@ -50,7 +50,7 @@
 	"Name": "BlackPawn",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/blackPawn.png",
+		"Url": "images/blackPawn.png",
 		"Origin": "https://pngimg.com/uploads/chess/chess_PNG8431.png"
 		}}
 	],

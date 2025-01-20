@@ -12,7 +12,7 @@
 	"CanRow": "true",
 	"Weight": 90,
 	"Image" : {
-		"Url": "../Scenarios/images/groom90kg.png",
+		"Url": "images/groom90kg.png",
 		"Origin": "https://pngimg.com/uploads/groom/groom_PNG19611.png"
 		}},
 
@@ -21,7 +21,7 @@
 	"CanRow": "true",
 	"Weight": 80,
 	"Image" : {
-		"Url": "../Scenarios/images/bride80kg.png",
+		"Url": "images/bride80kg.png",
 		"Origin": "https://pngimg.com/uploads/bride/bride_PNG19533.png"
 		}},
 
@@ -30,7 +30,7 @@
 	"CanRow": "true",
 	"Weight": 60,
 	"Image" : {
-		"Url": "../Scenarios/images/boy60kg.png",
+		"Url": "images/boy60kg.png",
 		"Origin": "https://pngimg.com/uploads/children/children_PNG18069.png"
 		}},
 
@@ -39,7 +39,7 @@
 	"CanRow": "true",
 	"Weight": 40,
 	"Image" : {
-		"Url": "../Scenarios/images/girl40kg.png",
+		"Url": "images/girl40kg.png",
 		"Origin": "https://pngimg.com/uploads/girls/girls_PNG6491.png"
 		}},
 
@@ -47,7 +47,7 @@
 	"Name": "Bag",
 	"Weight": 20,
 	"Image" : {
-		"Url": "../Scenarios/images/bag20kg.png",
+		"Url": "images/bag20kg.png",
 		"Origin": "https://pngimg.com/uploads/luggage/luggage_PNG10725.png"
 		}}
 	],

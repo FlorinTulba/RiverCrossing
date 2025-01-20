@@ -14,7 +14,7 @@
 	"Name": "Farmer",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/farmer.png",
+		"Url": "images/farmer.png",
 		"Origin": "https://pngimg.com/uploads/farmer/farmer_PNG34.png"
 		}},
 
@@ -22,7 +22,7 @@
 	"Name": "Son",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/boy.png",
+		"Url": "images/boy.png",
 		"Origin": "https://pngimg.com/uploads/children/children_PNG18069.png"
 		}},
 
@@ -30,38 +30,38 @@
 	"Name": "Daughter",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/girl.png",
+		"Url": "images/girl.png",
 		"Origin": "https://pngimg.com/uploads/girls/girls_PNG6491.png"
 		}},
 
 	{"Id": 3,
 	"Name": "Dog",
 	"Image" : {
-		"Url": "../Scenarios/images/dog.png",
+		"Url": "images/dog.png",
 		"Origin": "https://pngimg.com/uploads/dog/dog_PNG2454.png"
 		}},
 
 	{"Id": 4,
 	"Name": "Squirrel1",
 	"Image" : {
-		"Url": "../Scenarios/images/squirrel.png",
+		"Url": "images/squirrel.png",
 		"Origin": "https://pngimg.com/uploads/squirrel/squirrel_PNG15806.png"
 		}},
 
 	{"Id": 5,
 	"Name": "Squirrel2",
-	"Image" : {"Url": "../Scenarios/images/squirrel.png"}},
+	"Image" : {"Url": "images/squirrel.png"}},
 
 	{"Id": 6,
 	"Name": "Rabbit1",
 	"Image" : {
-		"Url": "../Scenarios/images/rabbit.png",
+		"Url": "images/rabbit.png",
 		"Origin": "https://pngimg.com/uploads/rabbit/rabbit_PNG5639.png"
 		}},
 
 	{"Id": 7,
 	"Name": "Rabbit2",
-	"Image" : {"Url": "../Scenarios/images/rabbit.png"}}
+	"Image" : {"Url": "images/rabbit.png"}}
 	],
 
 "CrossingConstraints" : {

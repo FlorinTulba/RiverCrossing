@@ -12,7 +12,7 @@
 	"Type": "athlete",
 	"CanRow": true,
 	"Image" : {
-		"Url": "../Scenarios/images/muscle1.png",
+		"Url": "images/muscle1.png",
 		"Origin": "https://pngimg.com/uploads/muscle/muscle_PNG49.png"
 		}},
 
@@ -21,7 +21,7 @@
 	"Type": "coach",
 	"CanRow": true,
 	"Image" : {
-		"Url": "../Scenarios/images/anonymous1.png",
+		"Url": "images/anonymous1.png",
 		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
 		}},
 
@@ -30,7 +30,7 @@
 	"Type": "athlete",
 	"CanRow": true,
 	"Image" : {
-		"Url": "../Scenarios/images/muscle2.png",
+		"Url": "images/muscle2.png",
 		"Origin": "https://pngimg.com/uploads/muscle/muscle_PNG49.png"
 		}},
 
@@ -39,7 +39,7 @@
 	"Type": "coach",
 	"CanRow": true,
 	"Image" : {
-		"Url": "../Scenarios/images/anonymous2.png",
+		"Url": "images/anonymous2.png",
 		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
 		}},
 
@@ -48,7 +48,7 @@
 	"Type": "athlete",
 	"CanRow": true,
 	"Image" : {
-		"Url": "../Scenarios/images/muscle3.png",
+		"Url": "images/muscle3.png",
 		"Origin": "https://pngimg.com/uploads/muscle/muscle_PNG49.png"
 		}},
 
@@ -57,7 +57,7 @@
 	"Type": "coach",
 	"CanRow": true,
 	"Image" : {
-		"Url": "../Scenarios/images/anonymous3.png",
+		"Url": "images/anonymous3.png",
 		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
 		}}
 	],

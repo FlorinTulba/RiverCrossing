@@ -1,36 +1,30 @@
-/*
- Part of the RiverCrossing project,
- which allows to describe and solve River Crossing puzzles:
+/******************************************************************************
+ This RiverCrossing project (https://github.com/FlorinTulba/RiverCrossing)
+ allows describing and solving River Crossing puzzles:
   https://en.wikipedia.org/wiki/River_crossing_puzzle
 
- Requires Boost installation (www.boost.org).
+ Required libraries:
+ - Boost (>=1.67) - https://www.boost.org
+ - Microsoft GSL (>=4.0) - https://github.com/microsoft/GSL
 
- (c) 2018 Florin Tulba (florintulba@yahoo.com)
-*/
+ (c) 2018-2025 Florin Tulba (florintulba@yahoo.com)
+ *****************************************************************************/
 
 #ifndef H_CONFIG_CONSTRAINT
 #define H_CONFIG_CONSTRAINT
 
-#include "absConfigConstraint.h"
 #include "configParser.h"
 #include "util.h"
 
-#include <sstream>
-#include <unordered_set>
 #include <iterator>
+#include <unordered_set>
+#include <variant>
+
+#include <gsl/pointers>
+
 #include <boost/logic/tribool.hpp>
 
-namespace rc {
-
-namespace ent {
-
-// Forward declarations
-class AllEntities;
-class MovingEntities;
-
-} // namespace ent
-
-namespace cond {
+namespace rc::cond {
 
 // Forward declarations
 class IdsConstraint;
@@ -41,40 +35,47 @@ Base class for extending the validation of IConfigConstraint.
 Some of the new virtual methods are abstract and must be implemented
 by every derived class.
 */
-class AbsConfigConstraintValidatorExt /*abstract*/ :
-      public IConfigConstraintValidatorExt,
+class AbsConfigConstraintValidatorExt
+    : public IConfigConstraintValidatorExt,
+
       // provides `selectExt` static method
       public DecoratorManager<AbsConfigConstraintValidatorExt,
-                        IConfigConstraintValidatorExt> {
-
+                              IConfigConstraintValidatorExt> {
   // for accessing nextExt
-  friend struct DecoratorManager<AbsConfigConstraintValidatorExt,
-                          IConfigConstraintValidatorExt>;
+  friend class DecoratorManager<AbsConfigConstraintValidatorExt,
+                                IConfigConstraintValidatorExt>;
 
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
+ public:
+  ~AbsConfigConstraintValidatorExt() noexcept override;
 
-  std::shared_ptr<const IConfigConstraintValidatorExt> nextExt;
+  AbsConfigConstraintValidatorExt(const AbsConfigConstraintValidatorExt&) =
+      delete;
+  AbsConfigConstraintValidatorExt(AbsConfigConstraintValidatorExt&&) = delete;
+  void operator=(const AbsConfigConstraintValidatorExt&) = delete;
+  void operator=(AbsConfigConstraintValidatorExt&&) = delete;
 
-  AbsConfigConstraintValidatorExt(
-      const std::shared_ptr<const IConfigConstraintValidatorExt> &nextExt_);
-
-  /// @throw logic_error if the types configuration does not respect current extension
-  virtual void checkTypesCfg(const TypesConstraint &cfg,
-             const std::shared_ptr<const ent::AllEntities> &allEnts) const {}
-
-  /// @throw logic_error if the ids configuration does not respect current extension
-  virtual void checkIdsCfg(const IdsConstraint &cfg,
-             const std::shared_ptr<const ent::AllEntities> &allEnts) const {}
-
-public:
   /// @throw logic_error if cfg does not respect all the extensions
-  void check(const IConfigConstraint &cfg,
-             const std::shared_ptr<const ent::AllEntities> &allEnts)
-      const override final;
+  void check(const IConfigConstraint& cfg,
+             const ent::AllEntities& allEnts) const final;
+
+ protected:
+  AbsConfigConstraintValidatorExt(
+      std::unique_ptr<const IConfigConstraintValidatorExt> nextExt_) noexcept;
+
+  /// @throw logic_error if the types configuration does not respect current
+  /// extension
+  virtual void checkTypesCfg(const TypesConstraint& /*cfg*/,
+                             const ent::AllEntities& /*allEnts*/) const {}
+
+  /// @throw logic_error if the ids configuration does not respect current
+  /// extension
+  virtual void checkIdsCfg(const IdsConstraint& /*cfg*/,
+                           const ent::AllEntities& /*allEnts*/) const {}
+
+  PROTECTED :
+
+      gsl::not_null<gsl::owner<const IConfigConstraintValidatorExt*>>
+          nextExt;
 };
 
 /**
@@ -84,31 +85,22 @@ public:
   The constraints should be either all enforced, or none of them is allowed
 */
 class ConfigConstraints {
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  grammar::ConstraintsVec constraints; ///< parsed constraints to be validated
-
-  std::shared_ptr<const ent::AllEntities> allEnts; ///< all known entities
-
-  /// Are these constraints allowing certain configurations or disallowing them?
-  const bool _allowed;
-
-public:
+ public:
   /// The constraints should be either all enforced, or none of them is allowed
   /// @throw logic_error if any constraint is invalid
-  ConfigConstraints(grammar::ConstraintsVec &&constraints_,
-                    const std::shared_ptr<const ent::AllEntities> &allEnts_,
-                    bool allowed_ = true, bool postponeValidation = false);
+  ConfigConstraints(grammar::ConstraintsVec&& constraints_,
+                    const ent::AllEntities& allEnts_,
+                    bool allowed_ = true,
+                    bool postponeValidation = false);
+  virtual ~ConfigConstraints() noexcept = default;
+
+  void operator=(const ConfigConstraints&) = delete;
+  void operator=(ConfigConstraints&&) = delete;
 
   /// Are these constraints allowing certain configurations or disallowing them?
-  bool allowed() const;
+  [[nodiscard]] bool allowed() const noexcept;
 
-  bool empty() const; ///< are there any constraints?
+  [[nodiscard]] bool empty() const noexcept;  ///< are there any constraints?
 
   /**
     For _allowed == true - are these entities
@@ -120,34 +112,65 @@ public:
 
     @return as explained above
   */
-  virtual bool check(const ent::IsolatedEntities &ents) const;
+  [[nodiscard]] virtual bool check(const ent::IsolatedEntities& ents) const;
 
-  std::string toString() const;
+  [[nodiscard]] std::string toString() const;
+
+ protected:
+  ConfigConstraints(const ConfigConstraints&) = default;
+  ConfigConstraints(ConfigConstraints&&) noexcept = default;
+
+  PROTECTED :
+
+      /// Parsed constraints to be validated
+      grammar::ConstraintsVec constraints;
+
+  gsl::not_null<const ent::AllEntities*> allEnts;  ///< all known entities
+
+  /// Are these constraints allowing certain configurations or disallowing them?
+  bool _allowed;
 };
 
-/// Allows performing canRow, allowedLoads and other checks on raft/bridge configurations
-struct IContextValidator /*abstract*/ {
-  virtual ~IContextValidator()/* = 0 */{}
+/// Allows performing canRow, allowedLoads and other checks on raft/bridge
+/// configurations
+class IContextValidator {
+ public:
+  virtual ~IContextValidator() noexcept = default;
 
-  /// @return true if `ents` is a valid raft/bridge configuration within `st` context
-  virtual bool validate(const ent::MovingEntities &ents,
-                        const SymbolsTable &st) const = 0;
+  IContextValidator(const IContextValidator&) = delete;
+  IContextValidator(IContextValidator&&) = delete;
+  void operator=(const IContextValidator&) = delete;
+  void operator=(IContextValidator&&) = delete;
+
+  /// @return true if `ents` is a valid raft/bridge configuration within `st`
+  /// context
+  /// @throw logic_error if ents misses some extension(s)
+  [[nodiscard]] virtual bool validate(const ent::MovingEntities& ents,
+                                      const SymbolsTable& st) const = 0;
+
+ protected:
+  IContextValidator() noexcept = default;
 };
 
 /// Neutral context validator - accepts any raft/bridge configuration
-struct DefContextValidator final : IContextValidator {
+class DefContextValidator final : public IContextValidator {
+ public:
+  ~DefContextValidator() noexcept override = default;
+
+  DefContextValidator(const DefContextValidator&) = delete;
+  DefContextValidator(DefContextValidator&&) = delete;
+  void operator=(const DefContextValidator&) = delete;
+  void operator=(DefContextValidator&&) = delete;
+
   /// Allows sharing the default instance
-  static const std::shared_ptr<const DefContextValidator>& INST();
+  static const std::shared_ptr<const DefContextValidator>& SHARED_INST();
 
-  bool validate(const ent::MovingEntities&, const SymbolsTable&) const override final {
-    return true;
-  }
+  [[nodiscard]] bool validate(const ent::MovingEntities&,
+                              const SymbolsTable&) const noexcept final;
 
-    #ifndef UNIT_TESTING // leave ctor public only for Unit tests
-protected:
-    #endif
+  PRIVATE :
 
-  DefContextValidator() {}
+      DefContextValidator() noexcept = default;
 };
 
 /**
@@ -161,83 +184,127 @@ whenever they occur, the validation will provide a result instead of throwing.
 
 The rest of the exceptions will still propagate.
 
-When an exception is caught, an instance of a derived class assesses the context.
+When an exception is caught, an instance of a derived class assesses the
+context.
 */
-struct IValidatorExceptionHandler /*abstract*/ {
-  virtual ~IValidatorExceptionHandler()/* = 0*/ {}
+class IValidatorExceptionHandler {
+ public:
+  virtual ~IValidatorExceptionHandler() noexcept = default;
+
+  IValidatorExceptionHandler(const IValidatorExceptionHandler&) = delete;
+  IValidatorExceptionHandler(IValidatorExceptionHandler&&) = delete;
+  void operator=(const IValidatorExceptionHandler&) = delete;
+  void operator=(IValidatorExceptionHandler&&) = delete;
 
   /**
   Assesses the context of the exception.
   If it doesn't match the exempted cases, returns `indeterminate`.
   If it matches the exempted cases generates a boolean validation result
   */
-  virtual boost::logic::tribool assess(const ent::MovingEntities &ents,
-                                       const SymbolsTable &st) const = 0;
+  [[nodiscard]] virtual boost::logic::tribool assess(
+      const ent::MovingEntities& ents,
+      const SymbolsTable& st) const noexcept = 0;
+
+ protected:
+  IValidatorExceptionHandler() noexcept = default;
 };
 
 /// Abstract base class for the context validator decorators.
-class AbsContextValidator /*abstract*/ : public IContextValidator {
+class AbsContextValidator : public IContextValidator {
+ public:
+  ~AbsContextValidator() noexcept override = default;
 
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
+  AbsContextValidator(const AbsContextValidator&) = delete;
+  AbsContextValidator(AbsContextValidator&&) = delete;
+  void operator=(const AbsContextValidator&) = delete;
+  void operator=(AbsContextValidator&&) = delete;
 
-  // using shared_ptr as more configurations might use these fields
-  std::shared_ptr<const IContextValidator> nextValidator; ///< a chained next validator
-  std::shared_ptr<const IValidatorExceptionHandler> ownValidatorExcHandler; ///< possible handler for particular contexts
-
-  AbsContextValidator(
-    const std::shared_ptr<const IContextValidator> &nextValidator_,
-    const std::shared_ptr<const IValidatorExceptionHandler> &ownValidatorExcHandler_
-      = nullptr);
-
-  /// @return true if `ents` is a valid raft/bridge configuration within `st` context
-  virtual bool doValidate(const ent::MovingEntities &ents,
-                          const SymbolsTable &st) const = 0;
-
-public:
   /**
   Performs local validation and then delegates to the next validator.
   The local validation might throw and the optional handler might
   stop the exception propagation and generate a validation result instead.
 
-  @return true if `ents` is a valid raft/bridge configuration within `st` context
+  @return true if `ents` is a valid raft/bridge configuration within `st`
+  context
+  @throw logic_error if ents misses some extension(s)
   */
-  bool validate(const ent::MovingEntities &ents,
-                const SymbolsTable &st) const override final;
+  [[nodiscard]] bool validate(const ent::MovingEntities& ents,
+                              const SymbolsTable& st) const final;
+
+ protected:
+  explicit AbsContextValidator(
+      const std::shared_ptr<const IContextValidator>& nextValidator_,
+      const std::shared_ptr<const IValidatorExceptionHandler>&
+          ownValidatorExcHandler_ = {}) noexcept;
+
+  /// @return true if `ents` is a valid raft/bridge configuration within `st`
+  /// context
+  /// @throw logic_error if ents misses some extension(s)
+  [[nodiscard]] virtual bool doValidate(const ent::MovingEntities& ents,
+                                        const SymbolsTable& st) const = 0;
+
+  PROTECTED :
+
+      // using shared_ptr as more configurations might use these fields
+
+      /// A chained next validator
+      gsl::not_null<std::shared_ptr<const IContextValidator>>
+          nextValidator;
+
+  /// Possible handler for particular contexts
+  std::shared_ptr<const IValidatorExceptionHandler> ownValidatorExcHandler;
 };
 
 /// Interface for the extensions for transfer constraints
-struct ITransferConstraintsExt /*abstract*/ {
-  virtual ~ITransferConstraintsExt()/* = 0 */{}
+class ITransferConstraintsExt {
+ public:
+  virtual ~ITransferConstraintsExt() noexcept = default;
+
+  ITransferConstraintsExt(const ITransferConstraintsExt&) = delete;
+  ITransferConstraintsExt(ITransferConstraintsExt&&) = delete;
+  void operator=(const ITransferConstraintsExt&) = delete;
+  void operator=(ITransferConstraintsExt&&) = delete;
 
   /// @return validator extensions of a configuration
-  virtual std::shared_ptr<const IConfigConstraintValidatorExt>
-    configValidatorExt() const = 0;
+  [[nodiscard]] virtual std::unique_ptr<const IConfigConstraintValidatorExt>
+  configValidatorExt() const = 0;
 
   /// @return true only if cfg satisfies these extensions
-  virtual bool check(const ent::MovingEntities &cfg) const = 0;
+  [[nodiscard]] virtual bool check(const ent::MovingEntities& cfg) const = 0;
+
+ protected:
+  ITransferConstraintsExt() noexcept = default;
 };
 
 /// Neutral TransferConstraints extension
-struct DefTransferConstraintsExt final : ITransferConstraintsExt {
-  /// Allows sharing the default instance
-  static const std::shared_ptr<const DefTransferConstraintsExt>& INST();
+class DefTransferConstraintsExt final : public ITransferConstraintsExt {
+ public:
+  ~DefTransferConstraintsExt() noexcept override = default;
 
-  /// @return validator extensions of a configuration
-  std::shared_ptr<const IConfigConstraintValidatorExt> configValidatorExt()
-              const override final;
+  DefTransferConstraintsExt(const DefTransferConstraintsExt&) = delete;
+  DefTransferConstraintsExt(DefTransferConstraintsExt&&) = delete;
+  void operator=(const DefTransferConstraintsExt&) = delete;
+  void operator=(DefTransferConstraintsExt&&) = delete;
+
+  /// Allows sharing the default instance
+  static const DefTransferConstraintsExt& INST() noexcept;
+
+  /// Getting a new instance
+  [[nodiscard]] static std::unique_ptr<const DefTransferConstraintsExt>
+  NEW_INST();
+
+  /// @return new validator extensions of a configuration
+  [[nodiscard]] std::unique_ptr<const IConfigConstraintValidatorExt>
+  configValidatorExt() const final;
 
   /// @return true only if cfg satisfies these extensions
-  bool check(const ent::MovingEntities&) const override final {return true;}
+  [[nodiscard]] bool check(const ent::MovingEntities&) const noexcept final {
+    return true;
+  }
 
-    #ifndef UNIT_TESTING // leave ctor public only for Unit tests
-protected:
-    #endif
+  PRIVATE :
 
-  DefTransferConstraintsExt() {}
+      DefTransferConstraintsExt() noexcept = default;
 };
 
 /**
@@ -245,66 +312,69 @@ Base class for handling transfer constraints extensions.
 Some of the new virtual methods are abstract and must be implemented
 by every derived class.
 */
-class AbsTransferConstraintsExt /*abstract*/ :
-      public ITransferConstraintsExt,
-      // provides `selectExt` static method
+class AbsTransferConstraintsExt
+    : public ITransferConstraintsExt,
+
+      // provides `selectExt` static
+      // method
       public DecoratorManager<AbsTransferConstraintsExt,
-                        ITransferConstraintsExt> {
-
+                              ITransferConstraintsExt> {
   // for accessing nextExt
-  friend struct DecoratorManager<AbsTransferConstraintsExt,
-                          ITransferConstraintsExt>;
+  friend class DecoratorManager<AbsTransferConstraintsExt,
+                                ITransferConstraintsExt>;
 
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
+ public:
+  ~AbsTransferConstraintsExt() noexcept override;
 
-  std::shared_ptr<const ITransferConstraintsExt> nextExt;
-
-  AbsTransferConstraintsExt(
-      const std::shared_ptr<const ITransferConstraintsExt> &nextExt_);
+  AbsTransferConstraintsExt(const AbsTransferConstraintsExt&) = delete;
+  AbsTransferConstraintsExt(AbsTransferConstraintsExt&&) = delete;
+  void operator=(const AbsTransferConstraintsExt&) = delete;
+  void operator=(AbsTransferConstraintsExt&&) = delete;
 
   /// @return validator extensions of a configuration
-  virtual std::shared_ptr<const IConfigConstraintValidatorExt>
-    _configValidatorExt(
-        const std::shared_ptr<const IConfigConstraintValidatorExt> &fromNextExt)
-                          const = 0;
-
-  /// @return true only if cfg satisfies current extension
-  virtual bool _check(const ent::MovingEntities&) const {return true;}
-
-public:
-  /// @return validator extensions of a configuration
-  std::shared_ptr<const IConfigConstraintValidatorExt> configValidatorExt()
-              const override final;
+  [[nodiscard]] std::unique_ptr<const IConfigConstraintValidatorExt>
+  configValidatorExt() const noexcept final;
 
   /// @return true only if cfg satisfies these extensions
-  bool check(const ent::MovingEntities &cfg) const override final;
+  [[nodiscard]] bool check(const ent::MovingEntities& cfg) const final;
+
+ protected:
+  AbsTransferConstraintsExt(
+      std::unique_ptr<const ITransferConstraintsExt> nextExt_);
+
+  /// @return validator extensions of a configuration
+  [[nodiscard]] virtual std::unique_ptr<const IConfigConstraintValidatorExt>
+  _configValidatorExt(std::unique_ptr<const IConfigConstraintValidatorExt>
+                          fromNextExt) const noexcept = 0;
+
+  /// @return true only if cfg satisfies current extension
+  /// @throw logic_error for invalid extension
+  [[nodiscard]] virtual bool _check(const ent::MovingEntities&) const {
+    return true;
+  }
+
+  PROTECTED :
+
+      gsl::not_null<gsl::owner<const ITransferConstraintsExt*>>
+          nextExt;
 };
 
 /// ConfigConstraints for raft/bridge configurations
 class TransferConstraints : public ConfigConstraints {
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  const std::shared_ptr<const ITransferConstraintsExt> extension;
-
-  /// How many entities are allowed on the raft/bridge at once
-  const unsigned &capacity;
-
-public:
+ public:
   /// @throw logic_error for an invalid constraint
-  TransferConstraints(grammar::ConstraintsVec &&constraints_,
-                      const std::shared_ptr<const ent::AllEntities> &allEnts_,
-                      const unsigned &capacity_, bool allowed_ = true,
-                      const std::shared_ptr<const ITransferConstraintsExt> &extension_
-                        = DefTransferConstraintsExt::INST());
+  TransferConstraints(grammar::ConstraintsVec&& constraints_,
+                      const ent::AllEntities& allEnts_,
+                      const unsigned& capacity_,
+                      bool allowed_ = true,
+                      const ITransferConstraintsExt& extension_ =
+                          DefTransferConstraintsExt::INST());
+  TransferConstraints(const TransferConstraints&) = default;
+  TransferConstraints(TransferConstraints&&) noexcept = default;
+  ~TransferConstraints() noexcept override = default;
+
+  void operator=(const TransferConstraints&) = delete;
+  void operator=(TransferConstraints&&) = delete;
 
   /**
     For _allowed == true - are these entities respecting
@@ -318,56 +388,110 @@ public:
 
     @return as explained above
   */
-  bool check(const ent::IsolatedEntities &ents) const override;
+  [[nodiscard]] bool check(const ent::IsolatedEntities& ents) const override;
 
   /// @return the minimal capacity suitable for these constraints
-  unsigned minRequiredCapacity() const;
+  [[nodiscard]] unsigned minRequiredCapacity() const noexcept;
 
-  std::shared_ptr<const ITransferConstraintsExt> getExtension() const {
-    return extension;
-  }
+  PROTECTED :
+
+      gsl::not_null<const ITransferConstraintsExt*>
+          extension;
+
+  /// How many entities are allowed on the raft/bridge at once
+  gsl::not_null<const unsigned*> capacity;
 };
 
 /// Valid configurations of same duration
 class ConfigurationsTransferDuration {
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  TransferConstraints constraints;  ///< all configurations with the given duration
-  unsigned _duration = 0U;          ///< traversal duration for those configurations
-
-public:
+ public:
   /// @throw logic_error for an invalid constraint
   ConfigurationsTransferDuration(
-      grammar::ConfigurationsTransferDurationInitType &&initType,
-      const std::shared_ptr<const ent::AllEntities> &allEnts_,
-      const unsigned &capacity,
-      const std::shared_ptr<const ITransferConstraintsExt> &extension_
-            = DefTransferConstraintsExt::INST());
+      grammar::ConfigurationsTransferDurationInitType&& initType,
+      const ent::AllEntities& allEnts_,
+      const unsigned& capacity,
+      const ITransferConstraintsExt& extension_ =
+          DefTransferConstraintsExt::INST());
+  ConfigurationsTransferDuration(const ConfigurationsTransferDuration&) =
+      default;
+  ConfigurationsTransferDuration(ConfigurationsTransferDuration&&) noexcept =
+      default;
+  ~ConfigurationsTransferDuration() noexcept = default;
 
-  /// all configurations with the given duration
-  const TransferConstraints& configConstraints() const;
+  void operator=(const ConfigurationsTransferDuration&) = delete;
+  void operator=(ConfigurationsTransferDuration&&) = delete;
 
-  unsigned duration() const; ///< traversal duration for those configurations
+  /// All configurations with the given duration
+  [[nodiscard]] const TransferConstraints& configConstraints() const noexcept;
 
-  std::string toString() const;
+  /// Traversal duration for those configurations
+  [[nodiscard]] unsigned duration() const noexcept;
+
+  [[nodiscard]] std::string toString() const;
+
+  PROTECTED :
+
+      /// All configurations with the given duration
+      TransferConstraints constraints;
+  unsigned _duration{};  ///< traversal duration for those configurations
 };
 
 /// The provided constraint uses entity types
 class TypesConstraint : public IConfigConstraint {
+ public:
+  TypesConstraint() noexcept = default;
+  TypesConstraint(const TypesConstraint&) = default;
+  TypesConstraint(TypesConstraint&&) noexcept = default;
+  ~TypesConstraint() noexcept override = default;
 
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
+  void operator=(const TypesConstraint&) = delete;
+  void operator=(TypesConstraint&&) = delete;
 
-  /// All the mentioned types
-  std::unordered_set<std::string> mentionedTypes;
+  /**
+    Expands the types constraint with a range for a new type.
+
+    @return *this
+    @throw logic_error for duplicate types or wrong range limits
+  */
+  TypesConstraint& addTypeRange(const std::string& newType,
+                                unsigned minIncl = 0U,
+                                unsigned maxIncl = UINT_MAX);
+  /// @return a copy of this on heap
+  [[nodiscard]] std::unique_ptr<const IConfigConstraint> clone()
+      const noexcept override;
+
+  /**
+  Checks the validity of this constraint using entities information,
+  raft/bridge capacity and additional validation logic
+
+  @throw logic_error for an invalid constraint
+  */
+  void validate(const ent::AllEntities& allEnts,
+                unsigned capacity = UINT_MAX,
+                const IConfigConstraintValidatorExt& valExt =
+                    DefConfigConstraintValidatorExt::INST()) const override;
+
+  /// Is there a match between the provided collection and the constraint's
+  /// data?
+  [[nodiscard]] bool matches(
+      const ent::IsolatedEntities& ents) const noexcept override;
+
+  /// @return the length of the longest possible match
+  [[nodiscard]] unsigned longestMatchLength() const noexcept override;
+
+  [[nodiscard]] const std::unordered_map<std::string,
+                                         std::pair<unsigned, unsigned>>&
+  mandatoryTypeNames() const noexcept {
+    return mandatoryTypes;
+  }
+
+  [[nodiscard]] std::string toString() const override;
+
+  PROTECTED :
+
+      /// All the mentioned types
+      std::unordered_set<std::string>
+          mentionedTypes;
 
   /// Map between expected types and the range for the count of each such type.
   /// The range comes as a pair of 2 unsigned values: min and max inclusive
@@ -376,100 +500,40 @@ protected:
   /// Map between optional types and their max inclusive count
   std::unordered_map<std::string, unsigned> optionalTypes;
 
-  unsigned _longestMatchLength = 0U; ///< length of the longest possible match
-
-public:
-  /**
-    Expands the types constraint with a range for a new type.
-
-    @return *this
-    @throw logic_error for duplicate types or wrong range limits
-  */
-  TypesConstraint& addTypeRange(const std::string &newType,
-                                unsigned minIncl = 0U,
-                                unsigned maxIncl = UINT_MAX);
-
-  /// @return a copy of this on heap
-  std::unique_ptr<const IConfigConstraint> clone() const override;
-
-  /**
-  Checks the validity of this constraint using entities information,
-  raft/bridge capacity and additional validation logic
-
-  @throw logic_error for an invalid constraint
-  */
-  void validate(const std::shared_ptr<const ent::AllEntities> &allEnts,
-      unsigned capacity = UINT_MAX,
-      const std::shared_ptr<const IConfigConstraintValidatorExt> &valExt
-        = DefConfigConstraintValidatorExt::INST()) const override;
-
-  /// Is there a match between the provided collection and the constraint's data?
-  bool matches(const ent::IsolatedEntities &ents) const override;
-
-  /// @return the length of the longest possible match
-  unsigned longestMatchLength() const override;
-
-  const std::unordered_map<std::string, std::pair<unsigned, unsigned>>&
-    mandatoryTypeNames() const {return mandatoryTypes;}
-
-  std::string toString() const override;
+  unsigned _longestMatchLength{};  ///< length of the longest possible match
 };
 
 /// The provided constraint uses entity ids
 class IdsConstraint : public IConfigConstraint {
+ public:
+  IdsConstraint() noexcept = default;
+  IdsConstraint(const IdsConstraint&) = default;
+  IdsConstraint(IdsConstraint&&) noexcept = default;
 
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
+  ~IdsConstraint() noexcept override = default;
 
-  std::unordered_set<unsigned> mentionedIds; ///< all id-s mentioned by the constraint
+  void operator=(const IdsConstraint&) = delete;
+  void operator=(IdsConstraint&&) = delete;
 
-  /// Set of mandatory groups
-  std::vector<std::unordered_set<unsigned>> mandatoryGroups;
-
-  /// Set of optional groups
-  std::vector<std::unordered_set<unsigned>> optionalGroups;
-
-  std::unordered_set<unsigned> avoidedIds;    ///< set of entity ids to avoid
-
-  /// Count of additional mandatory entities (with ids not covered by the 3 sets)
-  unsigned expectedExtraIds = 0U;
-
-  unsigned _longestMatchLength = 0U; ///< length of the longest possible match
-
-  /**
-    Prevents (when true) matching configurations with other ids,
-    apart from mandatory, optional and avoided.
-
-    On both situations, the configuration's length will be at least
-    size of mandatory + expectedExtraIds.
-
-    But when true, the configuration's length will be at most size of mandatory +
-    expectedExtraIds + size of optional.
-  */
-  bool capacityLimit = true;
-
-public:
   /// Creates a new mandatory group with this id
   IdsConstraint& addMandatoryId(unsigned id);
 
   /// Creates a new mandatory group with the ids from the provided container
-  template<class Cont>
-  IdsConstraint& addMandatoryGroup(const Cont &group) {
+  template <class Cont>
+  IdsConstraint& addMandatoryGroup(const Cont& group) {
     static_assert(std::is_same<unsigned, typename Cont::value_type>::value);
-    std::unordered_set<unsigned> newMentionedIds(mentionedIds);
+
+    std::unordered_set<unsigned> newMentionedIds{mentionedIds};
     newMentionedIds.insert(CBOUNDS(group));
-    if(mentionedIds.size() + (size_t)std::distance(CBOUNDS(group)) >
-        newMentionedIds.size())
-      throw std::domain_error(std::string(__func__) +
-        " - Found id(s) mentioned earlier in the same Ids constraint!");
+    if (std::size(mentionedIds) + std::size(group) > std::size(newMentionedIds))
+      throw std::domain_error{
+          HERE.function_name() +
+          " - Found id(s) mentioned earlier in the same Ids constraint!"s};
     mentionedIds = newMentionedIds;
 
     mandatoryGroups.emplace_back(CBOUNDS(group));
 
-    if(_longestMatchLength != UINT_MAX)
+    if (_longestMatchLength != UINT_MAX)
       ++_longestMatchLength;
 
     return *this;
@@ -479,35 +543,37 @@ public:
   IdsConstraint& addOptionalId(unsigned id);
 
   /// Creates a new optional group with the ids from the provided container
-  template<class Cont>
-  IdsConstraint& addOptionalGroup(const Cont &group) {
+  template <class Cont>
+  IdsConstraint& addOptionalGroup(const Cont& group) {
     static_assert(std::is_same<unsigned, typename Cont::value_type>::value);
-    std::unordered_set<unsigned> newMentionedIds(mentionedIds);
+
+    std::unordered_set<unsigned> newMentionedIds{mentionedIds};
     newMentionedIds.insert(CBOUNDS(group));
-    if(mentionedIds.size() + (size_t)std::distance(CBOUNDS(group)) >
-        newMentionedIds.size())
-      throw std::domain_error(std::string(__func__) +
-        " - Found id(s) mentioned earlier in the same Ids constraint!");
+    if (std::size(mentionedIds) + std::size(group) > std::size(newMentionedIds))
+      throw std::domain_error{
+          HERE.function_name() +
+          " - Found id(s) mentioned earlier in the same Ids constraint!"s};
     mentionedIds = newMentionedIds;
 
     optionalGroups.emplace_back(CBOUNDS(group));
 
-    if(_longestMatchLength != UINT_MAX)
+    if (_longestMatchLength != UINT_MAX)
       ++_longestMatchLength;
 
     return *this;
   }
 
-  IdsConstraint& addAvoidedId(unsigned id); ///< new id to avoid
+  IdsConstraint& addAvoidedId(unsigned id);  ///< new id to avoid
 
   /// Increments the count of mandatory ids
-  IdsConstraint& addUnspecifiedMandatory();
+  IdsConstraint& addUnspecifiedMandatory() noexcept;
 
   /// Allows more entities apart from mandatory, optional and avoided ones
-  IdsConstraint& setUnbounded();
+  IdsConstraint& setUnbounded() noexcept;
 
   /// @return a copy of this on heap
-  std::unique_ptr<const IConfigConstraint> clone() const override;
+  [[nodiscard]] std::unique_ptr<const IConfigConstraint> clone()
+      const noexcept override;
 
   /**
   Checks the validity of this constraint using entities information,
@@ -515,69 +581,150 @@ public:
 
   @throw logic_error for an invalid constraint
   */
-  void validate(const std::shared_ptr<const ent::AllEntities> &allEnts,
-      unsigned capacity = UINT_MAX,
-      const std::shared_ptr<const IConfigConstraintValidatorExt> &valExt
-        = DefConfigConstraintValidatorExt::INST()) const override;
+  void validate(const ent::AllEntities& allEnts,
+                unsigned capacity = UINT_MAX,
+                const IConfigConstraintValidatorExt& valExt =
+                    DefConfigConstraintValidatorExt::INST()) const override;
 
-  /// Is there a match between the provided collection and the constraint's data?
-  bool matches(const ent::IsolatedEntities &ents) const override;
+  /// Is there a match between the provided collection and the constraint's
+  /// data?
+  [[nodiscard]] bool matches(
+      const ent::IsolatedEntities& ents) const noexcept override;
 
   /// @return the length of the longest possible match
-  unsigned longestMatchLength() const override;
+  [[nodiscard]] unsigned longestMatchLength() const noexcept override;
 
   /// @return the length of the longest possible mismatch
-  unsigned longestMismatchLength() const override;
+  [[nodiscard]] unsigned longestMismatchLength() const noexcept override;
 
-  std::string toString() const override;
+  [[nodiscard]] std::string toString() const override;
+
+  PROTECTED :
+
+      /// All id-s mentioned by the constraint
+      std::unordered_set<unsigned>
+          mentionedIds;
+
+  /// Set of mandatory groups
+  std::vector<std::unordered_set<unsigned>> mandatoryGroups;
+
+  /// Set of optional groups
+  std::vector<std::unordered_set<unsigned>> optionalGroups;
+
+  std::unordered_set<unsigned> avoidedIds;  ///< set of entity ids to avoid
+
+  /// Count of additional mandatory entities (with ids not covered by the 3
+  /// sets)
+  unsigned expectedExtraIds{};
+
+  unsigned _longestMatchLength{};  ///< length of the longest possible match
+
+  /**
+    Prevents (when true) matching configurations with other ids,
+    apart from mandatory, optional and avoided.
+
+    On both situations, the configuration's length will be at least
+    size of mandatory + expectedExtraIds.
+
+    But when true, the configuration's length will be at most size of mandatory
+    + expectedExtraIds + size of optional.
+  */
+  bool capacityLimit{true};
 };
 
 /// bool constants: true or false
-struct BoolConst : LogicalExpr {
-  BoolConst(bool b);
+class BoolConst : public LogicalExpr {
+ public:
+  explicit BoolConst(bool b) noexcept;
+  ~BoolConst() noexcept override = default;
+
+  BoolConst(const BoolConst&) = delete;
+  BoolConst(BoolConst&&) = delete;
+  void operator=(const BoolConst&) = delete;
+  void operator=(BoolConst&&) = delete;
 
   /// @return the contained bool constant
-  bool eval(const SymbolsTable &) const override;
+  [[nodiscard]] bool eval(const SymbolsTable&) const noexcept override;
 
-  std::string toString() const override;
+  [[nodiscard]] std::string toString() const override;
 };
 
 /// Negation of a logical expression
 class Not : public LogicalExpr {
+ public:
+  explicit Not(const std::shared_ptr<const LogicalExpr>& le);
+  ~Not() noexcept override = default;
 
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-  std::shared_ptr<const LogicalExpr> _le; ///< the expression to negate
-
-public:
-  explicit Not(const std::shared_ptr<const LogicalExpr> &le);
+  Not(const Not&) = delete;
+  Not(Not&&) = delete;
+  void operator=(const Not&) = delete;
+  void operator=(Not&&) = delete;
 
   /// Checks if there is a dependency on `varName`
-  bool dependsOnVariable(const std::string &varName) const override;
+  [[nodiscard]] bool dependsOnVariable(
+      const std::string& varName) const noexcept override;
 
-  bool eval(const SymbolsTable &st) const override;
+  [[nodiscard]] bool eval(const SymbolsTable& st) const override;
 
-  std::string toString() const override;
+  [[nodiscard]] std::string toString() const override;
+
+  PROTECTED :
+
+      /// The expression to negate
+      gsl::not_null<std::shared_ptr<const LogicalExpr>>
+          _le;
 };
 
 /// Value of a numeric expression or a range provided as 2 numeric expressions
 class ValueOrRange {
+ public:
+  using ValueType = std::shared_ptr<const NumericExpr>;
+  using RangeType = std::pair<ValueType, ValueType>;
 
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
+  /// Ctor for the value of a numeric expression
+  explicit ValueOrRange(const ValueType& value_);
 
-  union {
-    std::shared_ptr<const NumericExpr> _value;  ///< either the value
-    std::shared_ptr<const NumericExpr> _from;   ///< or the inferior range limit
-  };
-  std::shared_ptr<const NumericExpr> _to; ///< the superior range limit (for a range)
+  /// Ctor for a range provided as 2 numeric expressions
+  ValueOrRange(const ValueType& from_, const ValueType& to_);
 
+  ValueOrRange(const ValueOrRange& other) noexcept;
+  ValueOrRange(ValueOrRange&& other) noexcept;
+
+  ~ValueOrRange() noexcept;
+
+  void operator=(const ValueOrRange& other) = delete;
+  void operator=(ValueOrRange&& other) = delete;
+
+  /// Checks if there is a dependency on `varName`
+  [[nodiscard]] bool dependsOnVariable(
+      const std::string& varName) const noexcept;
+
+  /// @return true if the value / range contains only constants
+  [[nodiscard]] bool isConst() const noexcept;
+
+  /// @return true for range; false for value
+  [[nodiscard]] bool isRange() const noexcept;
+
+  /**
+    @param st the symbols' table
+    @return the value based on the data from the symbols' table
+    @throw logic_error for ranges or for NaN values
+    @throw out_of_range when referring symbols missing from the table
+  */
+  [[nodiscard]] double value(const SymbolsTable& st) const;
+
+  /**
+    @param st the symbols' table
+    @return the range based on the data from the symbols' table
+    @throw logic_error for non-ranges, for NaN values and for out of order
+    values
+    @throw out_of_range when referring symbols missing from the table
+  */
+  [[nodiscard]] std::pair<double, double> range(const SymbolsTable& st) const;
+
+  [[nodiscard]] std::string toString() const;
+
+ private:
   /// @throw logic_error for NaN values
   static void validateDouble(double d);
 
@@ -587,236 +734,232 @@ protected:
   /// @throw logic_error for NULL / NaN values or for out of order values
   void validate() const;
 
-public:
-  ~ValueOrRange();
+  PROTECTED :
 
-  /// Ctor for the value of a numeric expression
-  ValueOrRange(const std::shared_ptr<const NumericExpr> &value_);
-
-  /// Ctor for a range provided as 2 numeric expressions
-  ValueOrRange(const std::shared_ptr<const NumericExpr> &from_,
-      const std::shared_ptr<const NumericExpr> &to_);
-  ValueOrRange(const ValueOrRange &other);
-
-  ValueOrRange(ValueOrRange&&) = delete;
-  void operator=(const ValueOrRange &other) = delete;
-  void operator=(ValueOrRange &&other) = delete;
-
-  /// Checks if there is a dependency on `varName`
-  bool dependsOnVariable(const std::string &varName) const;
-
-  /// @return true if the value / range contains only constants
-  bool isConst() const;
-
-  /// @return true for range; false for value
-  bool isRange() const;
-
-  /**
-    @param st the symbols' table
-    @return the value based on the data from the symbols' table
-    @throw logic_error for ranges or for NaN values
-    @throw out_of_range when referring symbols missing from the table
-  */
-  double value(const SymbolsTable &st) const;
-
-  /**
-    @param st the symbols' table
-    @return the range based on the data from the symbols' table
-    @throw logic_error for non-ranges, for NaN values and for out of order values
-    @throw out_of_range when referring symbols missing from the table
-  */
-  std::pair<double, double> range(const SymbolsTable &st) const;
-
-  std::string toString() const;
+      std::variant<ValueType, RangeType>
+          _valueOrRange;
 };
 
 /// A mixture of values and ranges
 class ValueSet : public IValues<double> {
+ public:
+  ValueSet() noexcept = default;
+  ValueSet(const ValueSet&) = default;
+  ValueSet(ValueSet&&) noexcept = default;
+  ~ValueSet() noexcept override = default;
 
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
+  void operator=(const ValueSet&) = delete;
+  void operator=(ValueSet&&) = delete;
 
-  std::vector<ValueOrRange> vors; ///< the values and the ranges
-
-  bool isConst = true; ///< true if the values / ranges are all constant
-
-public:
   /// Appends a value / range; Returns *this
-  ValueSet& add(const ValueOrRange &vor);
+  ValueSet& add(const ValueOrRange& vor) noexcept;
 
-  bool empty() const override;
+  [[nodiscard]] bool empty() const noexcept override;
 
   /// Checks if there is a dependency on `varName`
-  bool dependsOnVariable(const std::string &varName) const override;
+  [[nodiscard]] bool dependsOnVariable(
+      const std::string& varName) const noexcept override;
 
-  bool constSet() const override; ///< are the values all constant?
+  [[nodiscard]] bool constSet()
+      const noexcept override;  ///< are the values all constant?
 
-  /// Checks if v is covered by current values and ranges based on the symbols' table
-  bool contains(const double &v, const SymbolsTable &st = {}) const override;
+  /// Checks if v is covered by current values and ranges based on the symbols'
+  /// table
+  [[nodiscard]] bool contains(const double& v,
+                              const SymbolsTable& st = {}) const override;
 
-  std::string toString() const override;
+  [[nodiscard]] std::string toString() const override;
+
+  PROTECTED :
+
+      /// The values and the ranges
+      std::vector<ValueOrRange>
+          vors;
+
+  bool isConst{true};  ///< true if the values / ranges are all constant
 };
 
 /// Checks if an expression is covered by a set of values
-template<typename Type>
+template <typename Type>
 class BelongToCondition : public LogicalExpr {
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  std::shared_ptr<const AbsExpr<Type>> _e; ///< expression to be checked
-  std::shared_ptr<const IValues<Type>> _valueSet; ///< the set of values
-
-public:
-  BelongToCondition(const std::shared_ptr<const AbsExpr<Type>> &e,
-                    const std::shared_ptr<const IValues<Type>> &valueSet) :
-      _e(CP(e)), _valueSet(CP(valueSet)) {
-    if(_e->constValue() && _valueSet->constSet())
+ public:
+  BelongToCondition(const std::shared_ptr<const AbsExpr<Type>>& e,
+                    const std::shared_ptr<const IValues<Type>>& valueSet_)
+      : _e{e}, _valueSet{valueSet_} {
+    if (_e->constValue() && _valueSet->constSet())
       val = _valueSet->contains(*_e->constValue());
   }
+  ~BelongToCondition() noexcept override = default;
+
+  BelongToCondition(const BelongToCondition&) = delete;
+  BelongToCondition(BelongToCondition&&) = delete;
+  void operator=(const BelongToCondition&) = delete;
+  void operator=(BelongToCondition&&) = delete;
 
   /// Checks if there is a dependency on `varName`
-  bool dependsOnVariable(const std::string &varName) const override {
+  [[nodiscard]] bool dependsOnVariable(
+      const std::string& varName) const noexcept override {
     return _e->dependsOnVariable(varName) ||
-      _valueSet->dependsOnVariable(varName);
+           _valueSet->dependsOnVariable(varName);
   }
 
   /// Performs the membership test
-  bool eval(const SymbolsTable &st) const override {
-    if(val)
+  [[nodiscard]] bool eval(const SymbolsTable& st) const override {
+    if (val)
       return *val;
 
     return _valueSet->contains(_e->eval(st), st);
   }
 
-  std::string toString() const override {
+  [[nodiscard]] std::string toString() const override {
     std::ostringstream oss;
-    oss<<*_e<<" in "<<*_valueSet;
+    oss << *_e << " in " << *_valueSet;
     return oss.str();
   }
+
+  PROTECTED :
+
+      /// Expression to be checked
+      gsl::not_null<std::shared_ptr<const AbsExpr<Type>>>
+          _e;
+
+  /// The set of values
+  gsl::not_null<std::shared_ptr<const IValues<Type>>> _valueSet;
 };
 
 /// A number
-struct NumericConst : NumericExpr {
-  NumericConst(double d);
+class NumericConst : public NumericExpr {
+ public:
+  explicit NumericConst(double d) noexcept;
+  ~NumericConst() noexcept override = default;
 
-  double eval(const SymbolsTable &) const override; ///< @return the contained constant
+  NumericConst(const NumericConst&) = delete;
+  NumericConst(NumericConst&&) = delete;
+  void operator=(const NumericConst&) = delete;
+  void operator=(NumericConst&&) = delete;
 
-  std::string toString() const override;
+  /// @return the contained constant
+  [[nodiscard]] double eval(const SymbolsTable&) const noexcept override;
+
+  [[nodiscard]] std::string toString() const override;
 };
 
 /// The name of a variable
 class NumericVariable : public NumericExpr {
+ public:
+  explicit NumericVariable(const std::string& varName) noexcept;
+  ~NumericVariable() noexcept override = default;
 
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  std::string name; ///< the considered name
-
-public:
-  NumericVariable(const std::string &varName);
+  NumericVariable(const NumericVariable&) = delete;
+  NumericVariable(NumericVariable&&) = delete;
+  void operator=(const NumericVariable&) = delete;
+  void operator=(NumericVariable&&) = delete;
 
   /// Checks if there is a dependency on `varName`
-  bool dependsOnVariable(const std::string &varName) const override;
+  [[nodiscard]] bool dependsOnVariable(
+      const std::string& varName) const noexcept override;
 
   /// @throw out_of_range when name is missing from the symbols table
-  double eval(const SymbolsTable &st) const override;
+  [[nodiscard]] double eval(const SymbolsTable& st) const override;
 
-  std::string toString() const override;
+  [[nodiscard]] std::string toString() const noexcept override;
+
+  PROTECTED :
+
+      /// The considered name
+      std::string name;
 };
 
 /// Adding 2 numeric expressions
 class Addition : public NumericExpr {
+ public:
+  Addition(const std::shared_ptr<const NumericExpr>& left_,
+           const std::shared_ptr<const NumericExpr>& right_);
+  ~Addition() noexcept override = default;
 
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  std::shared_ptr<const NumericExpr> left, right;
-
-public:
-  /// @throw invalid_argument for NULL arguments
-  Addition(const std::shared_ptr<const NumericExpr> &left_,
-           const std::shared_ptr<const NumericExpr> &right_);
+  Addition(const Addition&) = delete;
+  Addition(Addition&&) = delete;
+  void operator=(const Addition&) = delete;
+  void operator=(Addition&&) = delete;
 
   /// Checks if there is a dependency on `varName`
-  bool dependsOnVariable(const std::string &varName) const override;
+  [[nodiscard]] bool dependsOnVariable(
+      const std::string& varName) const noexcept override;
 
   /// @throw out_of_range whenever a variable isn't found
-  double eval(const SymbolsTable &st) const override;
+  [[nodiscard]] double eval(const SymbolsTable& st) const override;
 
-  std::string toString() const override;
+  [[nodiscard]] std::string toString() const override;
+
+  PROTECTED :
+
+      gsl::not_null<std::shared_ptr<const NumericExpr>>
+          left;
+  gsl::not_null<std::shared_ptr<const NumericExpr>> right;
 };
 
 /// Modulus of 2 numeric expressions
 class Modulus : public NumericExpr {
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  std::shared_ptr<const NumericExpr> numerator, denominator;
-
+ public:
   /**
-  @throw logic_error for non-integer values
-  @return the corresponding integer value
-  */
-  static long validLong(double v);
-
-  /**
-  @throw logic_error when both values are 0
-  @throw overflow_error when only the denominator is 0
-  @return modulus result
-  */
-  static long validOperation(long numeratorL, long denominatorL);
-
-public:
-  /**
-  @throw invalid_argument for NULL arguments
   @throw logic_error when both values are 0 or one is non-integer
   @throw overflow_error when only the denominator is 0
   */
-  Modulus(const std::shared_ptr<const NumericExpr> &numerator_,
-          const std::shared_ptr<const NumericExpr> &denominator_);
+  Modulus(const std::shared_ptr<const NumericExpr>& numerator_,
+          const std::shared_ptr<const NumericExpr>& denominator_);
+  ~Modulus() noexcept override = default;
+
+  Modulus(const Modulus&) = delete;
+  Modulus(Modulus&&) = delete;
+  void operator=(const Modulus&) = delete;
+  void operator=(Modulus&&) = delete;
 
   /// Checks if there is a dependency on `varName`
-  bool dependsOnVariable(const std::string &varName) const override;
+  [[nodiscard]] bool dependsOnVariable(
+      const std::string& varName) const noexcept override;
 
   /**
   @throw out_of_range whenever a variable isn't found
   @throw logic_error when both values are 0 or one is non-integer
   @throw overflow_error when only the denominator is 0
   */
-  double eval(const SymbolsTable &st) const override;
+  [[nodiscard]] double eval(const SymbolsTable& st) const override;
 
-  std::string toString() const override;
+  [[nodiscard]] std::string toString() const override;
+
+ protected:
+  /**
+  @throw logic_error for non-integer values
+  @return the corresponding integer value
+  */
+  [[nodiscard]] static long validLong(double v);
+
+  /**
+  @throw logic_error when both values are 0
+  @throw overflow_error when only the denominator is 0
+  @return modulus result
+  */
+  [[nodiscard]] static long validOperation(long numeratorL, long denominatorL);
+
+  PROTECTED :
+
+      gsl::not_null<std::shared_ptr<const NumericExpr>>
+          numerator;
+  gsl::not_null<std::shared_ptr<const NumericExpr>> denominator;
 };
 
-} // namespace cond
-} // namespace rc
+}  // namespace rc::cond
 
 namespace std {
 
-std::ostream& operator<<(std::ostream &os, const rc::cond::ConfigConstraints &c);
+std::ostream& operator<<(std::ostream& os,
+                         const rc::cond::ConfigConstraints& c);
 
-std::ostream& operator<<(std::ostream &os,
-                         const rc::cond::ConfigurationsTransferDuration &ctd);
+std::ostream& operator<<(std::ostream& os,
+                         const rc::cond::ConfigurationsTransferDuration& ctd);
 
-std::ostream& operator<<(std::ostream &os, const rc::cond::ValueOrRange &vor);
+std::ostream& operator<<(std::ostream& os, const rc::cond::ValueOrRange& vor);
 
-} // namespace std
+}  // namespace std
 
-#endif // H_CONFIG_CONSTRAINT not defined
+#endif  // H_CONFIG_CONSTRAINT not defined

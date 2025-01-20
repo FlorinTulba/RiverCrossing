@@ -1,91 +1,92 @@
-/*
- Part of the RiverCrossing project,
- which allows to describe and solve River Crossing puzzles:
+/******************************************************************************
+ This RiverCrossing project (https://github.com/FlorinTulba/RiverCrossing)
+ allows describing and solving River Crossing puzzles:
   https://en.wikipedia.org/wiki/River_crossing_puzzle
 
- Requires Boost installation (www.boost.org).
+ Required libraries:
+ - Boost (>=1.67) - https://www.boost.org
+ - Microsoft GSL (>=4.0) - https://github.com/microsoft/GSL
 
- (c) 2018 Florin Tulba (florintulba@yahoo.com)
-*/
+ (c) 2018-2025 Florin Tulba (florintulba@yahoo.com)
+ *****************************************************************************/
 
 #ifndef H_ENTITY
 #define H_ENTITY
 
-#include "absEntity.h"
-
-#include <memory>
+#include "absConfigConstraint.h"
 
 #include <boost/property_tree/ptree.hpp>
 
-namespace rc {
-
-namespace cond {
-
-struct LogicalExpr; // forward declaration
-
-} // namespace cond
-
-namespace ent {
+namespace rc::ent {
 
 /// Person / Animal / Object that needs to cross the river.
 class Entity : public IEntity {
-
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-	std::string _name;	///< name of the entity - mandatory
-	std::string _type;	///< type of the entity - optional
-
-	/// Whether the entity can row / move by itself to the other bank
-	std::shared_ptr<const cond::LogicalExpr> _canRow;
-
-	double _weight = 0.;///< weight of the entity - optional
-	unsigned _id = 0U;	///< id of the entity - mandatory
-
-	/// Provides the initial location of this entity. It needs to get on the opposite bank
-	bool _startsFromRightBank = false;
-
-public:
+ public:
   /// @throw domain_error for invalid canRowExpr
   /// @throw invalid_argument for invalid weight_
-	Entity(unsigned id_, const std::string &name_,
-		const std::string &type_ = "",
-		bool startsFromRightBank_ = false,
-		const std::string &canRowExpr = "false",
-		double weight_ = 0.);
+  Entity(unsigned id_,
+         const std::string& name_,
+         const std::string& type_ = "",
+         bool startsFromRightBank_ = false,
+         const std::string& canRowExpr = "false",
+         double weight_ = 0.);
 
   /// @throw domain_error for invalid pt content
-	Entity(const boost::property_tree::ptree &pt);
+  explicit Entity(const boost::property_tree::ptree& pt);
+  ~Entity() noexcept override = default;
 
-	unsigned id() const override final;							///< unique id
-	const std::string& name() const override final;	///< unique name
+  Entity(const Entity&) = delete;
+  Entity(Entity&&) = delete;
+  void operator=(const Entity&) = delete;
+  void operator=(Entity&&) = delete;
 
-	/// the default starting bank is the left one
-	bool startsFromRightBank() const override;
+  [[nodiscard]] unsigned id() const noexcept final;  ///< unique id
+
+  /// Unique name
+  [[nodiscard]] const std::string& name() const noexcept final;
+
+  /// the default starting bank is the left one
+  [[nodiscard]] bool startsFromRightBank() const noexcept override;
 
   /**
-    By default, the entities cannot row. Even the other ones might take some breaks
-    @param st the symbols table
-    @return true if the entity is able to row in the provided context
+  By default, the entities cannot row. Even the other ones might take some
+  breaks
+  @param st the symbols table
+  @return true if the entity is able to row in the provided context
   */
-	bool canRow(const SymbolsTable &st) const override;
+  [[nodiscard]] bool canRow(const SymbolsTable& st) const override;
 
   /**
-    @return true when the entity does row; false when it doesn't
-      and indeterminate when its ability depends on variables from SymbolsTable
+   @return true when the entity does row; false when it doesn't and
+   indeterminate when its ability depends on variables from SymbolsTable
   */
-  boost::logic::tribool canRow() const override;
+  [[nodiscard]] boost::logic::tribool canRow() const noexcept override;
 
-	const std::string& type() const override;	///< type of entity; '' if unspecified
-	double weight() const override;	///< weight of entity; 0 if unspecified
+  /// Type of entity; '' if unspecified
+  [[nodiscard]] const std::string& type() const noexcept override;
 
-	virtual std::string toString() const override;
+  /// Weight of entity; 0 if unspecified
+  [[nodiscard]] double weight() const noexcept override;
+
+  [[nodiscard]] std::string toString() const override;
+
+  PROTECTED :
+
+      /// Name of the entity - mandatory
+      std::string _name;
+  std::string _type;  ///< type of the entity - optional
+
+  /// Whether the entity can row / move by itself to the other bank
+  std::shared_ptr<const cond::LogicalExpr> _canRow;
+
+  double _weight{};  ///< weight of the entity - optional
+  unsigned _id{};    ///< id of the entity - mandatory
+
+  /// Provides the initial location of this entity. It needs to get on the
+  /// opposite bank
+  bool _startsFromRightBank{};
 };
 
-} // namespace ent
-} // namespace rc
+}  // namespace rc::ent
 
-#endif // H_ENTITY not defined
+#endif  // H_ENTITY not defined

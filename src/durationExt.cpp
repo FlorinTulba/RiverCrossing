@@ -1,65 +1,66 @@
-/*
- Part of the RiverCrossing project,
- which allows to describe and solve River Crossing puzzles:
+/******************************************************************************
+ This RiverCrossing project (https://github.com/FlorinTulba/RiverCrossing)
+ allows describing and solving River Crossing puzzles:
   https://en.wikipedia.org/wiki/River_crossing_puzzle
 
- Requires Boost installation (www.boost.org).
+ Required libraries:
+ - Boost (>=1.67) - https://www.boost.org
+ - Microsoft GSL (>=4.0) - https://github.com/microsoft/GSL
 
- (c) 2018 Florin Tulba (florintulba@yahoo.com)
-*/
+ (c) 2018-2025 Florin Tulba (florintulba@yahoo.com)
+ *****************************************************************************/
 
-#include "durationExt.h"
+#include "precompiled.h"
+// This keeps precompiled.h first; Otherwise header sorting might move it
+
 #include "configConstraint.h"
+#include "durationExt.h"
 #include "entitiesManager.h"
+#include "util.h"
 
+#include <cassert>
 #include <iomanip>
 #include <memory>
-#include <cassert>
+
+#include <gsl/pointers>
 
 using namespace std;
 
-namespace rc {
-namespace sol {
+namespace rc::sol {
 
-shared_ptr<const IStateExt>
-    TimeStateExt::_clone(const shared_ptr<const IStateExt> &nextExt_) const {
-  return make_shared<const TimeStateExt>(_time, info, nextExt_);
+unique_ptr<const IStateExt> TimeStateExt::_clone(
+    const shared_ptr<const IStateExt>& nextExt_) const noexcept {
+  return make_unique<const TimeStateExt>(_time, *info, nextExt_);
 }
 
 bool TimeStateExt::_validate() const {
-  if(_time > info.maxDuration) {
+  if (_time > info->maxDuration) {
 #ifndef NDEBUG
-    cout<<"violates duration constraint ["
-      <<_time<<" > "<<info.maxDuration<<']'<<endl;
-#endif // NDEBUG
+    cout << "violates duration constraint [" << _time << " > "
+         << info->maxDuration << ']' << endl;
+#endif  // NDEBUG
     return false;
   }
   return true;
 }
 
-bool TimeStateExt::_isNotBetterThan(const IState &s2) const {
-  const shared_ptr<const IStateExt> extensions2 = s2.getExtension();
-  assert(nullptr != extensions2);
-
-  shared_ptr<const TimeStateExt> timeExt2 =
-    AbsStateExt::selectExt<TimeStateExt>(extensions2);
+bool TimeStateExt::_isNotBetterThan(const IState& s2) const {
+  const shared_ptr<const IStateExt> extensions2{s2.getExtension()};
+  const gsl::not_null<shared_ptr<const TimeStateExt>> timeExt2{
+      AbsStateExt::selectExt<TimeStateExt>(extensions2)};
 
   // if the other state was reached earlier, it is better
-  return _time >=
-    CP_EX_MSG(timeExt2,
-              logic_error,
-              "The parameter must be a state "
-              "with a TimeStateExt extension!")->_time;
+  return _time >= timeExt2->_time;
 }
 
-shared_ptr<const IStateExt>
-    TimeStateExt::_extensionForNextState(const ent::MovingEntities &movedEnts,
-                           const shared_ptr<const IStateExt> &fromNextExt) const {
-  unsigned timeOfNextState = _time;
-  bool foundMatch = false;
-  for(const cond::ConfigurationsTransferDuration &ctdItem : info.ctdItems) {
-    const cond::TransferConstraints& config = ctdItem.configConstraints();
-    if( ! config.check(movedEnts))
+shared_ptr<const IStateExt> TimeStateExt::_extensionForNextState(
+    const ent::MovingEntities& movedEnts,
+    const shared_ptr<const IStateExt>& fromNextExt) const {
+  unsigned timeOfNextState{_time};
+  bool foundMatch{};
+  for (const cond::ConfigurationsTransferDuration& ctdItem : info->ctdItems) {
+    const cond::TransferConstraints& config{ctdItem.configConstraints()};
+    if (!config.check(movedEnts))
       continue;
 
     foundMatch = true;
@@ -67,36 +68,41 @@ shared_ptr<const IStateExt>
     break;
   }
 
-  if( ! foundMatch)
-    throw domain_error(string(__func__) +
-      " - Provided CrossingDurationsOfConfigurations items don't cover "
-      "raft configuration: "s + movedEnts.toString());
+  if (!foundMatch)
+    throw domain_error{
+        HERE.function_name() +
+        " - Provided CrossingDurationsOfConfigurations items don't cover "
+        "raft configuration: "s +
+        movedEnts.toString()};
 
-  return make_shared<const TimeStateExt>(timeOfNextState, info, fromNextExt);
+  return make_shared<const TimeStateExt>(timeOfNextState, *info, fromNextExt);
 }
 
 string TimeStateExt::_detailsForDemo() const {
   ostringstream oss;
-  oss<<"; Elapsed: "<<_time<<" min";
+  oss << "; Elapsed time units: " << _time;
   return oss.str();
 }
 
-string TimeStateExt::_toString(bool suffixesInsteadOfPrefixes/* = true*/) const {
+string TimeStateExt::_toString(
+    bool suffixesInsteadOfPrefixes /* = true*/) const {
   // This is displayed only as prefix information
-  if(suffixesInsteadOfPrefixes)
-    return "";
+  if (suffixesInsteadOfPrefixes)
+    return {};
 
   ostringstream oss;
-  oss<<"[Time "<<setw(4)<<_time<<"] ";
+  oss << "[Elapsed time units: " << setw(4) << _time << "] ";
   return oss.str();
 }
 
-TimeStateExt::TimeStateExt(unsigned time_, const ScenarioDetails &info_,
-                           const shared_ptr<const IStateExt> &nextExt_
-                              /*= DefStateExt::INST()*/) :
-      AbsStateExt(info_, nextExt_), _time(time_) {}
+TimeStateExt::TimeStateExt(unsigned time_,
+                           const rc::ScenarioDetails& info_,
+                           const shared_ptr<const IStateExt>& nextExt_
+                           /*= DefStateExt::SHARED_INST()*/) noexcept
+    : AbsStateExt{info_, nextExt_}, _time{time_} {}
 
-unsigned TimeStateExt::time() const {return _time;}
+unsigned TimeStateExt::time() const noexcept {
+  return _time;
+}
 
-} // namespace sol
-} // namespace rc
+}  // namespace rc::sol

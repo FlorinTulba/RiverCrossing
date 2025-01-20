@@ -1,1 +1,3 @@
-./x64/g++/Debug/RiverCrossing.exe
+#!/usr/bin/env bash
+./_run.sh Debug
+exit 0

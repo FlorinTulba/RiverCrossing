@@ -1,40 +1,43 @@
-/*
- Part of the RiverCrossing project,
- which allows to describe and solve River Crossing puzzles:
+/******************************************************************************
+ This RiverCrossing project (https://github.com/FlorinTulba/RiverCrossing)
+ allows describing and solving River Crossing puzzles:
   https://en.wikipedia.org/wiki/River_crossing_puzzle
 
- Requires Boost installation (www.boost.org).
+ Required libraries:
+ - Boost (>=1.67) - https://www.boost.org
+ - Microsoft GSL (>=4.0) - https://github.com/microsoft/GSL
 
- (c) 2018 Florin Tulba (florintulba@yahoo.com)
-*/
+ (c) 2018-2025 Florin Tulba (florintulba@yahoo.com)
+ *****************************************************************************/
 
-#include "rowAbilityExt.h"
+#include "precompiled.h"
+// This keeps precompiled.h first; Otherwise header sorting might move it
+
 #include "entitiesManager.h"
+#include "rowAbilityExt.h"
 
 using namespace std;
 
-namespace rc {
-namespace cond {
+namespace rc::cond {
 
-bool CanRowValidator::doValidate(const ent::MovingEntities &ents,
-                                 const SymbolsTable &st) const {
-  const bool valid = ents.anyRowCapableEnts(st);
+bool CanRowValidator::doValidate(const ent::MovingEntities& ents,
+                                 const SymbolsTable& st) const {
+  const bool valid{ents.anyRowCapableEnts(st)};
 #ifndef NDEBUG
-  if( ! valid) {
-    cout<<"Nobody rows now : ";
-    copy(CBOUNDS(ents.ids()), ostream_iterator<unsigned>(cout, " "));
-    cout<<endl;
+  if (!valid) {
+    cout << "Nobody rows now : ";
+    ranges::copy(ents.ids(), ostream_iterator<unsigned>{cout, " "});
+    cout << endl;
   }
-#endif // NDEBUG
+#endif  // NDEBUG
   return valid;
 }
 
 CanRowValidator::CanRowValidator(
-  const shared_ptr<const IContextValidator> &nextValidator_
-    /* = DefContextValidator::INST()*/,
-  const shared_ptr<const IValidatorExceptionHandler> &ownValidatorExcHandler_
-    /* = nullptr*/) :
-  AbsContextValidator(nextValidator_, ownValidatorExcHandler_) {}
+    const shared_ptr<const IContextValidator>& nextValidator_
+    /* = DefContextValidator::SHARED_INST()*/,
+    const shared_ptr<const IValidatorExceptionHandler>& ownValidatorExcHandler_
+    /* = {}*/) noexcept
+    : AbsContextValidator{nextValidator_, ownValidatorExcHandler_} {}
 
-} // namespace cond
-} // namespace rc
+}  // namespace rc::cond

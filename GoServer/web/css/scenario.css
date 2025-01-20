@@ -1,0 +1,87 @@
+/*
+ This RiverCrossing project (https://github.com/FlorinTulba/RiverCrossing)
+ allows describing and solving River Crossing puzzles:
+  https://en.wikipedia.org/wiki/River_crossing_puzzle
+
+ Required libraries:
+ - Boost (>=1.67) - https://www.boost.org
+ - Microsoft GSL (>=4.0) - https://github.com/microsoft/GSL
+
+ (c) 2018-2025 Florin Tulba (florintulba@yahoo.com)
+*/
+
+html {
+  text-size-adjust: 100%;
+}
+
+body {
+  background-color: #e8edf3;
+  color: #22264b;
+  padding: 5px 10px 0;
+}
+
+#controls {
+  display: block;
+  max-width: 500px;
+  margin: 0 auto 10px auto;
+}
+
+#title {
+  text-align: center;
+  font-weight: bold;
+}
+
+#issuesBox {
+  display: none;
+}
+
+#scenarioData {
+  padding: 2px;
+  background-color: #f2efe8;
+  color: #b56969;
+  font-family: "Courier";
+  font-weight: bold;
+  font-size: x-small;
+  overflow: auto;
+  resize: vertical; /* doesn't work in IE */
+}
+
+#puzzleSelection {
+  margin: 0 0 30px 0;
+  padding: 0;
+}
+
+#knownPuzzlesLbl {
+  font-weight: bold;
+  font-size: small;
+  line-height: 22px;
+  padding: 0;
+}
+
+#puzzleSelectionControl {
+  padding: 0 3px;
+}
+
+#knownPuzzles {
+  background-color: #f2efe8;
+  color: #b56969;
+  padding: 0;
+  height: 22px;
+  min-width: 106px;
+  max-width: 228px;
+}
+
+#solveBtn {
+  display: block;
+  margin-right: 0;
+  margin-left: auto;
+}
+
+#interactiveSolCheckbox {
+  margin: 3px 0;
+}
+
+#footer {
+  text-align: center;
+  font-size: x-small;
+}

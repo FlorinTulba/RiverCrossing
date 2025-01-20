@@ -11,38 +11,38 @@
 	"Name": "Farmer",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/farmer.png",
+		"Url": "images/farmer.png",
 		"Origin": "https://pngimg.com/uploads/farmer/farmer_PNG34.png"
 		}},
 
 	{"Id": 1,
 	"Name": "Goat",
 	"Image" : {
-		"Url": "../Scenarios/images/goat.png",
+		"Url": "images/goat.png",
 		"Origin": "https://pngimg.com/uploads/goat/goat_PNG13150.png"
 		}},
 
 	{"Id": 2,
 	"Name": "Cow1",
 	"Image" : {
-		"Url": "../Scenarios/images/cow.png",
+		"Url": "images/cow.png",
 		"Origin": "https://pngimg.com/uploads/cow/cow_PNG2132.png"
 		}},
 
 	{"Id": 3,
 	"Name": "Cow2",
-	"Image" : {"Url": "../Scenarios/images/cow.png"}},
+	"Image" : {"Url": "images/cow.png"}},
 
 	{"Id": 4,
 	"Name": "Wolf1",
 	"Image" : {
-		"Url": "../Scenarios/images/wolf.png",
+		"Url": "images/wolf.png",
 		"Origin": "https://pngimg.com/uploads/wolf/wolf_PNG23212.png"
 		}},
 
 	{"Id": 5,
 	"Name": "Wolf2",
-	"Image" : {"Url": "../Scenarios/images/wolf.png"}}
+	"Image" : {"Url": "images/wolf.png"}}
 	],
 
 "CrossingConstraints" : {

@@ -1,67 +1,79 @@
-/*
- Part of the RiverCrossing project,
- which allows to describe and solve River Crossing puzzles:
+/******************************************************************************
+ This RiverCrossing project (https://github.com/FlorinTulba/RiverCrossing)
+ allows describing and solving River Crossing puzzles:
   https://en.wikipedia.org/wiki/River_crossing_puzzle
 
- Requires Boost installation (www.boost.org).
+ Required libraries:
+ - Boost (>=1.67) - https://www.boost.org
+ - Microsoft GSL (>=4.0) - https://github.com/microsoft/GSL
 
- (c) 2018 Florin Tulba (florintulba@yahoo.com)
-*/
+ (c) 2018-2025 Florin Tulba (florintulba@yahoo.com)
+ *****************************************************************************/
 
 #ifndef H_ABS_CONFIG_CONSTRAINT
 #define H_ABS_CONFIG_CONSTRAINT
 
-#include "symbolsTable.h"
+#include "entitiesManager.h"
 
-#include <memory>
 #include <climits>
-#include <iostream>
+#include <optional>
 
-#include <boost/optional/optional.hpp>
+namespace rc::cond {
 
-namespace rc {
-
-namespace ent {
-
-// Forward declarations
-class AllEntities;
-class IsolatedEntities;
-
-} // namespace ent
-
-namespace cond {
-
-struct IConfigConstraint; // forward declaration
+class IConfigConstraint;  // forward declaration
 
 /// Allows an extension of the validation of IConfigConstraint
-struct IConfigConstraintValidatorExt /*abstract*/ {
-  virtual ~IConfigConstraintValidatorExt() /*= 0*/ {}
+class IConfigConstraintValidatorExt {
+ public:
+  virtual ~IConfigConstraintValidatorExt() noexcept = default;
+
+  IConfigConstraintValidatorExt(const IConfigConstraintValidatorExt&) = delete;
+  IConfigConstraintValidatorExt(IConfigConstraintValidatorExt&&) = delete;
+  void operator=(const IConfigConstraintValidatorExt&) = delete;
+  void operator=(IConfigConstraintValidatorExt&&) = delete;
 
   /// @throw logic_error if cfg does not respect all the extensions
-  virtual void check(const IConfigConstraint &cfg,
-                     const std::shared_ptr<const ent::AllEntities> &allEnts) const = 0;
+  virtual void check(const IConfigConstraint& cfg,
+                     const ent::AllEntities& allEnts) const = 0;
+
+ protected:
+  IConfigConstraintValidatorExt() noexcept = default;
 };
 
 /// Neutral IConfigConstraint validator extension
-struct DefConfigConstraintValidatorExt final : IConfigConstraintValidatorExt {
+class DefConfigConstraintValidatorExt final
+    : public IConfigConstraintValidatorExt {
+ public:
+  ~DefConfigConstraintValidatorExt() noexcept override = default;
+
+  DefConfigConstraintValidatorExt(const DefConfigConstraintValidatorExt&) =
+      delete;
+  DefConfigConstraintValidatorExt(DefConfigConstraintValidatorExt&&) = delete;
+  void operator=(const DefConfigConstraintValidatorExt&) = delete;
+  void operator=(DefConfigConstraintValidatorExt&&) = delete;
+
   /// Allows sharing the default instance
-  static const std::shared_ptr<const DefConfigConstraintValidatorExt>& INST();
+  static const DefConfigConstraintValidatorExt& INST() noexcept;
 
-  /// @throw logic_error if cfg does not respect all the extensions
-  void check(const IConfigConstraint &cfg,
-             const std::shared_ptr<const ent::AllEntities> &allEnts)
-      const override final {}
+  /// Creates a new instance
+  [[nodiscard]] static std::unique_ptr<const DefConfigConstraintValidatorExt>
+  NEW_INST();
 
-    #ifndef UNIT_TESTING // leave ctor public only for Unit tests
-protected:
-    #endif
+  void check(const IConfigConstraint& /*cfg*/,
+             const ent::AllEntities& /*allEnts*/) const noexcept final {}
 
-  DefConfigConstraintValidatorExt() {}
+  PRIVATE :
+
+      DefConfigConstraintValidatorExt() noexcept = default;
 };
 
 /// Expresses a configuration for the raft(/bridge) / banks
-struct IConfigConstraint /*abstract*/ {
-  virtual ~IConfigConstraint() /*= 0*/ {}
+class IConfigConstraint {
+ public:
+  virtual ~IConfigConstraint() noexcept = default;
+
+  void operator=(const IConfigConstraint&) = delete;
+  void operator=(IConfigConstraint&&) = delete;
 
   /**
   Checks the validity of this constraint using entities information,
@@ -69,51 +81,52 @@ struct IConfigConstraint /*abstract*/ {
 
   @throw logic_error for an invalid constraint
   */
-  virtual void validate(const std::shared_ptr<const ent::AllEntities> &allEnts,
-      unsigned capacity = UINT_MAX,
-      const std::shared_ptr<const IConfigConstraintValidatorExt> &valExt
-        = DefConfigConstraintValidatorExt::INST()) const = 0;
+  virtual void validate(const ent::AllEntities& allEnts,
+                        unsigned capacity = UINT_MAX,
+                        const IConfigConstraintValidatorExt& valExt =
+                            DefConfigConstraintValidatorExt::INST()) const = 0;
 
   /// @return a copy of this on heap
-  virtual std::unique_ptr<const IConfigConstraint> clone() const = 0;
+  [[nodiscard]] virtual std::unique_ptr<const IConfigConstraint> clone()
+      const noexcept = 0;
 
-  /// Is there a match between the provided collection and the constraint's data?
-  virtual bool matches(const ent::IsolatedEntities &ents) const = 0;
+  /// Is there a match between the provided collection and the constraint's
+  /// data?
+  virtual bool matches(const ent::IsolatedEntities& ents) const noexcept = 0;
 
   /// @return the length of the longest possible match
-  virtual unsigned longestMatchLength() const {
-    return UINT_MAX;
-  }
+  virtual unsigned longestMatchLength() const noexcept { return UINT_MAX; }
 
   /// @return the length of the longest possible mismatch
-  virtual unsigned longestMismatchLength() const {
-    return UINT_MAX;
-  }
+  virtual unsigned longestMismatchLength() const noexcept { return UINT_MAX; }
 
   /// Describes the constraint
   virtual std::string toString() const = 0;
+
+ protected:
+  IConfigConstraint() noexcept = default;
+
+  IConfigConstraint(const IConfigConstraint&) = default;
+  IConfigConstraint(IConfigConstraint&&) noexcept = default;
 };
 
 /// Base class for Numeric and Logical expressions
-template<typename Type>
-class AbsExpr /*abstract*/ {
+template <typename Type>
+class AbsExpr {
+ public:
+  virtual ~AbsExpr() noexcept = default;
 
-    #ifdef UNIT_TESTING // leave fields public for Unit tests
-public:
-    #else // keep fields protected otherwise
-protected:
-    #endif
-
-  boost::optional<Type> val; ///< cached result of the expression if possible
-
-public:
-  virtual ~AbsExpr()/* = 0*/ {}
+  AbsExpr(const AbsExpr&) = delete;
+  AbsExpr(AbsExpr&&) = delete;
+  void operator=(const AbsExpr&) = delete;
+  void operator=(AbsExpr&&) = delete;
 
   /// Provide the cached result of the expression when this is a constant
-  const boost::optional<Type>& constValue() const {return val;}
+  const std::optional<Type>& constValue() const noexcept { return val; }
 
   /// Checks if there is a dependency on `varName`
-  virtual bool dependsOnVariable(const std::string &varName) const {
+  virtual bool dependsOnVariable(
+      const std::string& /*varName*/) const noexcept {
     return false;
   }
 
@@ -122,56 +135,99 @@ public:
     @return the expression evaluated using the provided symbols' values
     @throw out_of_range when referring symbols missing from the table
   */
-  virtual Type eval(const SymbolsTable &st) const = 0;
+  virtual Type eval(const SymbolsTable& st) const = 0;
 
   virtual std::string toString() const = 0;
+
+ protected:
+  AbsExpr() noexcept = default;
+
+  PROTECTED :
+
+      /// Cached result of the expression if possible
+      std::optional<Type>
+          val;
 };
 
 /// Base of numeric expression types
-struct NumericExpr /*abstract*/ : AbsExpr<double> {};
+class NumericExpr : public AbsExpr<double> {
+ public:
+  ~NumericExpr() noexcept override = default;
+
+  NumericExpr(const NumericExpr&) = delete;
+  NumericExpr(NumericExpr&&) = delete;
+  void operator=(const NumericExpr&) = delete;
+  void operator=(NumericExpr&&) = delete;
+
+ protected:
+  NumericExpr() noexcept = default;
+};
 
 /// Base of logical expression types
-struct LogicalExpr /*abstract*/ : AbsExpr<bool> {};
+class LogicalExpr : public AbsExpr<bool> {
+ public:
+  ~LogicalExpr() noexcept override = default;
+
+  LogicalExpr(const LogicalExpr&) = delete;
+  LogicalExpr(LogicalExpr&&) = delete;
+  void operator=(const LogicalExpr&) = delete;
+  void operator=(LogicalExpr&&) = delete;
+
+ protected:
+  LogicalExpr() noexcept = default;
+};
 
 /// A set of values (expressions that can be evaluated using a symbols table)
-template<typename Type>
-struct IValues {
-  virtual ~IValues() /*= 0*/ {}
+template <typename Type>
+class IValues {
+ public:
+  virtual ~IValues() noexcept = default;
 
-  virtual bool empty() const = 0;
+  void operator=(const IValues&) = delete;
+  void operator=(IValues&&) = delete;
 
-  virtual bool constSet() const = 0; ///< are the values all constant?
+  virtual bool empty() const noexcept = 0;
+
+  virtual bool constSet() const noexcept = 0;  ///< are the values all constant?
 
   /// Checks if there is a dependency on `varName`
-  virtual bool dependsOnVariable(const std::string &varName) const {
+  virtual bool dependsOnVariable(
+      const std::string& /*varName*/) const noexcept {
     return false;
   }
 
-  /// Checks if v is covered by current values and ranges based on the symbols' table
-  virtual bool contains(const Type &v, const SymbolsTable &st = {}) const = 0;
+  /// Checks if v is covered by current values and ranges based on the symbols'
+  /// table
+  virtual bool contains(const Type& v, const SymbolsTable& st = {}) const = 0;
 
   virtual std::string toString() const = 0;
+
+ protected:
+  IValues() noexcept = default;
+
+  IValues(const IValues&) = default;
+  IValues(IValues&&) noexcept = default;
 };
 
-} // namespace cond
-} // namespace rc
+}  // namespace rc::cond
 
 namespace std {
 
-std::ostream& operator<<(std::ostream &os, const rc::cond::IConfigConstraint &c);
+std::ostream& operator<<(std::ostream& os,
+                         const rc::cond::IConfigConstraint& c);
 
-template<typename Type>
-std::ostream& operator<<(std::ostream &os, const rc::cond::AbsExpr<Type> &e) {
-  os<<e.toString();
+template <typename Type>
+std::ostream& operator<<(std::ostream& os, const rc::cond::AbsExpr<Type>& e) {
+  os << e.toString();
   return os;
 }
 
-template<typename Type>
-std::ostream& operator<<(std::ostream &os, const rc::cond::IValues<Type> &vs) {
-  os<<vs.toString();
+template <typename Type>
+std::ostream& operator<<(std::ostream& os, const rc::cond::IValues<Type>& vs) {
+  os << vs.toString();
   return os;
 }
 
-} // namespace std
+}  // namespace std
 
-#endif // H_ABS_CONFIG_CONSTRAINT not defined
+#endif  // H_ABS_CONFIG_CONSTRAINT not defined

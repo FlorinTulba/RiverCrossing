@@ -12,7 +12,7 @@
 	"Name": "Mother1",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/bride1.png",
+		"Url": "images/bride1.png",
 		"Origin": "https://pngimg.com/uploads/bride/bride_PNG19533.png"
 		}},
 
@@ -20,35 +20,35 @@
 	"Name": "Son1",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/boy1.png",
+		"Url": "images/boy1.png",
 		"Origin": "https://pngimg.com/uploads/children/children_PNG18069.png"
 		}},
 
 	{"Id": 2,
 	"Name": "Daughter1",
 	"Image" : {
-		"Url": "../Scenarios/images/girl1.png",
+		"Url": "images/girl1.png",
 		"Origin": "https://pngimg.com/uploads/girls/girls_PNG6491.png"
 		}},
 
 	{"Id": 3,
 	"Name": "Mother2",
 	"Image" : {
-		"Url": "../Scenarios/images/bride2.png",
+		"Url": "images/bride2.png",
 		"Origin": "https://pngimg.com/uploads/bride/bride_PNG19533.png"
 		}},
 
 	{"Id": 4,
 	"Name": "Son2",
 	"Image" : {
-		"Url": "../Scenarios/images/boy2.png",
+		"Url": "images/boy2.png",
 		"Origin": "https://pngimg.com/uploads/children/children_PNG18069.png"
 		}},
 
 	{"Id": 5,
 	"Name": "Daughter2",
 	"Image" : {
-		"Url": "../Scenarios/images/girl2.png",
+		"Url": "images/girl2.png",
 		"Origin": "https://pngimg.com/uploads/girls/girls_PNG6491.png"
 		}}
 	],

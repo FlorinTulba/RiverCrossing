@@ -8,7 +8,7 @@
   <meta name="author" content="Florin Tulba">
   <link rel="stylesheet prefetch" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
   <link rel="stylesheet prefetch" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
-  <link rel="stylesheet" href="css/viewSolution.css">
+  <link rel="stylesheet" href="css/interactiveSolution.css">
 </head>
 <body>
   <div id="infoWindow" class="modal fade" role="dialog" data-backdrop="static">
@@ -27,20 +27,20 @@
     </div>
   </div>
   <div id="main" class="diurnal">
-    <img id="sunImg" class="diurnal" src="../Scenarios/images/sun.png" data-toggle="tooltip" data-placement="right" title="Diurnal period" alt="Diurnal period">
-    <img id="moonImg" class="diurnal" src="../Scenarios/images/moon.png" data-toggle="tooltip" data-placement="right" title="Nocturnal period" alt="Nocturnal period">
-    <img id="cloudImg" src="../Scenarios/images/cloud.png" alt="Cloud">
+    <img id="sunImg" class="diurnal" src="images/sun.png" data-toggle="tooltip" data-placement="right" title="Diurnal period" alt="Diurnal period">
+    <img id="moonImg" class="diurnal" src="images/moon.png" data-toggle="tooltip" data-placement="right" title="Nocturnal period" alt="Nocturnal period">
+    <img id="cloudImg" src="images/cloud.png" alt="Cloud">
     <div id="report">
       Performed transfers:&nbsp;<span id="stepIdx"></span>/<span id="stepsCount"></span><span id="otherDetails"></span>
     </div>
     <div id="land">
-      <img id="road" src="../Scenarios/images/road.png" alt="A road">
-      <img id="riverLandscape" class="landscape" src="../Scenarios/images/waterLandscape.png" alt="The river to cross">
-      <img id="riverPortrait" class="portrait" src="../Scenarios/images/waterPortrait.png" alt="The river to cross">      
-      <a id="houselink" data-toggle="modal" href="#infoWindow"><img id="house" src="../Scenarios/images/house.png" alt="A house" data-toggle="tooltip" title="Explain this puzzle"></a>
-      <img id="raft" class="landscape" src="../Scenarios/images/boat.png" alt="The raft" data-toggle="tooltip" title="The raft / boat">
-      <img id="bridgeLandscape" class="landscape" src="../Scenarios/images/bridgeLandscape.png" alt="The bridge" data-toggle="tooltip" title="The bridge">
-      <img id="bridgePortrait" class="portrait" src="../Scenarios/images/bridgePortrait.png" alt="The bridge" data-toggle="tooltip" title="The bridge">
+      <img id="road" src="images/road.png" alt="A road">
+      <img id="riverLandscape" class="landscape" src="images/waterLandscape.png" alt="The river to cross">
+      <img id="riverPortrait" class="portrait" src="images/waterPortrait.png" alt="The river to cross">      
+      <a id="houselink" data-toggle="modal" href="#infoWindow"><img id="house" src="images/house.png" alt="A house" data-toggle="tooltip" title="Explain this puzzle"></a>
+      <img id="raft" class="landscape" src="images/boat.png" alt="The raft" data-toggle="tooltip" title="The raft / boat">
+      <img id="bridgeLandscape" class="landscape" src="images/bridgeLandscape.png" alt="The bridge" data-toggle="tooltip" title="The bridge">
+      <img id="bridgePortrait" class="portrait" src="images/bridgePortrait.png" alt="The bridge" data-toggle="tooltip" title="The bridge">
       <button id='undo' class='btn btn-secondary landscape' data-toggle="tooltip" title="Go to the state before the last transfer"><i class="fa fa-undo"></i>&nbsp;Undo</button>
       <button id='next' class='btn btn-secondary landscape' data-toggle="tooltip" title="Perform the next transfer">Next&nbsp;<i class="fa fa-chevron-circle-right"></i></button>
       <i id="fromLeft" class="fa fa-long-arrow-right landscape" data-toggle="tooltip" title="Move direction"></i>
@@ -50,12 +50,14 @@
     </div>    
   </div>
   <div id="footer">
-    &copy;2018 Florin Tulba (florintulba@yahoo.com)
+    &copy;2018-2025 Florin Tulba (florintulba@yahoo.com)
   </div>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
-  <script src="js/solution.js"></script>
-  <script src="js/viewSolution.js"></script>
+  <script type="application/javascript">
+  var solution = JSON.parse({{.}});
+  </script>
+  <script src="js/interactiveSolution.js"></script>
 </body>
 </html>

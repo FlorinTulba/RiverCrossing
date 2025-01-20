@@ -11,7 +11,7 @@
 	"CanRow": "true",
 	"Weight": 1,
 	"Image" : {
-		"Url": "../Scenarios/images/weight1kg.png",
+		"Url": "images/weight1kg.png",
 		"Size": -3,
 		"Origin": "https://pngimg.com/uploads/barbell/barbell_PNG16352.png"
 		}},
@@ -21,7 +21,7 @@
 	"CanRow": "true",
 	"Weight": 2,
 	"Image" : {
-		"Url": "../Scenarios/images/weight2kg.png",
+		"Url": "images/weight2kg.png",
 		"Size": -2,
 		"Origin": "https://pngimg.com/uploads/barbell/barbell_PNG16352.png"
 		}},
@@ -31,7 +31,7 @@
 	"CanRow": "true",
 	"Weight": 3,
 	"Image" : {
-		"Url": "../Scenarios/images/weight3kg.png",
+		"Url": "images/weight3kg.png",
 		"Size": -1,
 		"Origin": "https://pngimg.com/uploads/barbell/barbell_PNG16352.png"
 		}},
@@ -41,7 +41,7 @@
 	"CanRow": "true",
 	"Weight": 4,
 	"Image" : {
-		"Url": "../Scenarios/images/weight4kg.png",
+		"Url": "images/weight4kg.png",
 		"Origin": "https://pngimg.com/uploads/barbell/barbell_PNG16352.png"
 		}}
 	],

@@ -11,7 +11,7 @@
 	"Name": "Mouse",
 	"CanRow": true,
 	"Image" : {
-		"Url": "../Scenarios/images/mouse.png",
+		"Url": "images/mouse.png",
 		"Origin": "https://pngimg.com/uploads/rat_mouse/rat_mouse_PNG23540.png"
 		}},
 
@@ -19,7 +19,7 @@
 	"Name": "Chicken",
 	"CanRow": true,
 	"Image" : {
-		"Url": "../Scenarios/images/chicken.png",
+		"Url": "images/chicken.png",
 		"Origin": "https://pngimg.com/uploads/chicken/chicken_PNG2163.png"
 		}},
 
@@ -27,7 +27,7 @@
 	"Name": "Bear",
 	"CanRow": true,
 	"Image" : {
-		"Url": "../Scenarios/images/bear.png",
+		"Url": "images/bear.png",
 		"Origin": "https://pngimg.com/uploads/bear/bear_PNG1192.png"
 		}},
 
@@ -35,7 +35,7 @@
 	"Name": "Gorilla1",
 	"CanRow": true,
 	"Image" : {
-		"Url": "../Scenarios/images/gorilla.png",
+		"Url": "images/gorilla.png",
 		"Origin": "https://pngimg.com/uploads/gorilla/gorilla_PNG18713.png"
 		}},
 
@@ -43,7 +43,7 @@
 	"Name": "Gorilla2",
 	"CanRow": true,
 	"Image" : {
-		"Url": "../Scenarios/images/gorilla.png"
+		"Url": "images/gorilla.png"
 		}}
 	],
 

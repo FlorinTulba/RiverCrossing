@@ -15,7 +15,7 @@
 	"CanRow": "true",
 	"Type": "dog",
 	"Image" : {
-		"Url": "../Scenarios/images/dog.png",
+		"Url": "images/dog.png",
 		"Origin": "https://pngimg.com/uploads/dog/dog_PNG2454.png"
 		}},
 
@@ -24,7 +24,7 @@
 	"CanRow": "true",
 	"Type": "dog",
 	"Image" : {
-		"Url": "../Scenarios/images/dog.png",
+		"Url": "images/dog.png",
 		"Size": -1
 		}},
 
@@ -33,7 +33,7 @@
 	"CanRow": "true",
 	"Type": "dog",
 	"Image" : {
-		"Url": "../Scenarios/images/dog.png",
+		"Url": "images/dog.png",
 		"Size": -2
 		}},
 
@@ -42,7 +42,7 @@
 	"CanRow": "true",
 	"Type": "cat",
 	"Image" : {
-		"Url": "../Scenarios/images/cat.png",
+		"Url": "images/cat.png",
 		"Origin": "https://pngimg.com/uploads/cat/cat_PNG50511.png"
 		}},
 
@@ -51,7 +51,7 @@
 	"CanRow": "true",
 	"Type": "cat",
 	"Image" : {
-		"Url": "../Scenarios/images/cat.png",
+		"Url": "images/cat.png",
 		"Size": -1
 		}},
 
@@ -60,7 +60,7 @@
 	"CanRow": "true",
 	"Type": "cat",
 	"Image" : {
-		"Url": "../Scenarios/images/cat.png",
+		"Url": "images/cat.png",
 		"Size": -2
 		}}
 	],

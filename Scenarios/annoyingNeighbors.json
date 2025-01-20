@@ -12,7 +12,7 @@
 	"Name":"Person1",
 	"CanRow":true,
 	"Image" : {
-		"Url": "../Scenarios/images/anonymous1.png",
+		"Url": "images/anonymous1.png",
 		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
 		}},
 	
@@ -20,7 +20,7 @@
 	"Name":"Person2",
 	"CanRow":true,
 	"Image" : {
-		"Url": "../Scenarios/images/anonymous2.png",
+		"Url": "images/anonymous2.png",
 		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
 		}},
 	
@@ -28,7 +28,7 @@
 	"Name":"Person3",
 	"CanRow":true,
 	"Image" : {
-		"Url": "../Scenarios/images/anonymous3.png",
+		"Url": "images/anonymous3.png",
 		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
 		}},
 	
@@ -36,7 +36,7 @@
 	"Name":"Person4",
 	"CanRow":true,
 	"Image" : {
-		"Url": "../Scenarios/images/anonymous4.png",
+		"Url": "images/anonymous4.png",
 		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
 		}},
 	
@@ -44,7 +44,7 @@
 	"Name":"Person5",
 	"CanRow":true,
 	"Image" : {
-		"Url": "../Scenarios/images/anonymous5.png",
+		"Url": "images/anonymous5.png",
 		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
 		}}
 	],

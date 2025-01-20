@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+Template for the properties file providing paths and other relevant information
+for your local installation of the Boost libraries.
+
+Required only for MSVC development!
+
+Instructions how to use it:
+1. Copy the template to the parent folder
+2. Replace all comments from below with the Boost relevant information.
+-->
+
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  
+  <PropertyGroup Label="UserMacros">
+    <BoostDir><!-- Replace with: Boost Installation Folder --></BoostDir>
+    <BoostBinariesDir><!-- Replace with: Folder containing Boost binaries.
+        Example: $(BoostDir)\lib64-msvc-14.3 --></BoostBinariesDir>
+  </PropertyGroup>
+
+  <!-- Release version user macro(s) -->
+  <PropertyGroup Label="UserMacros" Condition="'$(Configuration)'=='Release'">
+    <BoostSharedLibConfigSuffix><!-- Replace with: Suffix for Shared Release Multithreading Boost libraries.
+      Example: -vc143-mt-x64-1_87 --></BoostSharedLibConfigSuffix>
+  </PropertyGroup>
+
+  <!-- Debug and Test version of same user macro(s) as above -->
+  <PropertyGroup Label="UserMacros" Condition="'$(Configuration)'!='Release'">
+    <BoostSharedLibConfigSuffix><!-- Replace with: Suffix for Shared Debug Multithreading Boost libraries.
+      Example: -vc143-mt-gd-x64-1_87 --></BoostSharedLibConfigSuffix>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <BuildMacro Include="BoostDir">
+      <Value>$(BoostDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="BoostBinariesDir">
+      <Value>$(BoostBinariesDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="BoostSharedLibConfigSuffix">
+      <Value>$(BoostSharedLibConfigSuffix)</Value>
+    </BuildMacro>
+  </ItemGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>
+        $(BoostDir);%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+
+    <Link>
+      <AdditionalLibraryDirectories>
+        <!-- Replace with: Folder containing Boost libraries.
+        Example: $(BoostDir)\lib64-msvc-14.3
+        -->;%(AdditionalLibraryDirectories)
+      </AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

@@ -4,7 +4,7 @@ The images were copied from [pngimg.com](https://pngimg.com) and they are subjec
 
 Most were renamed and some needed various hint labels on top of them, to better illustrate what each scenario intends.
 
-The scenarios from the parent folder mention the exact source for each used picture.
+The [solved scenarios](../../../Scenarios) mention the exact source for each used picture.
 
 Additionaly, the specific sources of the rest of the pictures appear below:
 

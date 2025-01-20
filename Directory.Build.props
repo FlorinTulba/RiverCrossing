@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+
+  <!-- Typical suffix of system Debug & Tests libraries -->
+  <PropertyGroup Label="UserMacros" Condition="'$(Configuration)'!='Release'">
+    <LibConfigSuffix>d</LibConfigSuffix>
+  </PropertyGroup>
+  
+  <!-- Typical suffix of system Release libraries -->
+  <PropertyGroup Label="UserMacros" Condition="'$(Configuration)'=='Release'">
+    <LibConfigSuffix />
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <BuildMacro Include="LibConfigSuffix">
+      <Value>$(LibConfigSuffix)</Value>
+    </BuildMacro>
+  </ItemGroup>
+  
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>src;test;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+
+      <!-- Disable warnings for external includes -->
+      <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <ExternalTemplatesDiagnostics>false</ExternalTemplatesDiagnostics>
+      <DisableAnalyzeExternal>true</DisableAnalyzeExternal>
+    </ClCompile>
+
+    <Link>
+      <AdditionalDependencies>msvcrt$(LibConfigSuffix).lib;msvcprt$(LibConfigSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+
+      <IgnoreSpecificDefaultLibraries>libcmt.lib;libcmtd.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)'!='Release'">msvcrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)'=='Release'">msvcrtd.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

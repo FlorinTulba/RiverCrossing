@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+Template for the properties file providing the path to the Microsoft GSL headers
+
+Required only for MSVC development!
+
+Instructions how to use it:
+1. Copy the template to the parent folder
+2. Replace the whole comment marked by 'COMMENT' from below
+   with Microsoft GSL include path.
+   For instance, if the Microsoft GSL (from https://github.com/microsoft/GSL)
+   is installed locally at [c:\Libraries\GSL], then [c:\Libraries\GSL\include]
+   provides the required path.
+-->
+
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+
+  <PropertyGroup Label="UserMacros">
+    <GSL_IncludeDir><!-- COMMENT --></GSL_IncludeDir>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <BuildMacro Include="GSL_IncludeDir">
+      <Value>$(GSL_IncludeDir)</Value>
+    </BuildMacro>
+  </ItemGroup>
+  
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>
+        $(GSL_IncludeDir);%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

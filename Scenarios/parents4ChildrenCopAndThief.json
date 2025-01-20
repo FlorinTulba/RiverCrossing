@@ -12,51 +12,51 @@
 	{"Id":0, "Name":"Policeman",
 	"CanRow":true,
 	"Image" : {
-		"Url": "../Scenarios/images/policeman.png",
+		"Url": "images/policeman.png",
 		"Origin": "https://pngimg.com/uploads/policeman/_PNG15917.png"
 		}},
 	
 	{"Id":1, "Name":"Mother",
 	"CanRow":true,
 	"Image" : {
-		"Url": "../Scenarios/images/bride.png",
+		"Url": "images/bride.png",
 		"Origin": "https://pngimg.com/uploads/bride/bride_PNG19533.png"
 		}},
 	
 	{"Id":2, "Name":"Father",
 	"CanRow":true,
 	"Image" : {
-		"Url": "../Scenarios/images/groom.png",
+		"Url": "images/groom.png",
 		"Origin": "https://pngimg.com/uploads/groom/groom_PNG19611.png"
 		}},
 	
 	{"Id":3, "Name":"Son1",
 	"Image" : {
-		"Url": "../Scenarios/images/boy1.png",
+		"Url": "images/boy1.png",
 		"Origin": "https://pngimg.com/uploads/children/children_PNG18069.png"
 		}},
 	
 	{"Id":4, "Name":"Son2",
 	"Image" : {
-		"Url": "../Scenarios/images/boy2.png",
+		"Url": "images/boy2.png",
 		"Origin": "https://pngimg.com/uploads/children/children_PNG18069.png"
 		}},
 	
 	{"Id":5, "Name":"Daughter1",
 	"Image" : {
-		"Url": "../Scenarios/images/girl1.png",
+		"Url": "images/girl1.png",
 		"Origin": "https://pngimg.com/uploads/girls/girls_PNG6491.png"
 		}},
 	
 	{"Id":6, "Name":"Daughter2",
 	"Image" : {
-		"Url": "../Scenarios/images/girl2.png",
+		"Url": "images/girl2.png",
 		"Origin": "https://pngimg.com/uploads/girls/girls_PNG6491.png"
 		}},
 	
 	{"Id":7, "Name":"Thief",
 	"Image" : {
-		"Url": "../Scenarios/images/thief.png",
+		"Url": "images/thief.png",
 		"Origin": "https://pngimg.com/uploads/thief/thief_PNG47.png"
 		}}
 	],

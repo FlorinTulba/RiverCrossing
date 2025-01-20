@@ -15,7 +15,7 @@
 	"CanRow": "true",
 	"StartsFromRightBank": true,
 	"Image" : {
-		"Url": "../Scenarios/images/groom.png",
+		"Url": "images/groom.png",
 		"Origin": "https://pngimg.com/uploads/groom/groom_PNG19611.png"
 		}},
 
@@ -24,7 +24,7 @@
 	"Type": "merchant",
 	"StartsFromRightBank": true,
 	"Image" : {
-		"Url": "../Scenarios/images/groom.png",
+		"Url": "images/groom.png",
 		"Size": -1
 		}},
 
@@ -33,7 +33,7 @@
 	"Type": "merchant",
 	"StartsFromRightBank": true,
 	"Image" : {
-		"Url": "../Scenarios/images/groom.png",
+		"Url": "images/groom.png",
 		"Size": -1
 		}},
 
@@ -42,7 +42,7 @@
 	"Type": "robber",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/thief.png",
+		"Url": "images/thief.png",
 		"Origin": "https://pngimg.com/uploads/thief/thief_PNG47.png"
 		}},
 
@@ -50,7 +50,7 @@
 	"Name": "Robber2",
 	"Type": "robber",
 	"Image" : {
-		"Url": "../Scenarios/images/thief.png",
+		"Url": "images/thief.png",
 		"Size": -1
 		}},
 
@@ -58,7 +58,7 @@
 	"Name": "Robber3",
 	"Type": "robber",
 	"Image" : {
-		"Url": "../Scenarios/images/thief.png",
+		"Url": "images/thief.png",
 		"Size": -1
 		}}
 	],

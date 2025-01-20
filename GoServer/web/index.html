@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Solver for River-Crossing puzzles</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Part of the RiverCrossing project, which allows to describe and solve River Crossing puzzles: https://en.wikipedia.org/wiki/River_crossing_puzzle">
+  <meta name="author" content="Florin Tulba">
+  <link rel="stylesheet prefetch" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet prefetch" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="css/scenario.css">
+</head>
+<body>
+
+<h4 id="title">River Crossing puzzles <sup><a href='https://en.wikipedia.org/wiki/River_crossing_puzzle' title="Wikipedia article about river crossing puzzles" target="_blank"><i class="fa fa-info-circle"></i></a></sup></h4>
+
+<form id="formData" method="POST">
+
+<div id="controls" class="container-fluid">
+  <div id="issuesBox" class="alert alert-danger fade in">
+    <a href="#" id="hideIssues" class="close" aria-label="close">&times;</a>
+    <div id="issues"></div>
+  </div>
+
+  <div class="form-group">
+    <label for="scenarioData">Puzzle&nbsp;data (see&nbsp;<a href="https://github.com/FlorinTulba/RiverCrossing" target="_blank">explanations</a>)</label>
+    <textarea id="scenarioData" name="scenarioData" placeholder="Enter puzzle data here" class="form-control" rows="15" wrap="off" required></textarea>
+  </div>
+
+  <div id="puzzleSelection" class="form-group row">
+    <div id="knownPuzzlesLbl" class="col-xs-12 col-sm-9">
+      <label for="knownPuzzles">
+        Use&nbsp;the&nbsp;following&nbsp;puzzles as&nbsp;they&nbsp;are&nbsp;or&nbsp;as&nbsp;templates:
+      </label>
+    </div>
+    <div id="puzzleSelectionControl" class="col-xs-12 col-sm-3">
+      <select class="form-control input-sm" id="knownPuzzles" title="Existing scenarios">
+        <option value="-1" selected>-- CHOOSE --</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group row">
+    <div class="col-xs-6">
+      <button id="solveBtn" type="submit" class="btn btn-primary">Solve</button>
+    </div>
+    <div class="col-xs-6">
+      <div class="checkbox" id="interactiveSolCheckbox">
+        <label><input type="checkbox" id="interactiveSolId" name="interactiveSol"/>Interactive solution</label>
+      </div>
+    </div>
+  </div>
+
+</form>
+
+<div id="footer">
+  &copy;2018-2025 Florin Tulba (florintulba@yahoo.com)
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script type="application/javascript">
+var issues = '{{.}}';
+</script>
+<script src="js/scenario.js"></script>
+
+</body>
+</html>

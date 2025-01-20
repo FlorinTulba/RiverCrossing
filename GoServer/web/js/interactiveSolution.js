@@ -1,12 +1,16 @@
 /*
- Part of the RiverCrossing project,
- which allows to describe and solve River Crossing puzzles:
+ This RiverCrossing project (https://github.com/FlorinTulba/RiverCrossing)
+ allows describing and solving River Crossing puzzles:
   https://en.wikipedia.org/wiki/River_crossing_puzzle
 
- (c) 2018 Florin Tulba (florintulba@yahoo.com)
+ Required libraries:
+ - Boost (>=1.67) - https://www.boost.org
+ - Microsoft GSL (>=4.0) - https://github.com/microsoft/GSL
+
+ (c) 2018-2025 Florin Tulba (florintulba@yahoo.com)
 */
 
-// Expects a previously defined variable `solution` from `solution.js` !
+// Expects a previously defined variable `solution`
 
 var
   diurnal, // to show the sun or the  moon
@@ -274,7 +278,7 @@ function createForest() {
         + '" style="position:absolute;bottom:' + bot
         + '%;' + marginName + ':' + marginVal + '%;max-height:' + treeSz
         + '%;max-width:' + treeSz + '%;z-index:'+ zIdx
-        + ';" src="../Scenarios/images/tree'
+        + ';" src="images/tree'
         + Math.floor(1 + 2 * Math.random()) + '.png" alt="A tree">');
     }  
 
@@ -290,7 +294,7 @@ function createForest() {
         + '" class="portrait" style="position:absolute;bottom:' + bot
         + '%;left:' + (left-delta) + '%;max-height:' + treeSz
         + '%;max-width:' + treeSz + '%;z-index:'+ zIdx
-        + ';" src="../Scenarios/images/tree'
+        + ';" src="images/tree'
         + Math.floor(1 + 2 * Math.random()) + '.png" alt="A tree">');
     }
   }
@@ -338,7 +342,9 @@ function entDetails(ent) {
 
 // n-th point between from and to when there is a total count of `steps`
 // Works for multi-dimensional points (when from and to are arrays)
-function nthBetween(nth, from, to, steps = stagesPerSegment) {
+function nthBetween(nth, from, to, steps) {
+  if(typeof(steps) === 'undefined')
+    steps = stagesPerSegment
   if(from.hasOwnProperty('length') && to.hasOwnProperty('length')) {
     var len = from.length;
     if(len != to.length) {
@@ -377,7 +383,9 @@ function raftBridgeWidth() {
   orientation. Otherwise an animated entity might remain set for the previous
   orientation and disregard the second call which would correct the orientation.
 */
-function updateEnt(entId, animationCause = true) {
+function updateEnt(entId, animationCause) {
+  if(typeof(animationCause) === 'undefined')
+    animationCause = true
   var idle = (entsToMove.indexOf(entId) < 0),
     entIdx = idToIdxMap[entId],
     ent = solution.Entities[entId],
@@ -639,15 +647,42 @@ function orientationChangeHandler(evt) {
   }
 }
 
+// Ensures the received solution object appears ok
+function correctInput() {
+  if(typeof solution === 'undefined') {
+    alert('Please define a solution before loading this file!');
+    return false;
+  }
+
+  if( ! solution.hasOwnProperty('ScenarioDescription')) {
+    alert('The defined solution must define a ScenarioDescription property!');
+    return false;
+  }
+
+  if( ! solution.hasOwnProperty('Entities')) {
+    alert('The defined solution must define a Entities property!');
+    return false;
+  }
+  if( solution.Entities.length > 17) {
+    alert('The entities are barely visible for more than 17 entities!');
+    return false;
+  }
+
+  if( ! solution.hasOwnProperty('Moves')) {
+    alert('The defined solution must define a Moves property!');
+    return false;
+  }
+
+  return true;
+}
+
 /*
-  The solution object must have a description of the puzzle, which can be
-  presented in a modal window.
-  There are a few introductory phrases, then a part describing the constraints
+  The description has a few introductory phrases,
+  then a part describing the constraints
   as a list.
 */
-function extractPuzzleDescr() {
-  var descr = solution.ScenarioDescription,
-    lines = descr.length;
+function extractPuzzleDescr(descr) {
+  var lines = descr.length;
   var out = '', foundList = false;
   for(var i=0; i<lines; ++i) {
     var line = descr[i];
@@ -670,41 +705,14 @@ function extractPuzzleDescr() {
   return out;
 }
 
-// Ensures the received solution object appears ok
-function correctInput() {
-  if(typeof solution === 'undefined') {
-    alert('Please define a solution before loading this file!');
-    return false;
-  }
-
-  if( ! solution.hasOwnProperty('ScenarioDescription')) {
-    alert('The defined solution must define a ScenarioDescription property!');
-    return false;
-  }
-
-  if( ! solution.hasOwnProperty('Entities')) {
-    alert('The defined solution must define a Entities property!');
-    return false;
-  }
-  if( solution.Entities.length > 17) {
-    alert('The entities are barely visible for more than 18 entities!');
-    return false;
-  }
-
-  if( ! solution.hasOwnProperty('Moves')) {
-    alert('The defined solution must define a Moves property!');
-    return false;
-  }
-
-  return true;
-}
-
 $("document").ready(function() {
   if( ! correctInput()) return; // problems with the provided solution object
 
+  sessionStorage.foundSolution = 1;
+  
   isLandscape.addListener(orientationChangeHandler);
 
-  $('#infoText').html(extractPuzzleDescr());
+  $('#infoText').html(extractPuzzleDescr(solution.ScenarioDescription));
   
   if(solution.hasOwnProperty('Bridge')) boat = ! solution.Bridge;
   else boat = true;
@@ -725,7 +733,7 @@ $("document").ready(function() {
   orientationChangeHandler(isLandscape);
 
   $('[data-toggle="tooltip"]').tooltip();
-
+  
   $("#next").click(next);
   $("#undo").click(undo);
 });

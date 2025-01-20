@@ -11,28 +11,28 @@
 	"Name": "Farmer",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/farmer.png",
+		"Url": "images/farmer.png",
 		"Origin": "https://pngimg.com/uploads/farmer/farmer_PNG34.png"
 		}},
 
 	{"Id": 1,
 	"Name": "Wolf",
 	"Image" : {
-		"Url": "../Scenarios/images/wolf.png",
+		"Url": "images/wolf.png",
 		"Origin": "https://pngimg.com/uploads/wolf/wolf_PNG23212.png"
 		}},
 
 	{"Id": 2,
 	"Name": "Goat",
 	"Image" : {
-		"Url": "../Scenarios/images/goat.png",
+		"Url": "images/goat.png",
 		"Origin": "https://pngimg.com/uploads/goat/goat_PNG13150.png"
 		}},
 
 	{"Id": 3,
 	"Name": "Cabbage",
 	"Image" : {
-		"Url": "../Scenarios/images/cabbage.png",
+		"Url": "images/cabbage.png",
 		"Size": -4,
 		"Origin": "https://pngimg.com/uploads/cabbage/cabbage_PNG8804.png"
 		}}

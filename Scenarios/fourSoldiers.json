@@ -11,14 +11,14 @@
 	"Name": "Arrogant_Soldier",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/arrogantSoldier.png",
+		"Url": "images/arrogantSoldier.png",
 		"Origin": "https://pngimg.com/uploads/soldier/soldier_PNG16048.png"
 		}},
 
 	{"Id": 1,
 	"Name": "Lazy_Soldier",
 	"Image" : {
-		"Url": "../Scenarios/images/lazySoldier.png",
+		"Url": "images/lazySoldier.png",
 		"Size": -1,
 		"Origin": "https://pngimg.com/uploads/soldier/soldier_PNG16048.png"
 		}},
@@ -27,7 +27,7 @@
 	"Name": "Brave_Soldier1",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/braveSoldier.png",
+		"Url": "images/braveSoldier.png",
 		"Origin": "https://pngimg.com/uploads/soldier/soldier_PNG16048.png"
 		}},
 
@@ -35,7 +35,7 @@
 	"Name": "Brave_Soldier2",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/braveSoldier.png",
+		"Url": "images/braveSoldier.png",
 		"Origin": "https://pngimg.com/uploads/soldier/soldier_PNG16048.png"
 		}}
 	],

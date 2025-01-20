@@ -12,7 +12,7 @@
 	"Name": "Person1",
 	"CanTackleBridgeCrossing": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/anonymous1min.png",
+		"Url": "images/anonymous1min.png",
 		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
 		}},
 
@@ -20,7 +20,7 @@
 	"Name": "Person2",
 	"CanTackleBridgeCrossing": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/anonymous2min.png",
+		"Url": "images/anonymous2min.png",
 		"Size": -1,
 		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
 		}},
@@ -29,7 +29,7 @@
 	"Name": "Person3",
 	"CanTackleBridgeCrossing": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/anonymous5min.png",
+		"Url": "images/anonymous5min.png",
 		"Size": -2,
 		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
 		}},
@@ -38,7 +38,7 @@
 	"Name": "Person4",
 	"CanTackleBridgeCrossing": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/anonymous8min.png",
+		"Url": "images/anonymous8min.png",
 		"Size": -3,
 		"Origin": "https://pngimg.com/uploads/anonymous_mask/anonymous_mask_PNG28.png"
 		}}

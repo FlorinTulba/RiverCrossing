@@ -1,63 +1,75 @@
-/*
- Part of the RiverCrossing project,
- which allows to describe and solve River Crossing puzzles:
+/******************************************************************************
+ This RiverCrossing project (https://github.com/FlorinTulba/RiverCrossing)
+ allows describing and solving River Crossing puzzles:
   https://en.wikipedia.org/wiki/River_crossing_puzzle
 
- Requires Boost installation (www.boost.org).
+ Required libraries:
+ - Boost (>=1.67) - https://www.boost.org
+ - Microsoft GSL (>=4.0) - https://github.com/microsoft/GSL
 
- (c) 2018 Florin Tulba (florintulba@yahoo.com)
-*/
+ (c) 2018-2025 Florin Tulba (florintulba@yahoo.com)
+ *****************************************************************************/
 
-#if ! defined ENTITY_CPP || ! defined UNIT_TESTING
+#if !defined CPP_ENTITY || !defined UNIT_TESTING
 
-  #error \
-Please include this file only at the end of `entity.cpp` \
-after a `#define ENTITY_CPP` and surrounding the include and the define \
-by `#ifdef UNIT_TESTING`!
+#error \
+    "Please include this file only within `entity.cpp` \
+after a `#define CPP_ENTITY` and surrounding the include \
+and the define by `#ifdef UNIT_TESTING`!"
 
-#else // for ENTITY_CPP and UNIT_TESTING
+#else  // for CPP_ENTITY and UNIT_TESTING
 
-#include "../src/mathRelated.h"
-
-#include <boost/test/unit_test.hpp>
+#include "entity.h"
+#include "mathRelated.h"
 
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/test/unit_test.hpp>
 
-using namespace rc;
-using namespace rc::ent;
-
-BOOST_AUTO_TEST_SUITE(entity, *boost::unit_test::tolerance(Eps))
+BOOST_AUTO_TEST_SUITE(entity, *boost::unit_test::tolerance(rc::Eps))
 
 BOOST_AUTO_TEST_CASE(construction_fieldsAsParams) {
-  BOOST_CHECK_NO_THROW({ // using all default params
-    Entity e(123U, "abc");
-    BOOST_CHECK(e.id() == 123U);
-    BOOST_CHECK(0 == e.name().compare("abc"));
-    BOOST_CHECK(0 == e.type().compare(""));
-    BOOST_CHECK( ! e.startsFromRightBank());
-    BOOST_TEST(e.weight() == 0.);
-    BOOST_CHECK( ! e.canRow());
-    BOOST_CHECK_NO_THROW(BOOST_CHECK( ! e.canRow(SymbolsTable{})));
-  });
+  using namespace std;
+  using namespace rc;
+  using namespace rc::ent;
 
-  BOOST_CHECK_NO_THROW({ // using no default params
-    Entity e(123U, "abc", "def", true, "true", 123.);
+  try {  // using all default params
+    Entity e{123U, "abc"};
     BOOST_CHECK(e.id() == 123U);
-    BOOST_CHECK(0 == e.name().compare("abc"));
-    BOOST_CHECK(0 == e.type().compare("def"));
+    BOOST_CHECK(e.name() == "abc");
+    BOOST_CHECK(e.type().empty());
+    BOOST_CHECK(!e.startsFromRightBank());
+    BOOST_TEST(!e.weight());
+    BOOST_CHECK(!(bool)e.canRow());
+    BOOST_CHECK_NO_THROW(BOOST_CHECK(!e.canRow({})));
+  } catch (...) {
+    BOOST_CHECK(false);  // Unexpected exception
+  }
+
+  try {  // using no default params
+    Entity e{123U, "abc", "def", true, "true", 123.};
+    BOOST_CHECK(e.id() == 123U);
+    BOOST_CHECK(e.name() == "abc");
+    BOOST_CHECK(e.type() == "def");
     BOOST_CHECK(e.startsFromRightBank());
     BOOST_TEST(e.weight() == 123.);
-    BOOST_CHECK(e.canRow());
-    BOOST_CHECK_NO_THROW(BOOST_CHECK(e.canRow(SymbolsTable{})));
-  });
+    BOOST_CHECK((bool)e.canRow());
+    BOOST_CHECK_NO_THROW(BOOST_CHECK(e.canRow({})));
+  } catch (...) {
+    BOOST_CHECK(false);  // Unexpected exception
+  }
 
   BOOST_CHECK_THROW(Entity(123U, "abc", "def", true, "TrUe"),
-    domain_error); // invalid canRowExpr
+                    domain_error);  // invalid canRowExpr
   BOOST_CHECK_THROW(Entity(123U, "abc", "def", true, "true", -123.),
-    invalid_argument); // negative weight
+                    invalid_argument);  // negative weight
 }
 
 BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
+  using namespace std;
+  using namespace rc;
+  using namespace rc::ent;
+  using namespace boost::property_tree;
+
   ptree entTree;
   istringstream iss;
 
@@ -66,17 +78,21 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
       {"Id": 10,
         "Name": "Father"
       }
-    )"), iss), entTree));
-  BOOST_CHECK_NO_THROW({
-    Entity e(entTree);
+    )"),
+                                    iss),
+                                   entTree));
+  try {
+    Entity e{entTree};
     BOOST_CHECK(e.id() == 10U);
-    BOOST_CHECK(0 == e.name().compare("Father"));
-    BOOST_CHECK(0 == e.type().compare(""));
-    BOOST_CHECK( ! e.startsFromRightBank());
-    BOOST_TEST(e.weight() == 0.);
-    BOOST_CHECK( ! e.canRow());
-    BOOST_CHECK_NO_THROW(BOOST_CHECK( ! e.canRow(SymbolsTable{})));
-  });
+    BOOST_CHECK(e.name() == "Father");
+    BOOST_CHECK(e.type().empty());
+    BOOST_CHECK(!e.startsFromRightBank());
+    BOOST_TEST(!e.weight());
+    BOOST_CHECK(!(bool)e.canRow());
+    BOOST_CHECK_NO_THROW(BOOST_CHECK(!e.canRow({})));
+  } catch (...) {
+    BOOST_CHECK(false);  // Unexpected exception
+  }
 
   // using no default params
   BOOST_REQUIRE_NO_THROW(read_json((iss.str(R"(
@@ -87,24 +103,24 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
         "CanRow": "if (%CrossingIndex% mod 4) in {0, 3}",
         "Weight": 123
       }
-    )"), iss), entTree));
-  BOOST_CHECK_NO_THROW({
-    Entity e(entTree);
+    )"),
+                                    iss),
+                                   entTree));
+  try {
+    Entity e{entTree};
     BOOST_CHECK(e.id() == 123U);
-    BOOST_CHECK(0 == e.name().compare("abc"));
-    BOOST_CHECK(0 == e.type().compare("def"));
+    BOOST_CHECK(e.name() == "abc");
+    BOOST_CHECK(e.type() == "def");
     BOOST_CHECK(e.startsFromRightBank());
     BOOST_TEST(e.weight() == 123.);
     BOOST_CHECK(boost::logic::indeterminate(e.canRow()));
-    BOOST_CHECK_NO_THROW(
-      BOOST_CHECK(e.canRow(SymbolsTable{{"CrossingIndex", 4}})));
-    BOOST_CHECK_NO_THROW(
-      BOOST_CHECK(e.canRow(SymbolsTable{{"CrossingIndex", 7}})));
-    BOOST_CHECK_NO_THROW(
-      BOOST_CHECK( ! e.canRow(SymbolsTable{{"CrossingIndex", 5}})));
-    BOOST_CHECK_NO_THROW(
-      BOOST_CHECK( ! e.canRow(SymbolsTable{{"CrossingIndex", 6}})));
-  });
+    BOOST_CHECK(e.canRow({{"CrossingIndex", 4}}));
+    BOOST_CHECK(e.canRow({{"CrossingIndex", 7}}));
+    BOOST_CHECK(!e.canRow({{"CrossingIndex", 5}}));
+    BOOST_CHECK(!e.canRow({{"CrossingIndex", 6}}));
+  } catch (...) {
+    BOOST_CHECK(false);  // Unexpected exception
+  }
 
   // using the synonym of CanRow: CanTackleBridgeCrossing
   BOOST_REQUIRE_NO_THROW(read_json((iss.str(R"(
@@ -112,17 +128,21 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
         "Name": "abc",
         "CanTackleBridgeCrossing": "true"
       }
-    )"), iss), entTree));
-  BOOST_CHECK_NO_THROW({
-    Entity e(entTree);
+    )"),
+                                    iss),
+                                   entTree));
+  try {
+    Entity e{entTree};
     BOOST_CHECK(e.id() == 123U);
-    BOOST_CHECK(0 == e.name().compare("abc"));
-    BOOST_CHECK(0 == e.type().compare(""));
-    BOOST_CHECK( ! e.startsFromRightBank());
-    BOOST_TEST(e.weight() == 0.);
-    BOOST_CHECK(e.canRow());
-    BOOST_CHECK_NO_THROW(BOOST_CHECK(e.canRow(SymbolsTable{})));
-  });
+    BOOST_CHECK(e.name() == "abc");
+    BOOST_CHECK(e.type().empty());
+    BOOST_CHECK(!e.startsFromRightBank());
+    BOOST_TEST(!e.weight());
+    BOOST_CHECK((bool)e.canRow());
+    BOOST_CHECK_NO_THROW(BOOST_CHECK(e.canRow({})));
+  } catch (...) {
+    BOOST_CHECK(false);  // Unexpected exception
+  }
 
   // using both synonyms CanRow and CanTackleBridgeCrossing
   BOOST_REQUIRE_NO_THROW(read_json((iss.str(R"(
@@ -131,7 +151,9 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
         "CanRow": "false",
         "CanTackleBridgeCrossing": "true"
       }
-    )"), iss), entTree));
+    )"),
+                                    iss),
+                                   entTree));
   BOOST_CHECK_THROW(Entity e(entTree), domain_error);
 
   // non-number Id
@@ -139,7 +161,9 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
       {"Id": "id",
         "Name": "abc"
       }
-    )"), iss), entTree));
+    )"),
+                                    iss),
+                                   entTree));
   BOOST_CHECK_THROW(Entity e(entTree), domain_error);
 
   // negative Id
@@ -147,7 +171,9 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
       {"Id": -123,
         "Name": "abc"
       }
-    )"), iss), entTree));
+    )"),
+                                    iss),
+                                   entTree));
   BOOST_CHECK_THROW(Entity e(entTree), domain_error);
 
   // incorrect canRowExpr
@@ -156,7 +182,9 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
         "Name": "abc",
         "CanRow": "TrUe"
       }
-    )"), iss), entTree));
+    )"),
+                                    iss),
+                                   entTree));
   BOOST_CHECK_THROW(Entity e(entTree), domain_error);
 
   // incorrect StartsFromRightBank
@@ -165,7 +193,9 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
         "Name": "abc",
         "StartsFromRightBank": "TrUe"
       }
-    )"), iss), entTree));
+    )"),
+                                    iss),
+                                   entTree));
   BOOST_CHECK_THROW(Entity e(entTree), domain_error);
 
   // non-number Weight
@@ -174,7 +204,9 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
         "Name": "abc",
         "Weight": "weight"
       }
-    )"), iss), entTree));
+    )"),
+                                    iss),
+                                   entTree));
   BOOST_CHECK_THROW(Entity e(entTree), domain_error);
 
   // provided Weight was 0
@@ -183,7 +215,9 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
         "Name": "abc",
         "Weight": 0
       }
-    )"), iss), entTree));
+    )"),
+                                    iss),
+                                   entTree));
   BOOST_CHECK_THROW(Entity e(entTree), domain_error);
 
   // negative Weight
@@ -192,10 +226,12 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
         "Name": "abc",
         "Weight": -12.4
       }
-    )"), iss), entTree));
+    )"),
+                                    iss),
+                                   entTree));
   BOOST_CHECK_THROW(Entity e(entTree), domain_error);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
 
-#endif // for ENTITY_CPP and UNIT_TESTING
+#endif  // for CPP_ENTITY and UNIT_TESTING

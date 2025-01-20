@@ -11,7 +11,7 @@
 	"Type": "worker",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/worker1.png",
+		"Url": "images/worker1.png",
 		"Origin": "https://pngimg.com/uploads/industrial_worker/industrial_worker_PNG11450.png"
 		}},
 
@@ -20,7 +20,7 @@
 	"Type": "worker",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/worker2.png",
+		"Url": "images/worker2.png",
 		"Origin": "https://pngimg.com/uploads/industrial_worker/industrial_worker_PNG11462.png"
 		}},
 
@@ -29,7 +29,7 @@
 	"Type": "child",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/girl.png",
+		"Url": "images/girl.png",
 		"Origin": "https://pngimg.com/uploads/girls/girls_PNG6491.png"
 		}},
 
@@ -38,7 +38,7 @@
 	"Type": "child",
 	"CanRow": "true",
 	"Image" : {
-		"Url": "../Scenarios/images/boy.png",
+		"Url": "images/boy.png",
 		"Origin": "https://pngimg.com/uploads/children/children_PNG18069.png"
 		}}
 	],
