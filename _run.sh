@@ -16,7 +16,7 @@ if [ "$1" != "Release" -a "$1" != "Debug" -a "$1" != "tests" ]; then
 	exit 1
 fi
 
-# Troubleshooting text in case './_run.sh tests' is launched for MinGW/Cygwin
+# Troubleshooting text in case './_run.sh tests' is launched for MSYS2/Cygwin
 # environments without preceding it with an updated PATH, like:
 # 'PATH=<libraryPath(s)>:$PATH ./_run.sh tests <testArgs>'
 # This mechanism is enforced and better explained by './runTests <testArgs>'
@@ -24,7 +24,7 @@ fi
 possibleProblem=""
 if [ "$1" == "tests" ]; then
 	if [[ `uname -o | grep -E "Msys|Cygwin"` ]]; then
-		possibleProblem="Note: For MinGW/Cygwin environments '_run.sh tests' is supposed to be called from 'runTests.sh'! (Ignore if this already is the case)"
+		possibleProblem="Note: For MSYS2/Cygwin environments '_run.sh tests' is supposed to be called from 'runTests.sh'! (Ignore if this already is the case)"
 	fi
 
 elif [ $# -gt 1 ]; then

@@ -5,7 +5,7 @@ usageStr="Usage:\n\trunTests.sh [libraryPath(s)] !"
 if [[ `uname -o | grep -E "Msys|Cygwin"` ]]; then
 	if [ $# -ne 1 ]; then
 		>&2 echo -e "$usageStr"
-		>&2 echo "Please provide a library path(s) parameter for MinGW/Cygwin environments!"
+		>&2 echo "Please provide a library path(s) parameter for MSYS2/Cygwin environments!"
 		>&2 echo "(Just copy the path from the '-L' argument used by the linker.)"
 		exit 1
 	fi

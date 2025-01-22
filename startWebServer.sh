@@ -4,7 +4,7 @@
 # the server needs to be compiled and launched from the same OS.
 
 if [[ `uname -o | grep -E "Msys|Cygwin"` ]]; then
-	>&2 echo "MinGW and Cygwin should use 'startWebServer.bat' instead of 'startWebServer.sh'!"
+	>&2 echo "MSYS2 and Cygwin should use 'startWebServer.bat' instead of 'startWebServer.sh'!"
 	exit 1
 fi
 

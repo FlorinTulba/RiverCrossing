@@ -9,9 +9,9 @@
 :: EnableDelayedExpansion needed for concatenating several command args
 setlocal EnableDelayedExpansion
 
-:: Cygwin and MSIS have the env var SHELL defined, while CMD/Powershell don't
+:: Cygwin and MSYS2 have the env var SHELL defined, while CMD/Powershell don't
 if NOT "%SHELL%"=="" (
-	echo 'run*.bat' are not available for Cygwin, nor for MSIS^!
+	echo 'run*.bat' are not available for Cygwin, nor for MSYS2^!
 	exit /B 1
 )
 

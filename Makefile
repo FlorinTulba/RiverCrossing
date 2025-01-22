@@ -78,7 +78,7 @@ ifeq ($(CPP_STANDARD_TEST),error)
  $(error Invalid provided/determined C++ standard for $(CC): $(CPP_STANDARD)!)
 endif
 
-# Determine OS(Linux or WSL/MinGW/Cygwin or Android or FreeBSD or MacOS) name
+# Determine OS(Linux or WSL/MSYS2/Cygwin or Android or FreeBSD or MacOS) name
 # and whether it is arm, 32 or 64bit
 
 # Operating system: Msys, Cygwin, GNU/Linux, FreeBSD, Darwin or Android
@@ -172,7 +172,7 @@ STRIP_FLAGS := -s
 # Also, -H shows the tried pch-s and which did match plus all included headers.
 # -march=native [-mtune=...] might generate some additional speed-up,
 # but limits which machines can run the binary.
-# -flto is supported for .so libraries, but not .dll (thus not by MinGW/Cygwin).
+# -flto is supported for .so libraries, but not .dll (thus not by MSYS2/Cygwin).
 # -flto was not supported by some versions of clang in Linux/WSL, as it needs
 # the LLVMgold.so plugin which was missing.
 # There is a clang warning to replace '-Ofast' by '-O3 -ffast-math'.
@@ -186,11 +186,11 @@ CXX_FLAGS := \
 	-std=$(CPP_STANDARD) -march=native -Ofast -fno-finite-math-only \
 	-Wall -Wextra -flto=auto
 
-TARGET_EXT :=# No extension except for Windows executables (MinGW/Cygwin)
+TARGET_EXT :=# No extension except for Windows executables (MSYS2/Cygwin)
 
 ifeq (Msys,$(UNAME_O))
- CURRENT_OS := MinGW
- TARGET_EXT := .exe # MinGW executes .exe files
+ CURRENT_OS := MSYS2
+ TARGET_EXT := .exe # MSYS2 executes .exe files
 
  ifeq (clang++,$(CC_TYPE))
   CXX_FLAGS := \
@@ -289,18 +289,18 @@ ifeq (,$(wildcard $(INCLUDE_DIR_GSL)gsl))
  $(error GSL include folder ($(INCLUDE_DIR_GSL)) must contain a 'gsl' subfolder!)
 endif
 
-BOOST_LIB_ENDING_RELEASE :=# None, except for MSVC and MinGW
-BOOST_LIB_ENDING_DEBUG :=# None, except for MSVC and MinGW
+BOOST_LIB_ENDING_RELEASE :=# None, except for MSVC and MSYS2
+BOOST_LIB_ENDING_DEBUG :=# None, except for MSVC and MSYS2
 REQUIRED_BOOST_LIBS :=# None, except for the 'tests' build configuration
 REQUIRED_BOOST_LIBS_TESTING := boost_unit_test_framework
 ALL_REQUIRED_BOOST_LIBS := $(REQUIRED_BOOST_LIBS) $(REQUIRED_BOOST_LIBS_TESTING)
-EXTRA_LIBS :=#None. Example exception: MinGW with gcc8 requires 'stdc++fs'
+EXTRA_LIBS :=#None. Example exception: MSYS2 MinGW with gcc8 requires 'stdc++fs'
 
 # The included file below must define 2 paths: INCLUDE_DIR_BOOST and LIB_DIR_BOOST.
 # It also has to define 'boost_libs_available' target which ensures that
 # ALL_REQUIRED_BOOST_LIBS are created/available.
 # When necessary, it has to update BOOST_LIB_ENDING_DEBUG|RELEASE to somethink like
-# '-mgw14-mt[-d]-x64-1_87' (for MinGW with gcc-14, multithreading[, debug], x64, Boost 1.87)
+# '-mgw14-mt[-d]-x64-1_87' (for MSYS2 MinGW with gcc-14, multithreading[, debug], x64, Boost 1.87)
 include BoostDirs$(CURRENT_OS).mk
 
 ifeq (,$(INCLUDE_DIR_BOOST))
@@ -381,11 +381,11 @@ LIB_DIR_BOOST_NO_TRAILING_SLASH := $(LIB_DIR_BOOST:%/=%)
 # Whenever the required libraries are not within the expected folders,
 # the generated executable needs to be launched within an environment indicating
 # where else to look for libraries.
-# PATH (for MinGW/Cygwin environments), DYLD_LIBRARY_PATH for MacOS
+# PATH (for MSYS2/Cygwin environments), DYLD_LIBRARY_PATH for MacOS
 # and LD_LIBRARY_PATH for the rest are the relevant environment variables to prepend/append:
 # <libPath>=ColonSeparatedPathsForFoldersOfUnusualLibs:$<libPath> <generatedExe>
 # This becomes the <rpath> where to look first for libraries.
-# MinGW/Cygwin environments cannot use the <rpath> mechanism
+# MSYS2/Cygwin environments cannot use the <rpath> mechanism
 # and still need an updated environment before launching
 COMMON_LINK_FLAGS := $(CXX_FLAGS) -Wl,-rpath,"$(LIB_DIR_BOOST_NO_TRAILING_SLASH)"
 RELEASE_LINK_FLAGS := $(COMMON_LINK_FLAGS) -L"$(LIB_DIR_BOOST_NO_TRAILING_SLASH)"
