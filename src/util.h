@@ -96,26 +96,28 @@ template <class FwCont, class Proj = std::identity>
   requires std::ranges::forward_range<FwCont>
 class ContView {
  public:
-  ContView(const FwCont& cont,
-           const ContViewDelims& delims = {},
-           const Proj& proj = {})
-      : s{build(cont, delims, proj)} {}
+  explicit ContView(const FwCont& cont,
+                    const ContViewDelims& delims_ = {},
+                    const Proj& proj_ = {})
+      : pCont{&cont}, delims{delims_}, proj{proj_} {}
 
-  std::string toString() const noexcept { return s; }
+  ContView(const ContView&) = default;
+  ContView(ContView&&) noexcept = delete;
+  ~ContView() noexcept = default;
 
- private:
-  static std::string build(const FwCont& cont,
-                           const ContViewDelims& delims = {},
-                           const Proj& proj = {}) {
+  ContView& operator=(const ContView&) = default;
+  ContView& operator=(ContView&&) noexcept = delete;
+
+  std::string toString() const {
     std::ostringstream oss;
     oss << delims.before;
 
     // Using begin() and end() since FwCont.empty() and FwCont.size()
     // might not be available.
-    const auto itBeg{cont.begin()}, itEnd{cont.end()};
+    const auto itBeg{pCont->begin()}, itEnd{pCont->end()};
     if (itBeg != itEnd) {
-      oss << proj(*cont.begin());
-      for (const auto& elem : cont | std::ranges::views::drop(1))
+      oss << proj(*pCont->begin());
+      for (const auto& elem : *pCont | std::ranges::views::drop(1))
         oss << delims.between << proj(elem);
     }
 
@@ -127,7 +129,10 @@ class ContView {
     return oss.str();
   }
 
-  std::string s;
+ private:
+  gsl::not_null<const FwCont*> pCont;  // not_null is not movable
+  ContViewDelims delims;
+  Proj proj;
 };
 
 /**
