@@ -25,6 +25,10 @@ Folder [Scenarios](./Scenarios/) contains the puzzles used for testing in *json*
 
 Each puzzle file contains a description of the problem.
 
+A web server is available so that such puzzles can be edited from scratch or starting from the templates in the Scenarios folder. It signals any errors above the editing window:
+
+![Puzzle editing and solving when the web server is started](doc/editScenario.png)
+
 The entities should appear as follows:
 ```
 "Entities" : [
