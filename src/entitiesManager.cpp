@@ -162,12 +162,10 @@ const vector<unsigned>& AllEntities::idsStartingFromRightBank() const noexcept {
 }
 
 string AllEntities::toString() const {
-  ostringstream oss;
-  oss << "Entities: [ " << **cbegin(entities);
-  for (const shared_ptr<const IEntity>& ent : entities | views::drop(1))
-    oss << ", " << *ent;
-  oss << " ]";
-  return oss.str();
+  return ContView{entities,
+                  {"Entities: [ ", ", ", " ]"},
+                  [](const auto& pEnt) -> const IEntity& { return *pEnt; }}
+      .toString();
 }
 
 IsolatedEntities::IsolatedEntities(const IsolatedEntities& other) noexcept
@@ -264,19 +262,14 @@ string IsolatedEntities::toString() const {
   if (_ids.empty())
     return "[]"s;
 
-  const auto streamNamePlusId = [this](ostream& os, unsigned id) {
-    os << (*all)[id]->name() << '(' << id << ')';
-  };
-
-  ostringstream oss;
-  oss << "[ ";
-  streamNamePlusId(oss, *cbegin(_ids));
-  for (const unsigned id : _ids | views::drop(1)) {
-    oss << ", ";
-    streamNamePlusId(oss, id);
-  }
-  oss << " ]";
-  return oss.str();
+  return ContView{_ids,
+                  {"[ ", ", ", " ]"},
+                  [this](unsigned id) {
+                    ostringstream oss;
+                    oss << (*all)[id]->name() << '(' << id << ')';
+                    return oss.str();
+                  }}
+      .toString();
 }
 
 unique_ptr<IMovingEntitiesExt> DefMovingEntitiesExt::clone() const noexcept {
@@ -434,12 +427,3 @@ size_t BankEntities::differencesCount(
 }
 
 }  // namespace rc::ent
-
-namespace std {
-
-ostream& operator<<(ostream& os, const rc::ent::IEntities& ents) {
-  os << ents.toString();
-  return os;
-}
-
-}  // namespace std

@@ -952,13 +952,21 @@ class Modulus : public NumericExpr {
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& os,
-                         const rc::cond::ConfigConstraints& c);
+inline auto& operator<<(auto& os, const rc::cond::ConfigConstraints& c) {
+  os << c.toString();
+  return os;
+}
 
-std::ostream& operator<<(std::ostream& os,
-                         const rc::cond::ConfigurationsTransferDuration& ctd);
+inline auto& operator<<(auto& os,
+                        const rc::cond::ConfigurationsTransferDuration& ctd) {
+  os << ctd.toString();
+  return os;
+}
 
-std::ostream& operator<<(std::ostream& os, const rc::cond::ValueOrRange& vor);
+inline auto& operator<<(auto& os, const rc::cond::ValueOrRange& vor) {
+  os << vor.toString();
+  return os;
+}
 
 }  // namespace std
 

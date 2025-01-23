@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -82,6 +83,52 @@ it is (a subfolder of) RiverCrossing directory.
 @return RiverCrossing folder if found; otherwise an empty path
 */
 [[nodiscard]] const std::filesystem::path projectFolder() noexcept;
+
+/// Delimiters when displaying a container
+struct ContViewDelims {
+  std::string_view before{};
+  std::string_view between{};
+  std::string_view after{};
+};
+
+/// Helper for displaying a container
+template <class FwCont, class Proj = std::identity>
+  requires std::ranges::forward_range<FwCont>
+class ContView {
+ public:
+  ContView(const FwCont& cont,
+           const ContViewDelims& delims = {},
+           const Proj& proj = {})
+      : s{build(cont, delims, proj)} {}
+
+  std::string toString() const noexcept { return s; }
+
+ private:
+  static std::string build(const FwCont& cont,
+                           const ContViewDelims& delims = {},
+                           const Proj& proj = {}) {
+    std::ostringstream oss;
+    oss << delims.before;
+
+    // Using begin() and end() since FwCont.empty() and FwCont.size()
+    // might not be available.
+    const auto itBeg{cont.begin()}, itEnd{cont.end()};
+    if (itBeg != itEnd) {
+      oss << proj(*cont.begin());
+      for (const auto& elem : cont | std::ranges::views::drop(1))
+        oss << delims.between << proj(elem);
+    }
+
+    // Used the technique [first + 'std::ranges::views::drop(1)'], instead of
+    // 'std::ranges::views::join_with', because the latter requires 'proj(elem)'
+    // to return string-like
+
+    oss << delims.after;
+    return oss.str();
+  }
+
+  std::string s;
+};
 
 /**
 The template parameter represents a visitor displaying extended information
@@ -192,5 +239,14 @@ class DecoratorManager {
 };
 
 }  // namespace rc
+
+namespace std {
+
+template <class Cont, class Proj>
+inline auto& operator<<(auto& os, const rc::ContView<Cont, Proj>& cont) {
+  return os << cont.toString();
+}
+
+}  // namespace std
 
 #endif  // H_UTIL

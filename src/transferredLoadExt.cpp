@@ -157,9 +157,7 @@ bool MaxLoadTransferConstraintsExt::_check(
 #ifndef NDEBUG
     const auto& entsIds{cfg.ids()};
     cout << "violates maxWeight constraint [ " << entsWeight << " > "
-         << *_maxLoad << " ] : ";
-    ranges::copy(entsIds, ostream_iterator<unsigned>{cout, " "});
-    cout << endl;
+         << *_maxLoad << " ] : " << ContView{entsIds, {"", " ", "\n"}};
 #endif  // NDEBUG
     return false;
   }
@@ -217,12 +215,9 @@ bool AllowedLoadsValidator::doValidate(const ent::MovingEntities& ents,
   const double entsWeight{totalLoadExt->totalLoad()};
   const bool valid{_allowedLoads->contains(entsWeight, st)};
 #ifndef NDEBUG
-  if (!valid) {
+  if (!valid)
     cout << "Invalid load [" << entsWeight << " outside " << *_allowedLoads
-         << "] : ";
-    ranges::copy(ents.ids(), ostream_iterator<unsigned>{cout, " "});
-    cout << endl;
-  }
+         << "] : " << ContView{ents.ids(), {"", " ", "\n"}};
 #endif  // NDEBUG
   return valid;
 }

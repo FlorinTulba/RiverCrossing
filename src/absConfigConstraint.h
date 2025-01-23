@@ -213,17 +213,19 @@ class IValues {
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& os,
-                         const rc::cond::IConfigConstraint& c);
+inline auto& operator<<(auto& os, const rc::cond::IConfigConstraint& c) {
+  os << c.toString();
+  return os;
+}
 
 template <typename Type>
-std::ostream& operator<<(std::ostream& os, const rc::cond::AbsExpr<Type>& e) {
+inline auto& operator<<(auto& os, const rc::cond::AbsExpr<Type>& e) {
   os << e.toString();
   return os;
 }
 
 template <typename Type>
-std::ostream& operator<<(std::ostream& os, const rc::cond::IValues<Type>& vs) {
+inline auto& operator<<(auto& os, const rc::cond::IValues<Type>& vs) {
   os << vs.toString();
   return os;
 }

@@ -480,7 +480,10 @@ class BankEntities : public IsolatedEntities {
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& os, const rc::ent::IEntities& ents);
+inline auto& operator<<(auto& os, const rc::ent::IEntities& ents) {
+  os << ents.toString();
+  return os;
+}
 
 }  // namespace std
 

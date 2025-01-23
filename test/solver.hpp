@@ -24,6 +24,7 @@ and the define by `#ifdef UNIT_TESTING`!"
 #include "mathRelated.h"
 #include "solverDetail.hpp"
 #include "transferredLoadExt.h"
+#include "util.h"
 
 #include <cassert>
 #include <climits>
@@ -81,28 +82,18 @@ template <class IfEntities>
       [](const rc::ent::IEntities* retCfg, const set<unsigned>& cfg) {
         assert(retCfg);
         const bool ret{*retCfg == cfg};
-        if (!ret) {
-          cout << "[ ";
-          ranges::copy(retCfg->ids(), ostream_iterator<unsigned>{cout, " "});
-          cout << "] != [ ";
-          ranges::copy(cfg, ostream_iterator<unsigned>{cout, " "});
-          cout << ']' << endl;
-        }
+        if (!ret)
+          cout << rc::ContView{retCfg->ids(), {"[ ", " ", " ]"}}
+               << " != " << rc::ContView{cfg, {"[ ", " ", " ]\n"}};
         return ret;
       })};
   if (!result) {
     cout << "IEntities { ";
-    for (const gsl::not_null<const IfEntities*> retCfg : returnedConfigs) {
-      cout << "[ ";
-      ranges::copy(retCfg->ids(), ostream_iterator<unsigned>{cout, " "});
-      cout << "] ";
-    }
+    for (const gsl::not_null<const IfEntities*> retCfg : returnedConfigs)
+      cout << rc::ContView{retCfg->ids(), {"[ ", " ", " ] "}};
     cout << "} != ExpectedEntities { ";
-    for (const set<unsigned>& cfg : expectedConfigs) {
-      cout << "[ ";
-      ranges::copy(cfg, ostream_iterator<unsigned>{cout, " "});
-      cout << "] ";
-    }
+    for (const set<unsigned>& cfg : expectedConfigs)
+      cout << rc::ContView{cfg, {"[ ", " ", " ] "}};
     cout << "}" << endl;
   }
   return result;

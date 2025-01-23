@@ -145,7 +145,10 @@ class ScenarioDetails {
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& os, const rc::ScenarioDetails& sc);
+inline auto& operator<<(auto& os, const rc::ScenarioDetails& sc) {
+  os << sc.toString();
+  return os;
+}
 
 }  // namespace std
 

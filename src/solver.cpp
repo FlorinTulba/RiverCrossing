@@ -160,22 +160,3 @@ const Scenario::Results& Scenario::solution(bool usingBFS /* = true*/,
 }
 
 }  // namespace rc
-
-namespace std {
-
-ostream& operator<<(ostream& os, const rc::sol::IState& st) {
-  os << st.toString();
-  return os;
-}
-
-ostream& operator<<(ostream& os, const rc::sol::IMove& m) {
-  os << m.toString();
-  return os;
-}
-
-ostream& operator<<(ostream& os, const rc::sol::IAttempt& attempt) {
-  os << attempt.toString();
-  return os;
-}
-
-}  // namespace std

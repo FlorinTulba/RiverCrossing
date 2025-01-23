@@ -170,12 +170,3 @@ string Entity::toString() const {
 }
 
 }  // namespace rc::ent
-
-namespace std {
-
-ostream& operator<<(ostream& os, const rc::ent::IEntity& e) {
-  os << e.toString();
-  return os;
-}
-
-}  // namespace std

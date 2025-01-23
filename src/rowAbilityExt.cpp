@@ -24,11 +24,8 @@ bool CanRowValidator::doValidate(const ent::MovingEntities& ents,
                                  const SymbolsTable& st) const {
   const bool valid{ents.anyRowCapableEnts(st)};
 #ifndef NDEBUG
-  if (!valid) {
-    cout << "Nobody rows now : ";
-    ranges::copy(ents.ids(), ostream_iterator<unsigned>{cout, " "});
-    cout << endl;
-  }
+  if (!valid)
+    cout << "Nobody rows now : " << ContView{ents.ids(), {"", " ", "\n"}};
 #endif  // NDEBUG
   return valid;
 }

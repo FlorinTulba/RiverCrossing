@@ -128,8 +128,12 @@ class Scenario {
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& os, const rc::Scenario& sc);
-std::ostream& operator<<(std::ostream& os, const rc::Scenario::Results& o);
+inline auto& operator<<(auto& os, const rc::Scenario& sc) {
+  os << sc.toString();
+  return os;
+}
+
+ostream& operator<<(ostream& os, const rc::Scenario::Results& o);
 
 }  // namespace std
 

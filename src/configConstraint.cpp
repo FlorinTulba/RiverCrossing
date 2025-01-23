@@ -28,6 +28,7 @@
 #include "configConstraint.h"
 #include "entitiesManager.h"
 #include "mathRelated.h"
+#include "util.h"
 #include "warnings.h"
 
 #include <cmath>
@@ -189,20 +190,16 @@ bool ConfigConstraints::check(const ent::IsolatedEntities& ents) const {
     if (c->matches(ents)) {
       found = true;
 #ifndef NDEBUG
-      if (!_allowed) {
-        cout << "violates NOT{" << *c << "} : ";
-        ranges::copy(ents.ids(), ostream_iterator<unsigned>{cout, " "});
-        cout << endl;
-      }
+      if (!_allowed)
+        cout << "violates NOT{" << *c
+             << "} : " << ContView{ents.ids(), {"", " ", "\n"}};
 #endif  // NDEBUG
       break;
     }
 #ifndef NDEBUG
-  if (_allowed != found) {
-    cout << "violates " << *this << " : ";
-    ranges::copy(ents.ids(), ostream_iterator<unsigned>{cout, " "});
-    cout << endl;
-  }
+  if (_allowed != found)
+    cout << "violates " << *this << " : "
+         << ContView{ents.ids(), {"", " ", "\n"}};
 #endif  // NDEBUG
   return found == _allowed;
 }
@@ -214,10 +211,11 @@ string ConfigConstraints::toString() const {
   ostringstream oss;
   if (!_allowed)
     oss << "NOT";
-  oss << "{ " << **cbegin(constraints);
-  for (auto& pConf : constraints | views::drop(1))
-    oss << " ; " << *pConf;
-  oss << " }";
+
+  oss << ContView{
+      constraints,
+      {"{ ", " ; ", " }"},
+      [](const auto& pConf) -> const IConfigConstraint& { return *pConf; }};
   return oss.str();
 }
 
@@ -247,9 +245,7 @@ bool TransferConstraints::check(const ent::IsolatedEntities& ents) const {
   if ((unsigned)ents.count() > *capacity) {
 #ifndef NDEBUG
     cout << "violates capacity constraint [ " << ents.count() << " > "
-         << *capacity << " ] : ";
-    ranges::copy(entsIds, ostream_iterator<unsigned>{cout, " "});
-    cout << endl;
+         << *capacity << " ] : " << ContView{entsIds, {"", " ", "\n"}};
 #endif  // NDEBUG
     return false;
   }
@@ -625,12 +621,8 @@ string IdsConstraint::toString() const {
     for (const auto& group : mandatoryGroups) {
       if (size(group) == 1ULL)
         oss << *cbegin(group);
-      else {
-        oss << '(' << *cbegin(group);
-        for (const auto member : group | views::drop(1))
-          oss << '|' << member;
-        oss << ')';
-      }
+      else
+        oss << ContView{group, {"(", "|", ")"}};
       oss << ' ';
     }
 
@@ -642,24 +634,16 @@ string IdsConstraint::toString() const {
     oss << '}';
   }
 
-  if (!avoidedIds.empty()) {
-    oss << " Avoided={" << *cbegin(avoidedIds);
-    for (const auto avoidedId : avoidedIds | views::drop(1))
-      oss << ',' << avoidedId;
-    oss << '}';
-  }
+  if (!avoidedIds.empty())
+    oss << " Avoided=" << ContView{avoidedIds, {"{", ",", "}"}};
 
   if (!optionalGroups.empty()) {
     oss << " Optional={";
     for (const auto& group : optionalGroups) {
       if (size(group) == 1ULL)
         oss << *cbegin(group);
-      else {
-        oss << '(' << *cbegin(group);
-        for (const auto member : group | views::drop(1))
-          oss << '|' << member;
-        oss << ')';
-      }
+      else
+        oss << ContView{group, {"(", "|", ")"}};
       oss << ' ';
     }
 
@@ -867,15 +851,7 @@ bool ValueSet::contains(const double& v,
 }
 
 string ValueSet::toString() const {
-  ostringstream oss;
-  oss << '{';
-  if (!vors.empty()) {
-    oss << *cbegin(vors);
-    for (const auto& vor : vors | views::drop(1))
-      oss << ", " << vor;
-  }
-  oss << '}';
-  return oss.str();
+  return ContView{vors, {"{", ", ", "}"}}.toString();
 }
 
 NumericConst::NumericConst(double d) noexcept : NumericExpr() {
@@ -999,28 +975,7 @@ string Modulus::toString() const {
 
 namespace std {
 
-ostream& operator<<(ostream& os, const rc::cond::IConfigConstraint& c) {
-  os << c.toString();
-  return os;
-}
-
-ostream& operator<<(ostream& os, const rc::cond::ConfigConstraints& c) {
-  os << c.toString();
-  return os;
-}
-
-ostream& operator<<(ostream& os,
-                    const rc::cond::ConfigurationsTransferDuration& ctd) {
-  os << ctd.toString();
-  return os;
-}
-
-ostream& operator<<(ostream& os, const rc::cond::ValueOrRange& vor) {
-  os << vor.toString();
-  return os;
-}
-
-ostream& operator<<(ostream& os, const rc::cond::ValueSet& vs) {
+auto& operator<<(auto& os, const rc::cond::ValueSet& vs) {
   os << vs.toString();
   return os;
 }

@@ -69,7 +69,10 @@ class IEntity {
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& os, const rc::ent::IEntity& e);
+inline auto& operator<<(auto& os, const rc::ent::IEntity& e) {
+  os << e.toString();
+  return os;
+}
 
 }  // namespace std
 

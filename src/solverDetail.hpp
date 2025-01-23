@@ -112,9 +112,8 @@ class MovingConfigOption {
     for (const unsigned id : raftIds)
       if (!bankIds.contains(id)) {
 #ifndef NDEBUG
-        cout << "Invalid id [" << id << "] : ";
-        ranges::copy(raftIds, ostream_iterator<unsigned>{cout, " "});
-        cout << endl;
+        cout << "Invalid id [" << id
+             << "] : " << rc::ContView{raftIds, {"", " ", "\n"}};
 #endif                 // NDEBUG
         return false;  // cfg should not contain id-s outside bank
       }
@@ -303,8 +302,7 @@ class MovingConfigsManager {
     if (scenarioDetails->transferConstraints->check(me)) {
       allConfigs.emplace_back(me, validator);
 #ifndef NDEBUG
-      ranges::copy(cfg, ostream_iterator<unsigned>{cout, " "});
-      cout << endl;
+      cout << rc::ContView{cfg, {"", " ", "\n"}};
 #endif  // NDEBUG
     }
   }

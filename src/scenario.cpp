@@ -47,12 +47,9 @@ namespace {
 /// @throw domain_error mentioning the set of keys to choose only one from
 void duplicateKeyExc(const vector<string>& keys) {
   ostringstream oss;
-  if (!keys.empty()) {
-    oss << keys.front();
-    for (const auto& key : keys | views::drop(1))
-      oss << ", " << key;
-  }
-  throw domain_error{"There must appear only one from the keys: "s + oss.str()};
+  oss << "There must appear only one from the keys: ";
+  oss << rc::ContView{keys, {"", ", ", ""}};
+  throw domain_error{oss.str()};
 }
 
 /**
@@ -707,12 +704,8 @@ string ScenarioDetails::toString() const {
     oss << "TransferConstraints = " << *transferConstraints << "; ";
   if (allowedLoads)
     oss << "AllowedLoads = `" << *allowedLoads << "`; ";
-  if (!ctdItems.empty()) {
-    oss << "CrossingDurations: { " << *cbegin(ctdItems);
-    for (const auto& cdtItem : ctdItems | views::drop(1))
-      oss << " ; " << cdtItem;
-    oss << " }; ";
-  }
+  if (!ctdItems.empty())
+    oss << ContView{ctdItems, {"CrossingDurations: { ", " ; ", " }; "}};
 
   // Replace last '; ' with ' }'
   oss.seekp(-2, ios_base::cur);
@@ -732,16 +725,6 @@ string ScenarioDetails::toString() const {
 }  // namespace rc
 
 namespace std {
-
-ostream& operator<<(ostream& os, const rc::Scenario& sc) {
-  os << sc.toString();
-  return os;
-}
-
-ostream& operator<<(ostream& os, const rc::ScenarioDetails& sc) {
-  os << sc.toString();
-  return os;
-}
 
 ostream& operator<<(ostream& os, const rc::Scenario::Results& o) {
   const gsl::not_null<std::shared_ptr<const rc::sol::IAttempt>> attempt{

@@ -344,11 +344,20 @@ class IAttempt {
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& os, const rc::sol::IState& st);
+inline auto& operator<<(auto& os, const rc::sol::IState& st) {
+  os << st.toString();
+  return os;
+}
 
-std::ostream& operator<<(std::ostream& os, const rc::sol::IMove& m);
+inline auto& operator<<(auto& os, const rc::sol::IMove& m) {
+  os << m.toString();
+  return os;
+}
 
-std::ostream& operator<<(std::ostream& os, const rc::sol::IAttempt& attempt);
+inline auto& operator<<(auto& os, const rc::sol::IAttempt& attempt) {
+  os << attempt.toString();
+  return os;
+}
 
 }  // namespace std
 
