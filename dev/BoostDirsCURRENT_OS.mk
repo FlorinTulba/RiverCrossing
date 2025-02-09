@@ -14,7 +14,7 @@
 #       INCLUDE_DIR_BOOST := /usr/include/
 #       LIB_DIR_BOOST := /usr/lib/x86_64-linux-gnu/
 #    provide the required paths.
-INCLUDE_DIR_GSL := # COMMENT
+INCLUDE_DIR_BOOST := # COMMENT
 LIB_DIR_BOOST := # COMMENT
 
 # 4. When necessary, uncomment and set BOOST_LIB_ENDING_DEBUG|RELEASE from below.
