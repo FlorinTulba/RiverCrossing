@@ -1,6 +1,7 @@
 *.bak
 /RiverCrossing.licenseheader
 
+/BuildRequiredBoostLibs.mk
 /BoostDirs*.mk
 /GSL_Dirs*.mk
 /Lib*.props
@@ -9,12 +10,10 @@
 /.vscode
 /Versions
 
-/.d
-/.r
-/.td
-
+/.deps
 /src/precompiled.h.gch
-/GoServer/cmd/RiverCrossingServer/RiverCrossingServer*
 /x64
 /x32
 /x_arm
+
+/GoServer/cmd/RiverCrossingServer/RiverCrossingServer*
