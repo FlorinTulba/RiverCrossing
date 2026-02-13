@@ -70,13 +70,13 @@ if [ "$GCC_VER_EXISTS" -a "$CLANG_VER_EXISTS" ]; then
 	echo "Gcc and Clang executable found for the $1 configuration!"
 	if [ "$GCC_VERSION" -nt "$CLANG_VERSION" ]; then
 		echo -n Gcc
-	
+
 	else
 		echo -n Clang
 	fi
-	
+
 	echo " version is newer."
-	
+
 	echo -ne "Options:\n-run <g>cc version\n-run <c>lang version\n-<l>eave\n\nPlease choose:"
 	read option
 	while [[ ! "$option" =~ ^[gcl]$ ]]; do
@@ -91,7 +91,7 @@ if [ "$GCC_VER_EXISTS" -a "$CLANG_VER_EXISTS" ]; then
 
 	if [ "$option" == 'g' ]; then
 		VER_TO_RUN=$GCC_VERSION
-	
+
 	else
 		VER_TO_RUN=$CLANG_VERSION
 	fi
