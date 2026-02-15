@@ -193,9 +193,9 @@ On following OS-s/platforms these are the compilers used to build and test the p
 | Ubuntu 24.04<br><small>from *WSL2* in Windows 11</small>  |                                 14.2                                 |                             19.1                              |                                                              |
 |   MinGW64<br><small>from *MSYS2* in Windows 11</small>    |                                 14.2                                 |                             19.1                              |         <small>*can run MSVC-generated code*</small>         |
 |    UCRT64<br><small>from *MSYS2* in Windows 11</small>    |                                 14.2                                 |                             19.1                              |         <small>*can run MSVC-generated code*</small>         |
-|   Clang64<br><small>from *MSYS2* in Windows 11</small>    |                                 13.3                                 |                             19.1                              |         <small>*can run MSVC-generated code*</small>         |
 |          Cygwin<br><small>in Windows 11</small>           |                                 12.4                                 | <small>*Clang from Cygwin is<br>no longer maintained*</small> |         <small>*can run MSVC-generated code*</small>         |
 |                        Windows 11                         |                                                                      |                                                               | 19.43 |
+|   Clang64<br><small>from *MSYS2* in Windows 11</small>    |              <small>*No GCC package available*</small>               |                             19.1                              |         <small>*can run MSVC-generated code*</small>         |
 
 The provided [Makefile](./Makefile) and Visual Studio project files allow generating the binaries for the release / debug and for the unit tests.
 The executables can then be launched using the corresponding *run&lt;Configuration&gt;.(sh|bat)* command.
