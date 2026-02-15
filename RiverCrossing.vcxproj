@@ -145,6 +145,7 @@
       <EnablePREfast>true</EnablePREfast>
       <BuildStlModules>false</BuildStlModules>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <AdditionalIncludeDirectories>src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -163,6 +164,7 @@
       <EnablePREfast>true</EnablePREfast>
       <BuildStlModules>false</BuildStlModules>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <AdditionalIncludeDirectories>src;test;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -186,6 +188,7 @@
       <FloatingPointModel>Precise</FloatingPointModel>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -20,8 +20,6 @@
   
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>src;test;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-
       <!-- Disable warnings for external includes -->
       <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
