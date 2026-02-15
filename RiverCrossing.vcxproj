@@ -67,9 +67,6 @@
     <ClCompile Include="test\testMain.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="RiverCrossing.licenseheader" />
-  </ItemGroup>
-  <ItemGroup>
     <Natvis Include="GSL.natvis" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
