@@ -3,7 +3,7 @@
 # Runs Debug/Release/tests for RiverCrossing application
 
 # IMPORTANT:
-# 'run(Release|Debug|tests).sh' is the preferred method to launch the application!
+# 'run(Release|Debug|Tests).sh' is the preferred method to launch the application!
 
 usageStr="Usage:\n\t_run.sh Debug|Release|(tests testParam*) !"
 if [ $# -lt 1 ]; then

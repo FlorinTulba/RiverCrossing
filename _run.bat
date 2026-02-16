@@ -2,7 +2,7 @@
 :: the release/debug/tests versions of RiverCrossing built using MSVC
 
 :: IMPORTANT:
-:: 'run(Release|Debug|tests).bat' is the preferred method to launch the application!
+:: 'run(Release|Debug|Tests).bat' is the preferred method to launch the application!
 
 @echo off
 
