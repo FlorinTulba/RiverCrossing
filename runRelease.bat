@@ -1,5 +1,5 @@
 :: Script for launching from Windows CMD/Powershell
-:: the release version of RiverCrossing built using MSVC
+:: the release version of RiverCrossing built using MSVC/ClangCL
 
 @echo off
 

@@ -185,23 +185,23 @@ On following OS-s/platforms these are the compilers used to build and test the p
 
 |                        OS/Platform                        |                                 GCC                                  |                             Clang                             |                             MSVC                             |
 | :-------------------------------------------------------: | :------------------------------------------------------------------: | :-----------------------------------------------------------: | :----------------------------------------------------------: |
-|                         MacOS 15                          |                                 14.2                                 |             16<br><small>*(Apple Clang)*</small>              |                                                              |
-|                       FreeBSD 14.2                        |                                 14.2                                 |                             19.1                              |                                                              |
-| Android 8<br><small>using *Termux* from *F-Droid*</small> | <small>*GCC is actually Clang.<br>No separate GCC available*</small> |                             19.1                              |                                                              |
-|          Debian 12.9<br><small>*32-bit*</small>           |                                 12.2                                 |                                                               |                                                              |
-|                      Linux Mint 22.1                      |                                 14.2                                 |                             19.1                              |                                                              |
-| Ubuntu 24.04<br><small>from *WSL2* in Windows 11</small>  |                                 14.2                                 |                             19.1                              |                                                              |
-|   MinGW64<br><small>from *MSYS2* in Windows 11</small>    |                                 14.2                                 |                             19.1                              |         <small>*can run MSVC-generated code*</small>         |
-|    UCRT64<br><small>from *MSYS2* in Windows 11</small>    |                                 14.2                                 |                             19.1                              |         <small>*can run MSVC-generated code*</small>         |
-|          Cygwin<br><small>in Windows 11</small>           |                                 12.4                                 | <small>*Clang from Cygwin is<br>no longer maintained*</small> |         <small>*can run MSVC-generated code*</small>         |
-|                        Windows 11                         |                                                                      |                                                               | 19.43 |
-|   Clang64<br><small>from *MSYS2* in Windows 11</small>    |              <small>*No GCC package available*</small>               |                             19.1                              |         <small>*can run MSVC-generated code*</small>         |
+|                         macOS 26                          |                                 15.2                                 |             17<br><small>*(Apple Clang)*</small>              |                              N/A                             |
+|                       FreeBSD 15                          |                                 15.2                                 |                             21.1.8                            |                              N/A                             |
+| Android 8<br><small>using *Termux* from *F-Droid*</small> | <small>*GCC is actually Clang.<br>No separate GCC available*</small> |                             21.1.8                            |                              N/A                             |
+|          Debian 13.3<br><small>*32-bit*</small>           |                                 14.2                                 |                             20.1.8                            |                              N/A                             |
+|                      Linux Mint 22.3                      |                                 14.2                                 |                             21.1.8                            |                              N/A                             |
+| Ubuntu 24.04<br><small>from *WSL2* in Windows 11</small>  |                                 14.2                                 |                             21.1.8                            |                              N/A                             |
+|   MinGW64<br><small>from *MSYS2* in Windows 11</small>    |                                 15.2                                 |                             21.1.8                            |     <small>*can run code generated by MSVC/ClangCL*</small>     |
+|    UCRT64<br><small>from *MSYS2* in Windows 11</small>    |                                 15.2                                 |                             21.1.8                            |     <small>*can run code generated by MSVC/ClangCL*</small>     |
+|   Clang64<br><small>from *MSYS2* in Windows 11</small>    |              <small>*No GCC package available*</small>               |                             21.1.8                            |     <small>*can run code generated by MSVC/ClangCL*</small>     |
+|          Cygwin<br><small>in Windows 11</small>           |                                 13.4                                 | 21.1.4<br><small>*(Test packages)*</small>                    |     <small>*can run code generated by MSVC/ClangCL*</small>     |
+|                        Windows 11                         |                                 N/A                                  |             20.1.8<br><small>*(ClangCL)*</small>              |                             14.50                            |
 
 The provided [Makefile](./Makefile) and Visual Studio project files allow generating the binaries for the release / debug and for the unit tests.
 The executables can then be launched using the corresponding *run&lt;Configuration&gt;.(sh|bat)* command.
 A valid RiverCrossing scenario in JSON format should be provided to the standard inputs of the release / debug versions immediately after launching. For this, you may pick the contents of any file from the [./Scenarios/](./Scenarios/) folder.
 
-Below is a selection of the output generated by the unit tests in Cygwin using runTests.sh &lt;*pathToBoostTestLibFolder*&gt;, where the parameter is needed only for *.exe* files (from MSYS2/Cygwin/MSVC builds):
+Below is a selection of the output generated by the unit tests in Cygwin using *runTests.sh* &lt;*pathToBoostTestBinFolder*&gt;, where the parameter is needed only for *.exe* files (from MSYS2/Cygwin builds). MSVC/ClangCL tests should be performed using *runTests.bat* &lt;*pathToBoostTestBinFolder*&gt;, while the other platforms can simply use *$(MAKE) run_TESTS*, apart from the *runTests.sh* method.
 
 ```
 Running 183 test cases...
@@ -292,4 +292,4 @@ The [bridge and torch problem](./Scenarios/bridgeAndTorch.json) is from [Wikiped
 
 * * *
 
-&copy; 2018-2025 Florin Tulba (florintulba@yahoo.com)
+&copy; 2018-2026 Florin Tulba (florintulba@yahoo.com)

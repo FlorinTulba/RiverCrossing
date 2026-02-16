@@ -4,40 +4,69 @@
 Template for the properties file providing paths and other relevant information
 for your local installation of the Boost libraries.
 
-Required only for MSVC development!
+Required only for Visual Studio development (MSVC/ClangCL)!
 
-Instructions how to use it:
-1. Copy the template to the parent folder
+Instructions:
+1. Copy the template to the parent folder.
 2. Replace all comments from below with the Boost relevant information.
+3. Although cross-linking might work, it is recommended linking against Boost libraries generated using the same toolset.
 -->
 
 <Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   
   <PropertyGroup Label="UserMacros">
-    <BoostDir><!-- Replace with: Boost Installation Folder --></BoostDir>
-    <BoostBinariesDir><!-- Replace with: Folder containing Boost binaries.
-        Example: $(BoostDir)\lib64-msvc-14.3 --></BoostBinariesDir>
+    <BoostDir><!-- Replace with: Boost Installation Folder (no trailing '\') --></BoostDir>
+    <BoostVerM_m><!-- Replace with: Boost Version (Major and minor separated by '_').
+      Example: 1_87 --></BoostVerM_m>
+  </PropertyGroup>
+
+  <!-- MSVC-specific user macros for the generated Boost libraries.
+       Required only when setting PlatformToolset to
+       'v14[digit] for Microsoft C++ Build Tools' -->
+  <PropertyGroup Label="UserMacros" Condition="'$(PlatformToolset)' != 'ClangCL'">
+    <BoostBinariesDir><!-- Replace with: Folder containing Boost binaries (*.dll) built using MSVC.
+        Example: $(BoostDir)\bin64-msvc-14.3 --></BoostBinariesDir>
+    <BoostLibsDir><!-- Replace with: Folder containing Boost libraries (*.lib) built using MSVC.
+        Example: $(BoostDir)\lib64-msvc-14.3 --></BoostLibsDir>
+    <_BoostLibCompilerRelatedSuffix>-vc$(PlatformToolsetVersion)</_BoostLibCompilerRelatedSuffix>
+  </PropertyGroup>
+
+  <!-- ClangCL-specific user macros for the generated Boost libraries.
+       Required only when setting PlatformToolset to
+       'LLVM (clang-cl)' -->
+  <PropertyGroup Label="UserMacros" Condition="'$(PlatformToolset)' == 'ClangCL'">
+    <BoostBinariesDir><!-- Replace with: Folder containing Boost binaries (*.dll) built using ClangCL.
+        Example: $(BoostDir)\bin64-clangw-20 --></BoostBinariesDir>
+    <BoostLibsDir><!-- Replace with: Folder containing Boost libraries (*.lib) built using ClangCL.
+        Example: $(BoostDir)\lib64-clangw-20 --></BoostLibsDir>
+    <_BoostLibCompilerRelatedSuffix>-clangw$(LLVMIncludeVersion)</_BoostLibCompilerRelatedSuffix>
   </PropertyGroup>
 
   <!-- Release version user macro(s) -->
   <PropertyGroup Label="UserMacros" Condition="'$(Configuration)'=='Release'">
-    <BoostSharedLibConfigSuffix><!-- Replace with: Suffix for Shared Release Multithreading Boost libraries.
-      Example: -vc143-mt-x64-1_87 --></BoostSharedLibConfigSuffix>
+    <BoostSharedLibConfigSuffix>$(_BoostLibCompilerRelatedSuffix)<!-- Replace with: Suffix for Shared Release Multithreading Boost libraries.
+      Example: -mt-x64- -->$(BoostVerM_m)</BoostSharedLibConfigSuffix>
   </PropertyGroup>
 
   <!-- Debug and Test version of same user macro(s) as above -->
   <PropertyGroup Label="UserMacros" Condition="'$(Configuration)'!='Release'">
-    <BoostSharedLibConfigSuffix><!-- Replace with: Suffix for Shared Debug Multithreading Boost libraries.
-      Example: -vc143-mt-gd-x64-1_87 --></BoostSharedLibConfigSuffix>
+    <BoostSharedLibConfigSuffix>$(_BoostLibCompilerRelatedSuffix)<!-- Replace with: Suffix for Shared Debug Multithreading Boost libraries.
+      Example: -mt-gd-x64- -->$(BoostVerM_m)</BoostSharedLibConfigSuffix>
   </PropertyGroup>
 
   <ItemGroup>
     <BuildMacro Include="BoostDir">
       <Value>$(BoostDir)</Value>
     </BuildMacro>
+    <BuildMacro Include="BoostVerM_m">
+      <Value>$(BoostVerM_m)</Value>
+    </BuildMacro>
     <BuildMacro Include="BoostBinariesDir">
       <Value>$(BoostBinariesDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="BoostLibsDir">
+      <Value>$(BoostLibsDir)</Value>
     </BuildMacro>
     <BuildMacro Include="BoostSharedLibConfigSuffix">
       <Value>$(BoostSharedLibConfigSuffix)</Value>
@@ -52,11 +81,7 @@ Instructions how to use it:
     </ClCompile>
 
     <Link>
-      <AdditionalLibraryDirectories>
-        <!-- Replace with: Folder containing Boost libraries.
-        Example: $(BoostDir)\lib64-msvc-14.3
-        -->;%(AdditionalLibraryDirectories)
-      </AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(BoostLibsDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
 </Project>

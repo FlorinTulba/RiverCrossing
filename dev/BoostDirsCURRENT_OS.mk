@@ -1,7 +1,7 @@
 # Template for the makefiles providing the paths from where
 # Boost headers and libraries can be used
 
-# Not required for MSVC development!
+# Not required for Visual Studio development (MSVC/ClangCL)!
 
 # Instructions how to use it:
 # 1. Copy the template to the parent folder

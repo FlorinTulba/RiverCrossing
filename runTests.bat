@@ -1,5 +1,5 @@
 :: Script for launching from Windows CMD/Powershell
-:: the unit testing for RiverCrossing built using MSVC
+:: the unit testing for RiverCrossing built using MSVC/ClangCL
 
 @echo off
 
@@ -7,8 +7,8 @@
 setlocal
 
 if "%~1"=="" (
-	echo There must be a libraryPath(s^) parameter^!
-	echo It is the value of 'BoostBinariesDir' configured in 'LibBoost.props'^!
+	echo There must be a libraryPath(s^) parameter^! 1>&2
+	echo It is the value of 'BoostBinariesDir' configured in 'LibBoost.props'^! 1>&2
 	exit /B 1
 )
 
@@ -27,8 +27,8 @@ PATH=%~1;%PATH% && call _run.bat tests ^
 	-r short ^
 	-i yes ^
 	--color_output || (
-			echo The tests could not be run^!
-			echo Probably the libraryPath(s^) parameter is incorrect^!
+			echo The tests could not be run^! 1>&2
+			echo Probably the libraryPath(s^) parameter is incorrect^! 1>&2
 			exit /B 1
 	)
 

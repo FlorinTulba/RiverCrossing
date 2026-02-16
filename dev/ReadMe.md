@@ -6,6 +6,6 @@ Each file from this folder contains details on how to use it.
 
 - - -
 
-For MSVC developers, the relevant files from here are Lib\*.props.
+For Visual Studio developers (MSVC/ClangCL), the relevant files from here are Lib\*.props.
 
 For the other, only the \*.mk files are of interest.
