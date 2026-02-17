@@ -1,0 +1,35 @@
+---
+# Activate the base rules, those for modernization and for performance
+Checks: >
+  -*,
+  bugprone-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -modernize-use-trailing-return-type,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -readability-braces-around-statements,
+  -clang-diagnostic-c++98-compat,
+  -clang-diagnostic-c++98-compat-pedantic,
+  -clang-diagnostic-pre-c++14-compat,
+  -clang-diagnostic-pre-c++17-compat,
+  -clang-diagnostic-pre-c++20-compat,
+  -clang-diagnostic-used-but-marked-unused,
+  -clang-diagnostic-disabled-macro-expansion
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(?!.*(boost|gsl)).*'
+SystemHeaders: false
+
+CheckOptions:
+  - key:             bugprone-reserved-identifier.AllowedIdentifiers
+    value:           '__boost_.*'
+
+  - key:             modernize-use-nullptr.NullMacros
+    value:           'NULL'
+---

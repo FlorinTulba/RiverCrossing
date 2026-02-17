@@ -29,6 +29,8 @@
       <!-- Disable specific warnings for MSVC -->
       <DisableSpecificWarnings Condition="'$(PlatformToolset)' != 'ClangCL'">4464;4514;4710;4711;4820;5045</DisableSpecificWarnings>
 
+      <!-- Disable specific warnings for ClangCL -->
+      <AdditionalOptions Condition="'$(PlatformToolset)' == 'ClangCL'">-Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-pre-c++14-compat -Wno-pre-c++17-compat -Wno-pre-c++20-compat -Wno-used-but-marked-unused -Wno-disabled-macro-expansion %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
 
     <Link>
