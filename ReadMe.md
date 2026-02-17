@@ -176,7 +176,7 @@ The raft / bridge capacity might be deduced or reduced based on several differen
 
 - - -
 
-The minimum C++ standard for the project is *c++20* and the libraries [*Boost*](https://www.boost.org) (version &ge; 1.67) and [*Microsoft GSL*](https://github.com/microsoft/GSL) (version &ge; 4.0) should be installed.
+The minimum C++ standard for the project is *c++20* and the libraries [*Boost*](https://www.boost.org) (version &ge; 1.83) and [*Microsoft GSL*](https://github.com/microsoft/GSL) (version &ge; 4.0) should be installed.
 After installing them, follow the instructions from [*./dev/*](./dev/) folder for providing the relevant data about these libraries to the project.
 *Boost.Test* library is needed for the unit tests only.
 The shared version of it was [built](https://www.boost.org/doc/libs/1_87_0/libs/test/doc/html/boost_test/adv_scenarios/build_utf.html) for each combination of platform and compiler of interest when not found already in repositories.

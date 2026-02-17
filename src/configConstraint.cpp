@@ -4,10 +4,10 @@
   https://en.wikipedia.org/wiki/River_crossing_puzzle
 
  Required libraries:
- - Boost (>=1.67) - https://www.boost.org
+ - Boost (>=1.83) - https://www.boost.org
  - Microsoft GSL (>=4.0) - https://github.com/microsoft/GSL
 
- (c) 2018-2025 Florin Tulba (florintulba@yahoo.com)
+ (c) 2018-2026 Florin Tulba (florintulba@yahoo.com)
  *****************************************************************************/
 
 #include "precompiled.h"
@@ -52,13 +52,13 @@ void AbsConfigConstraintValidatorExt::check(
     const ent::AllEntities& allEnts) const {
   nextExt->check(cfg, allEnts);
 
-  if (const TypesConstraint *
-      pTypesCfg{dynamic_cast<const TypesConstraint*>(&cfg)}) {
+  if (const TypesConstraint* pTypesCfg{
+          dynamic_cast<const TypesConstraint*>(&cfg)}) {
     checkTypesCfg(*pTypesCfg, allEnts);
     return;
   }
 
-  if (const IdsConstraint * pIdsCfg{dynamic_cast<const IdsConstraint*>(&cfg)}) {
+  if (const IdsConstraint* pIdsCfg{dynamic_cast<const IdsConstraint*>(&cfg)}) {
     checkIdsCfg(*pIdsCfg, allEnts);
     return;
   }
@@ -708,7 +708,7 @@ void ValueOrRange::validateRange(double a, double b) {
 }
 
 void ValueOrRange::validate() const {
-  if (const ValueType * pValue{get_if<ValueType>(&_valueOrRange)}) {
+  if (const ValueType* pValue{get_if<ValueType>(&_valueOrRange)}) {
     const gsl::not_null<const ValueType> value_{*pValue};
     if (const std::optional<double>& v{value_->constValue()})
       validateDouble(*v);
@@ -756,7 +756,7 @@ bool ValueOrRange::dependsOnVariable(const string& varName) const noexcept {
   if (isConst())
     return false;
 
-  if (const ValueType * value_{get_if<ValueType>(&_valueOrRange)})
+  if (const ValueType* value_{get_if<ValueType>(&_valueOrRange)})
     return (*value_)->dependsOnVariable(varName);
 
   const RangeType range{get<RangeType>(_valueOrRange)};
@@ -765,7 +765,7 @@ bool ValueOrRange::dependsOnVariable(const string& varName) const noexcept {
 }
 
 bool ValueOrRange::isConst() const noexcept {
-  if (const ValueType * value_{get_if<ValueType>(&_valueOrRange)})
+  if (const ValueType* value_{get_if<ValueType>(&_valueOrRange)})
     return (*value_)->constValue().has_value();
 
   const RangeType range{get<RangeType>(_valueOrRange)};
@@ -800,7 +800,7 @@ pair<double, double> ValueOrRange::range(const SymbolsTable& st) const {
 
 string ValueOrRange::toString() const {
   ostringstream oss;
-  if (const ValueType * value_{get_if<ValueType>(&_valueOrRange)})
+  if (const ValueType* value_{get_if<ValueType>(&_valueOrRange)})
     oss << **value_;
   else {
     const RangeType range{get<RangeType>(_valueOrRange)};

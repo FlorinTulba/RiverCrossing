@@ -4,10 +4,10 @@
   https://en.wikipedia.org/wiki/River_crossing_puzzle
 
  Required libraries:
- - Boost (>=1.67) - https://www.boost.org
+ - Boost (>=1.83) - https://www.boost.org
  - Microsoft GSL (>=4.0) - https://github.com/microsoft/GSL
 
- (c) 2018-2025 Florin Tulba (florintulba@yahoo.com)
+ (c) 2018-2026 Florin Tulba (florintulba@yahoo.com)
  *****************************************************************************/
 
 #ifndef H_ABS_CONFIG_CONSTRAINT
