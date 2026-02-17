@@ -25,6 +25,10 @@
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <ExternalTemplatesDiagnostics>false</ExternalTemplatesDiagnostics>
       <DisableAnalyzeExternal>true</DisableAnalyzeExternal>
+
+      <!-- Disable specific warnings for MSVC -->
+      <DisableSpecificWarnings Condition="'$(PlatformToolset)' != 'ClangCL'">4464;4514;4710;4711;4820;5045</DisableSpecificWarnings>
+
     </ClCompile>
 
     <Link>
