@@ -3,7 +3,7 @@
 <!--
 Template for the properties file providing the path to the Microsoft GSL headers
 
-Required only for MSVC development!
+Required only for Visual Studio development (MSVC/ClangCL)!
 
 Instructions how to use it:
 1. Copy the template to the parent folder
