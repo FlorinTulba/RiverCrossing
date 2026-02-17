@@ -75,9 +75,8 @@ Instructions:
 
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>
-        $(BoostDir);%(AdditionalIncludeDirectories)
-      </AdditionalIncludeDirectories>
+      <!-- External include folders -->
+      <AdditionalOptions>/external:I "$(BoostDir)" %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
 
     <Link>

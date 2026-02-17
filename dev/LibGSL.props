@@ -29,9 +29,8 @@ Instructions how to use it:
   
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>
-        $(GSL_IncludeDir);%(AdditionalIncludeDirectories)
-      </AdditionalIncludeDirectories>
+      <!-- External include folders -->
+      <AdditionalOptions>/external:I "$(GSL_Dir)\include" %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
 </Project>
