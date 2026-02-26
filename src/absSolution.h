@@ -32,8 +32,8 @@ class IStateExt {
 
   IStateExt(const IStateExt&) = delete;
   IStateExt(IStateExt&&) = delete;
-  void operator=(const IStateExt&) = delete;
-  void operator=(IStateExt&&) = delete;
+  IStateExt& operator=(const IStateExt&) = delete;
+  IStateExt& operator=(IStateExt&&) noexcept = delete;
 
   /// Clones the State extension
   [[nodiscard]] virtual std::unique_ptr<const IStateExt> clone()
@@ -80,8 +80,8 @@ class DefStateExt final : public IStateExt {
 
   DefStateExt(const DefStateExt&) = delete;
   DefStateExt(DefStateExt&&) = delete;
-  void operator=(const DefStateExt&) = delete;
-  void operator=(DefStateExt&&) = delete;
+  DefStateExt& operator=(const DefStateExt&) = delete;
+  DefStateExt& operator=(DefStateExt&&) noexcept = delete;
 
   /// Allows sharing the default instance
   [[nodiscard]] static const std::shared_ptr<const DefStateExt>&
@@ -114,8 +114,7 @@ class DefStateExt final : public IStateExt {
   }
 
   PRIVATE :
-
-      DefStateExt() noexcept = default;
+  DefStateExt() noexcept = default;
 };
 
 /// Base class for state extensions decorators.
@@ -131,8 +130,8 @@ class AbsStateExt : public IStateExt,
 
   AbsStateExt(const AbsStateExt&) = delete;
   AbsStateExt(AbsStateExt&&) = delete;
-  void operator=(const AbsStateExt&) = delete;
-  void operator=(AbsStateExt&&) = delete;
+  AbsStateExt& operator=(const AbsStateExt&) = delete;
+  AbsStateExt& operator=(AbsStateExt&&) noexcept = delete;
 
   /// Clones the State extension
   [[nodiscard]] std::unique_ptr<const IStateExt> clone() const noexcept final;
@@ -202,9 +201,7 @@ class AbsStateExt : public IStateExt,
   }
 
   PROTECTED :
-
-      gsl::not_null<const rc::ScenarioDetails*>
-          info;
+  gsl::not_null<const rc::ScenarioDetails*> info;
   gsl::not_null<std::shared_ptr<const IStateExt>> nextExt;
 };
 
@@ -213,8 +210,8 @@ class IState {
  public:
   virtual ~IState() noexcept = default;
 
-  void operator=(const IState&) = delete;
-  void operator=(IState&&) = delete;
+  IState& operator=(const IState&) = delete;
+  IState& operator=(IState&&) noexcept = delete;
 
   [[nodiscard]] virtual const ent::BankEntities& leftBank() const noexcept = 0;
   [[nodiscard]] virtual const ent::BankEntities& rightBank() const noexcept = 0;
@@ -298,8 +295,8 @@ class IAttempt {
 
   IAttempt(const IAttempt&) = delete;
   IAttempt(IAttempt&&) = delete;
-  void operator=(const IAttempt&) = delete;
-  void operator=(IAttempt&&) = delete;
+  IAttempt& operator=(const IAttempt&) = delete;
+  IAttempt& operator=(IAttempt&&) noexcept = delete;
 
   /// First call sets the initial state. Next calls are the actually moves.
   virtual void append(const IMove& move) = 0;

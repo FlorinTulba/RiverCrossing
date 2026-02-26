@@ -29,8 +29,10 @@ class IConfigConstraintValidatorExt {
 
   IConfigConstraintValidatorExt(const IConfigConstraintValidatorExt&) = delete;
   IConfigConstraintValidatorExt(IConfigConstraintValidatorExt&&) = delete;
-  void operator=(const IConfigConstraintValidatorExt&) = delete;
-  void operator=(IConfigConstraintValidatorExt&&) = delete;
+  IConfigConstraintValidatorExt& operator=(
+      const IConfigConstraintValidatorExt&) = delete;
+  IConfigConstraintValidatorExt& operator=(
+      IConfigConstraintValidatorExt&&) noexcept = delete;
 
   /// @throw logic_error if cfg does not respect all the extensions
   virtual void check(const IConfigConstraint& cfg,
@@ -49,22 +51,23 @@ class DefConfigConstraintValidatorExt final
   DefConfigConstraintValidatorExt(const DefConfigConstraintValidatorExt&) =
       delete;
   DefConfigConstraintValidatorExt(DefConfigConstraintValidatorExt&&) = delete;
-  void operator=(const DefConfigConstraintValidatorExt&) = delete;
-  void operator=(DefConfigConstraintValidatorExt&&) = delete;
+  DefConfigConstraintValidatorExt& operator=(
+      const DefConfigConstraintValidatorExt&) = delete;
+  DefConfigConstraintValidatorExt& operator=(
+      DefConfigConstraintValidatorExt&&) noexcept = delete;
 
   /// Allows sharing the default instance
   static const DefConfigConstraintValidatorExt& INST() noexcept;
 
   /// Creates a new instance
   [[nodiscard]] static std::unique_ptr<const DefConfigConstraintValidatorExt>
-  NEW_INST();
+  NEW_INST() noexcept;
 
   void check(const IConfigConstraint& /*cfg*/,
              const ent::AllEntities& /*allEnts*/) const noexcept final {}
 
   PRIVATE :
-
-      DefConfigConstraintValidatorExt() noexcept = default;
+  DefConfigConstraintValidatorExt() noexcept = default;
 };
 
 /// Expresses a configuration for the raft(/bridge) / banks
@@ -72,8 +75,8 @@ class IConfigConstraint {
  public:
   virtual ~IConfigConstraint() noexcept = default;
 
-  void operator=(const IConfigConstraint&) = delete;
-  void operator=(IConfigConstraint&&) = delete;
+  IConfigConstraint& operator=(const IConfigConstraint&) = delete;
+  IConfigConstraint& operator=(IConfigConstraint&&) noexcept = delete;
 
   /**
   Checks the validity of this constraint using entities information,
@@ -118,8 +121,8 @@ class AbsExpr {
 
   AbsExpr(const AbsExpr&) = delete;
   AbsExpr(AbsExpr&&) = delete;
-  void operator=(const AbsExpr&) = delete;
-  void operator=(AbsExpr&&) = delete;
+  AbsExpr& operator=(const AbsExpr&) = delete;
+  AbsExpr& operator=(AbsExpr&&) noexcept = delete;
 
   /// Provide the cached result of the expression when this is a constant
   const std::optional<Type>& constValue() const noexcept { return val; }
@@ -140,13 +143,11 @@ class AbsExpr {
   virtual std::string toString() const = 0;
 
  protected:
-  AbsExpr() noexcept = default;
+  AbsExpr(const std::optional<Type>& val_ = {}) noexcept : val{val_} {}
 
   PROTECTED :
-
-      /// Cached result of the expression if possible
-      std::optional<Type>
-          val;
+  /// Cached result of the expression if possible
+  std::optional<Type> val;
 };
 
 /// Base of numeric expression types
@@ -156,11 +157,12 @@ class NumericExpr : public AbsExpr<double> {
 
   NumericExpr(const NumericExpr&) = delete;
   NumericExpr(NumericExpr&&) = delete;
-  void operator=(const NumericExpr&) = delete;
-  void operator=(NumericExpr&&) = delete;
+  NumericExpr& operator=(const NumericExpr&) = delete;
+  NumericExpr& operator=(NumericExpr&&) noexcept = delete;
 
  protected:
-  NumericExpr() noexcept = default;
+  NumericExpr(const std::optional<double>& val_ = {}) noexcept
+      : AbsExpr{val_} {}
 };
 
 /// Base of logical expression types
@@ -170,11 +172,11 @@ class LogicalExpr : public AbsExpr<bool> {
 
   LogicalExpr(const LogicalExpr&) = delete;
   LogicalExpr(LogicalExpr&&) = delete;
-  void operator=(const LogicalExpr&) = delete;
-  void operator=(LogicalExpr&&) = delete;
+  LogicalExpr& operator=(const LogicalExpr&) = delete;
+  LogicalExpr& operator=(LogicalExpr&&) noexcept = delete;
 
  protected:
-  LogicalExpr() noexcept = default;
+  LogicalExpr(const std::optional<bool>& val_ = {}) noexcept : AbsExpr{val_} {}
 };
 
 /// A set of values (expressions that can be evaluated using a symbols table)
@@ -183,8 +185,8 @@ class IValues {
  public:
   virtual ~IValues() noexcept = default;
 
-  void operator=(const IValues&) = delete;
-  void operator=(IValues&&) = delete;
+  IValues& operator=(const IValues&) = delete;
+  IValues& operator=(IValues&&) noexcept = delete;
 
   virtual bool empty() const noexcept = 0;
 

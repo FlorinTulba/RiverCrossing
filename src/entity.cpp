@@ -15,9 +15,9 @@
 #ifdef UNIT_TESTING
 
 /*
-  This include allows recompiling only the Unit tests project when updating the
-  tests. It also keeps the count of total code units to recompile to a minimum
-  value.
+This include allows recompiling only the Unit tests project when updating the
+tests. It also keeps the count of total code units to recompile to a minimum
+value.
 */
 #define CPP_ENTITY
 #include "entity.hpp"
@@ -56,13 +56,13 @@ gsl::not_null<shared_ptr<const rc::cond::LogicalExpr>> canRowSemantic(
 namespace rc::ent {
 
 Entity::Entity(unsigned id_,
-               const string& name_,
-               const string& type_ /* = ""*/,
+               string name_,
+               string type_ /* = ""*/,
                bool startsFromRightBank_ /* = false*/,
                const string& canRowExpr /* = "false"*/,
                double weight_ /* = 0.*/)
-    : _name{name_},
-      _type{type_},
+    : _name{std::move(name_)},
+      _type{std::move(type_)},
       _canRow{canRowSemantic(canRowExpr)},
       _weight{weight_},
       _id{id_},
@@ -81,7 +81,7 @@ Entity::Entity(const ptree& ent) : _type{ent.get("Type", ""s)} {
       throw domain_error{HERE.function_name() +
                          " - Entity id-s cannot be negative!"s};
 
-    _id = (unsigned)readId;
+    _id = gsl::narrow_cast<unsigned>(readId);
     _name = ent.get<string>("Name");
   } catch (const ptree_bad_path& ex) {
     throw domain_error{HERE.function_name() +
@@ -140,10 +140,11 @@ bool Entity::canRow(const SymbolsTable& st) const {
 
 boost::logic::tribool Entity::canRow() const noexcept {
   using namespace boost::logic;
-  if (!_canRow->constValue())
+  const auto& constValOpt{_canRow->constValue()};
+  if (!constValOpt.has_value())
     return indeterminate;
 
-  return *_canRow->constValue();
+  return constValOpt.value();
 }
 
 const string& Entity::type() const noexcept {

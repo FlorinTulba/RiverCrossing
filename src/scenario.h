@@ -65,15 +65,21 @@ class Scenario {
   explicit Scenario(std::istream& scenarioStream,
                     bool solveNow = false,
                     bool interactiveSol = false);
+
+#ifdef UNIT_TESTING
+  // Tests can provide rvalue scenarioStream parameters (ifstream/istringstream)
   explicit Scenario(std::istream&& scenarioStream,
                     bool solveNow = false,
-                    bool interactiveSol = false);
+                    bool interactiveSol = false)
+      : Scenario{scenarioStream, solveNow, interactiveSol} {}
+#endif  // UNIT_TESING
+
   Scenario(Scenario&&) noexcept = default;
   Scenario& operator=(Scenario&&) noexcept = default;
   ~Scenario() noexcept = default;
 
   Scenario(const Scenario&) = delete;
-  void operator=(const Scenario&) = delete;
+  Scenario& operator=(const Scenario&) = delete;
 
   /// Provided description of the scenario
   [[nodiscard]] const std::string& description() const noexcept;
@@ -84,7 +90,7 @@ class Scenario {
 
   @param usingBFS true when a Breadth-First solution is wanted (default); false
   for a Depth-First solution
-  @param interactiveSol_ true when an interactive visualization of the solution
+  @param interactiveSol true when an interactive visualization of the solution
   is requested and possible; false by default
 
   @return the solution or an unsuccessful attempt
@@ -96,10 +102,8 @@ class Scenario {
       const;  ///< data apart from the description
 
   PROTECTED :
-
-      /// Prepares visualizing the solution
-      void
-      outputResults(const Results& res, bool interactiveSol = false) const;
+  /// Prepares visualizing the solution
+  void outputResults(const Results& res, bool interactiveSol = false) const;
 
   // Read in ctor and reused by outputResults()
   boost::property_tree::ptree entTree;

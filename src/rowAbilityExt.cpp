@@ -25,7 +25,9 @@ bool CanRowValidator::doValidate(const ent::MovingEntities& ents,
   const bool valid{ents.anyRowCapableEnts(st)};
 #ifndef NDEBUG
   if (!valid)
-    cout << "Nobody rows now : " << ContView{ents.ids(), {"", " ", "\n"}};
+    cout << "Nobody rows now : "
+         << ContView{ents.ids(), {.before = "", .between = " ", .after = "\n"}}
+         << flush;
 #endif  // NDEBUG
   return valid;
 }

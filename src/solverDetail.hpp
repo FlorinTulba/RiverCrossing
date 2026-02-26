@@ -87,12 +87,13 @@ class MovingConfigOption {
       const rc::ent::MovingEntities& cfg_,
       const std::shared_ptr<const rc::cond::IContextValidator>& validator_ =
           rc::cond::DefContextValidator::SHARED_INST()) noexcept
-      : cfg{cfg_}, validator{validator_} {}
+      : cfg{cfg_},
+        validator{validator_} {}
   MovingConfigOption(const MovingConfigOption&) noexcept = default;
   ~MovingConfigOption() noexcept = default;
 
-  void operator=(const MovingConfigOption&) = delete;
-  void operator=(MovingConfigOption&&) = delete;
+  MovingConfigOption& operator=(const MovingConfigOption&) = delete;
+  MovingConfigOption& operator=(MovingConfigOption&&) noexcept = delete;
 
   /**
   Method for checking which raft/bridge configuration from all possible ones
@@ -112,8 +113,10 @@ class MovingConfigOption {
     for (const unsigned id : raftIds)
       if (!bankIds.contains(id)) {
 #ifndef NDEBUG
-        cout << "Invalid id [" << id
-             << "] : " << rc::ContView{raftIds, {"", " ", "\n"}};
+        cout << "Invalid id [" << id << "] : "
+             << rc::ContView{raftIds,
+                             {.before = "", .between = " ", .after = "\n"}}
+             << flush;
 #endif                 // NDEBUG
         return false;  // cfg should not contain id-s outside bank
       }
@@ -126,9 +129,8 @@ class MovingConfigOption {
   }
 
   PROTECTED :
-
-      /// Raft/bridge configuration
-      const rc::ent::MovingEntities cfg;
+  /// Raft/bridge configuration
+  const rc::ent::MovingEntities cfg;
 
   /// The associated validator
   gsl::not_null<std::shared_ptr<const rc::cond::IContextValidator>> validator;
@@ -150,7 +152,8 @@ class MovingConfigsManager {
   */
   MovingConfigsManager(const rc::ScenarioDetails& scenarioDetails_,
                        const rc::SymbolsTable& SymTb_)
-      : scenarioDetails{&scenarioDetails_}, SymTb{&SymTb_} {
+      : scenarioDetails{&scenarioDetails_},
+        SymTb{&SymTb_} {
     using namespace std;
     using namespace rc::ent;
     using namespace rc::cond;
@@ -183,7 +186,7 @@ class MovingConfigsManager {
                          " - There are no entities that can or might row!"s};
 
     const unsigned capacity{scenarioDetails->capacity};
-    if (capacity >= (unsigned)entsCount)
+    if (static_cast<size_t>(capacity) >= entsCount)
       throw logic_error{
           HERE.function_name() +
           " - expecting scenario details with a raft/bridge capacity "
@@ -195,7 +198,7 @@ class MovingConfigsManager {
             make_shared<const CanRowValidator>(validatorWithoutCanRow)};
 
 #ifndef NDEBUG
-    cout << "All possible raft configs: \n";
+    cout << "All possible raft configs:\n" << flush;
 #endif  // NDEBUG
 
     // Storing allConfigs in increasing order of their capacity
@@ -209,8 +212,8 @@ class MovingConfigsManager {
 
       for (const unsigned alwaysRowsId : alwaysRowIds) {
         ids.erase(alwaysRowsId);
-        if ((unsigned)size(ids) >= restCap)
-          generateCombinations(CBOUNDS(ids), ptrdiff_t(restCap),
+        if (size(ids) >= static_cast<size_t>(restCap))
+          generateCombinations(CBOUNDS(ids), static_cast<ptrdiff_t>(restCap),
                                alwaysCanCrossConfigs, {alwaysRowsId});
       }
       for (const auto& cfg : alwaysCanCrossConfigs)
@@ -218,8 +221,8 @@ class MovingConfigsManager {
 
       for (const unsigned rowsSometimesId : rowSometimesIds) {
         ids.erase(rowsSometimesId);
-        if ((unsigned)size(ids) >= restCap)
-          generateCombinations(CBOUNDS(ids), ptrdiff_t(restCap),
+        if (size(ids) >= static_cast<size_t>(restCap))
+          generateCombinations(CBOUNDS(ids), static_cast<ptrdiff_t>(restCap),
                                sometimesCanCrossConfigs, {rowsSometimesId});
       }
       for (const auto& cfg : sometimesCanCrossConfigs)
@@ -227,14 +230,14 @@ class MovingConfigsManager {
     }
 
 #ifndef NDEBUG
-    cout << endl;
+    cout << '\n' << flush;
 #endif  // NDEBUG
   }
   MovingConfigsManager(const MovingConfigsManager&) noexcept = default;
   ~MovingConfigsManager() noexcept = default;
 
-  void operator=(const MovingConfigsManager&) = delete;
-  void operator=(MovingConfigsManager&&) = delete;
+  MovingConfigsManager& operator=(const MovingConfigsManager&) = delete;
+  MovingConfigsManager& operator=(MovingConfigsManager&&) noexcept = delete;
 
   /**
   Determines which raft/bridge configurations can be generated for
@@ -257,7 +260,7 @@ class MovingConfigsManager {
     using namespace std;
 
 #ifndef NDEBUG
-    cout << "\nInvalid raft configs:\n";
+    cout << "\nInvalid raft configs:\n" << flush;
 #endif  // NDEBUG
     result.clear();
     if (largerConfigsFirst) {
@@ -273,24 +276,22 @@ class MovingConfigsManager {
           result.push_back(&cfgOption.get());
     }
 #ifndef NDEBUG
-    cout << "\nValid raft configs:\n";
+    cout << "\nValid raft configs:\n" << flush;
     for (const rc::ent::MovingEntities* me : result)
-      cout << *me << '\n';
-    cout << endl;
+      cout << *me << '\n' << flush;
+    cout << '\n' << flush;
 #endif  // NDEBUG
   }
 
   PROTECTED :
-
-      /**
-      Performs the `static` validation of the `cfg` raft/bridge configuration,
-      associates it with its necessary `dynamic` validators and appends it
-      to the set of all possible configurations.
-      */
-      void
-      tackleConfig(
-          const std::vector<unsigned>& cfg,
-          const std::shared_ptr<const rc::cond::IContextValidator>& validator) {
+  /**
+  Performs the `static` validation of the `cfg` raft/bridge configuration,
+  associates it with its necessary `dynamic` validators and appends it
+  to the set of all possible configurations.
+  */
+  void tackleConfig(
+      const std::vector<unsigned>& cfg,
+      const std::shared_ptr<const rc::cond::IContextValidator>& validator) {
     using namespace std;
     using namespace rc::ent;
 
@@ -302,7 +303,8 @@ class MovingConfigsManager {
     if (scenarioDetails->transferConstraints->check(me)) {
       allConfigs.emplace_back(me, validator);
 #ifndef NDEBUG
-      cout << rc::ContView{cfg, {"", " ", "\n"}};
+      cout << rc::ContView{cfg, {.before = "", .between = " ", .after = "\n"}}
+           << flush;
 #endif  // NDEBUG
     }
   }
@@ -335,11 +337,12 @@ class State : public rc::sol::IState {
           " - needs complementary bank configurations!"s};
   }
   State(const State&) = default;
-  State(State&&) noexcept = default;
-  ~State() noexcept override = default;
 
-  void operator=(const State&) = delete;
-  void operator=(State&&) = delete;
+  State(State&&) noexcept = delete;
+  State& operator=(const State&) = delete;
+  State& operator=(State&&) noexcept = delete;
+
+  ~State() noexcept override = default;
 
   [[nodiscard]] gsl::not_null<std::shared_ptr<const rc::sol::IStateExt>>
   getExtension() const noexcept final {
@@ -356,14 +359,16 @@ class State : public rc::sol::IState {
       if (!banksConstraints->check(_leftBank)) {
 #ifndef NDEBUG
         std::cout << "violates bank constraint [" << *banksConstraints
-                  << "] : " << _leftBank << std::endl;
+                  << "] : " << _leftBank << '\n'
+                  << std::flush;
 #endif  // NDEBUG
         return false;
       }
       if (!banksConstraints->check(_rightBank)) {
 #ifndef NDEBUG
         std::cout << "violates bank constraint [" << *banksConstraints
-                  << "] : " << _rightBank << std::endl;
+                  << "] : " << _rightBank << '\n'
+                  << std::flush;
 #endif  // NDEBUG
         return false;
       }
@@ -380,7 +385,7 @@ class State : public rc::sol::IState {
     for (const auto& prevSt : examinedStates)
       if (handledBy(*prevSt)) {
 #ifndef NDEBUG
-        std::cout << "previously considered state" << std::endl;
+        std::cout << "previously considered state\n" << std::flush;
 #endif  // NDEBUG
         return true;
       }
@@ -458,8 +463,7 @@ class State : public rc::sol::IState {
   }
 
   PROTECTED :
-
-      rc::ent::BankEntities _leftBank;
+  rc::ent::BankEntities _leftBank;
   rc::ent::BankEntities _rightBank;
 
   gsl::not_null<std::shared_ptr<const rc::sol::IStateExt>> extension;
@@ -471,14 +475,12 @@ class State : public rc::sol::IState {
 /// The moved entities and the resulted state
 class Move : public rc::sol::IMove {
  public:
-  /*
-  resultedSt_ is passed by value, thus triggers
-  WARN_MSVC_BRACED_INIT_LIST_ORDER when braced-initialized.
-  */
   Move(const rc::ent::MovingEntities& movedEnts_,
        std::unique_ptr<const rc::sol::IState> resultedSt_,
        unsigned idx_)
-      : movedEnts{movedEnts_}, resultedSt{std::move(resultedSt_)}, idx{idx_} {
+      : movedEnts{movedEnts_},
+        resultedSt{std::move(resultedSt_)},
+        idx{idx_} {
     using namespace std;
 
     const rc::ent::BankEntities& receiverBank{(resultedSt->nextMoveFromLeft())
@@ -503,18 +505,10 @@ class Move : public rc::sol::IMove {
   Move(const Move&) = default;
   Move(Move&&) noexcept = default;
 
-  ///< copy assignment operator from the base IMove, not from Move
-  Move& operator=(const rc::sol::IMove& other) noexcept {
-    if (this != &other) {
-      movedEnts = other.movedEntities();
-      resultedSt = other.resultedState()->clone();
-      idx = other.index();
-    }
-    return *this;
-  }
-  Move& operator=(const Move&) = default;
-  Move& operator=(Move&&) noexcept = default;
-  ~Move() noexcept = default;
+  ~Move() noexcept override = default;
+
+  Move& operator=(const Move&) = delete;
+  Move& operator=(Move&&) noexcept = delete;
 
   [[nodiscard]] const rc::ent::MovingEntities& movedEntities()
       const noexcept override {
@@ -545,9 +539,8 @@ class Move : public rc::sol::IMove {
   }
 
   PROTECTED :
-
-      /// The moved entities
-      rc::ent::MovingEntities movedEnts;
+  /// The moved entities
+  rc::ent::MovingEntities movedEnts;
 
   /// The resulted state
   gsl::not_null<std::shared_ptr<const rc::sol::IState>> resultedSt;
@@ -562,11 +555,14 @@ class ChainedMove : public Move {
               std::unique_ptr<const rc::sol::IState> resultedSt_,
               unsigned idx_,
               const std::shared_ptr<const ChainedMove>& prevMove = {})
-      : Move(movedEnts_, std::move(resultedSt_), idx_), prev{prevMove} {}
+      : Move(movedEnts_, std::move(resultedSt_), idx_),
+        prev{prevMove} {}
   ChainedMove(const ChainedMove&) = default;
-  ChainedMove(ChainedMove&&) noexcept = default;
-  ChainedMove& operator=(const ChainedMove&) = default;
-  ChainedMove& operator=(ChainedMove&&) noexcept = default;
+
+  ChainedMove(ChainedMove&&) noexcept = delete;
+  ChainedMove& operator=(const ChainedMove&) = delete;
+  ChainedMove& operator=(ChainedMove&&) noexcept = delete;
+
   ~ChainedMove() noexcept override = default;
 
   [[nodiscard]] std::shared_ptr<const ChainedMove> prevMove() const noexcept {
@@ -574,10 +570,8 @@ class ChainedMove : public Move {
   }
 
   PROTECTED :
-
-      /// The link to the previous move or NULL if first move
-      std::shared_ptr<const ChainedMove>
-          prev;
+  /// The link to the previous move or NULL if first move
+  std::shared_ptr<const ChainedMove> prev;
 };
 
 /**
@@ -590,27 +584,29 @@ class Attempt : public rc::sol::IAttempt {
   Attempt() noexcept = default;  ///< used by Depth-First search
 
   /// Builds the chronological Breadth-First solution based on the last move
-  explicit Attempt(const ChainedMove& chainedMove) noexcept {
-    // Calling below Attempt instead of _Attempt would just create temporary
+  explicit Attempt(const ChainedMove& chainedMove) {
+    // Calling below Attempt instead of _attempt would just create temporary
     // objects and won't create the desired effects of the recursion.
 
     // Function that must be called only within this ctor, so kept as a lambda:
-    std::function<void(const ChainedMove&)> _Attempt{
+    std::function<void(const ChainedMove&)> _attempt{
         // cannot refer to itself below without capturing its own name
-        [&_Attempt, this](const ChainedMove& chMove) noexcept {
+        [&_attempt, this](const ChainedMove& chMove) {
           if (chMove.prevMove())
             // this required the mentioned capture
-            _Attempt(*chMove.prevMove());
+            _attempt(*chMove.prevMove());
+
           append(chMove);
         }};
-    _Attempt(chainedMove);
+
+    _attempt(chainedMove);
   }
   ~Attempt() noexcept override = default;
 
   Attempt(const Attempt&) = delete;
   Attempt(Attempt&&) = delete;
-  void operator=(const Attempt&) = delete;
-  void operator=(Attempt&&) = delete;
+  Attempt& operator=(const Attempt&) = delete;
+  Attempt& operator=(Attempt&&) noexcept = delete;
 
   /// First call sets the initial state. Next calls are the actually moves.
   void append(const rc::sol::IMove& move) override {
@@ -627,7 +623,7 @@ class Attempt : public rc::sol::IAttempt {
           initFakeMove->resultedState()->rightBank());
       return;
     }
-    if (move.index() != (unsigned)size(moves))
+    if (static_cast<size_t>(move.index()) != size(moves))
       throw logic_error{HERE.function_name() + " - Expecting move index "s +
                         to_string(size(moves)) +
                         ", but the provided move has index "s +
@@ -701,10 +697,8 @@ class Attempt : public rc::sol::IAttempt {
   }
 
   PROTECTED :
-
-      /// Initial fake empty move setting the initial state
-      std::unique_ptr<const Move>
-          initFakeMove;
+  /// Initial fake empty move setting the initial state
+  std::unique_ptr<const Move> initFakeMove;
 
   /// The configuration of the left bank for a solution
   std::unique_ptr<const rc::ent::BankEntities> targetLeftBank;
@@ -725,15 +719,15 @@ class Solver {
 
   Solver(const Solver&) = delete;
   Solver(Solver&&) = delete;
-  void operator=(const Solver&) = delete;
-  void operator=(Solver&&) = delete;
+  Solver& operator=(const Solver&) = delete;
+  Solver& operator=(Solver&&) noexcept = delete;
 
   /// Looks for a solution either through BFS or through DFS
   void run(bool usingBFS) {
     using namespace std;
 
 #ifndef NDEBUG
-    cout << "Exploring:\n";
+    cout << "Exploring:\n" << flush;
 #endif  // NDEBUG
 
     try {
@@ -747,13 +741,14 @@ class Solver {
       else
         ignore = dfsExplore(std::move(initSt));
     } catch (const exception& e) {
-      cerr << "Couldn't solve the scenario due to: " << e.what() << endl;
+      cerr << "Couldn't solve the scenario due to: " << e.what() << '\n'
+           << flush;
       if (steps)
         steps->clear();
     }
 
 #ifndef NDEBUG
-    cout << "Finished exploring.\n" << endl;
+    cout << "Finished exploring.\n\n" << flush;
 
     /*
     Testing duplicate/redundancy among the examined states.
@@ -771,7 +766,8 @@ class Solver {
             oneState->handledBy(*otherState)) {
           cout << "Found duplicate/redundancy among the examined states:\n"
                << *oneState << '\n'
-               << *otherState << endl;
+               << *otherState << '\n'
+               << flush;
           assert(false);
         }
       }
@@ -785,17 +781,15 @@ class Solver {
   }
 
   PROTECTED :
-
-      /**
-      This should be a newer / better state than the examined ones.
-      However, previous states that are inferior to this one should be removed.
-      Since this purge is executed for each new addition, there can be only 1
-      dominated state for each call - all previous states
-      were independent and dominant and now at most one of them
-      can become inferior to the provided state.
-      */
-      void
-      addExaminedState(std::unique_ptr<const rc::sol::IState> s) noexcept {
+  /**
+  This should be a newer / better state than the examined ones.
+  However, previous states that are inferior to this one should be removed.
+  Since this purge is executed for each new addition, there can be only 1
+  dominated state for each call - all previous states
+  were independent and dominant and now at most one of them
+  can become inferior to the provided state.
+  */
+  void addExaminedState(std::unique_ptr<const rc::sol::IState> s) {
     ++results->investigatedStates;  // needs to be counted in any case
 
     auto it = begin(examinedStates);
@@ -811,12 +805,21 @@ class Solver {
 
   /// Updates the statistics to report and Symbols Table if necessary
   void commonTasksAddMove(const Move& move) noexcept {
-    // wraps around for UINT_MAX
-    SymTb["CrossingIndex"] = double(move.index() + 2U);
+
+    rc::makeNoexcept([this, &move] {
+      // 1-based index of the move.
+      // Wraps around for UINT_MAX becoming 1. On purpose overflow!
+      const unsigned crossingIndex{move.index() + 2U};
+      SymTb["CrossingIndex"] = static_cast<double>(crossingIndex);
+    });
 
     move.movedEntities().getExtension()->addMovePostProcessing(SymTb);
+
+    // 0-based index of the move.
+    // Wraps around for UINT_MAX becoming 0. On purpose overflow!
+    const unsigned nextMoveIndex{move.index() + 1U};
     results->update(
-        size_t(move.index() + 1U),  // wraps around for UINT_MAX
+        static_cast<size_t>(nextMoveIndex),
         targetLeftBank->differencesCount(move.resultedState()->leftBank()),
         move.resultedState()->leftBank(), minDistToGoal);
   }
@@ -860,18 +863,19 @@ class Solver {
       const unsigned moveIdx{move.index()};
       if (UINT_MAX != moveIdx) {  // a normal move
         assert(!move.movedEntities().empty());
-        assert((unsigned)solver->steps->length() == moveIdx);
+        assert(solver->steps->length() == static_cast<size_t>(moveIdx));
         assert(solver->steps->initialState());
 
         cout << *solver->steps->lastMove().resultedState() << "\n  DO move "
-             << (moveIdx + 1U) << " : " << move << endl;
+             << (moveIdx + 1U) << " : " << move << '\n'
+             << flush;
 
       } else {  // about to set the initial state through a fake empty move
         assert(move.movedEntities().empty());
         assert(!solver->steps->length());
         assert(!solver->steps->initialState());
 
-        cout << "  DO initial fake empty move : " << move << endl;
+        cout << "  DO initial fake empty move : " << move << '\n' << flush;
       }
 #endif  // NDEBUG
 
@@ -893,35 +897,40 @@ class Solver {
       // Dead end => backtracking
       solver->steps->pop();
 
-      --solver->SymTb["CrossingIndex"];
+      rc::makeNoexcept([this] { --solver->SymTb["CrossingIndex"]; });
 
       // Allowing the actions of the extensions
       const gsl::not_null<const rc::ent::IMovingEntitiesExt*> previousMoveExt{
-          solver->steps->lastMove().movedEntities().getExtension()};
+          rc::makeNoexcept([this]() -> const rc::sol::IMove& {
+            return solver->steps->lastMove();
+          })
+              .movedEntities()
+              .getExtension()};
       previousMoveExt->removeMovePostProcessing(solver->SymTb);
 
 #ifndef NDEBUG
-      using namespace std;
+      rc::makeNoexcept([this] {
+        using namespace std;
 
-      // _move.index() might return UINT_MAX, while CrossingIndex is reliable
-      cout << "\n\nUNDO move " << solver->SymTb["CrossingIndex"] << " : "
-           << _move << endl;
+        // _move.index() might return UINT_MAX, while CrossingIndex is reliable
+        cout << "\n\nUNDO move " << solver->SymTb["CrossingIndex"] << " : "
+             << _move << '\n'
+             << flush;
+      });
 #endif  // NDEBUG
     }
 
     StepManager(const StepManager&) = delete;
     StepManager(StepManager&&) = delete;
-    void operator=(const StepManager&) = delete;
-    void operator=(StepManager&&) = delete;
+    StepManager& operator=(const StepManager&) = delete;
+    StepManager& operator=(StepManager&&) noexcept = delete;
 
     void commitStep() noexcept { committed = true; }  ///< marks the move as ok
     [[nodiscard]] bool committedStep() const noexcept { return committed; }
 
     PROTECTED :
-
-        /// Parent outer class
-        gsl::not_null<Solver*>
-            solver;
+    /// Parent outer class
+    gsl::not_null<Solver*> solver;
 
 #ifndef NDEBUG
     Move _move;
@@ -958,7 +967,7 @@ class Solver {
       movesToExplore.pop();
 
 #ifndef NDEBUG
-      cout << "\nDiscovering successors of move:\n" << *move << endl;
+      cout << "\nDiscovering successors of move:\n" << *move << '\n' << flush;
 #endif  // NDEBUG
 
       commonTasksAddMove(*move);
@@ -967,12 +976,13 @@ class Solver {
       vector<const MovingEntities*> allowedMovingConfigs;
       allowedMovingConfigurations(*crtState, allowedMovingConfigs);
 
-      for (const MovingEntities* movingCfg : allowedMovingConfigs) {
-        assert(movingCfg);
+      for (const gsl::not_null<const MovingEntities*> movingCfg :
+           allowedMovingConfigs) {
         unique_ptr<const IState> nextState{crtState->next(*movingCfg)};
 
 #ifndef NDEBUG
-        cout << "\nProbing move " << *movingCfg << " => " << *nextState << endl;
+        cout << "\nProbing move " << *movingCfg << " => " << *nextState << '\n'
+             << flush;
 #endif  // NDEBUG
 
         if (!nextState->valid(scenarioDetails->banksConstraints.get()) ||
@@ -1021,13 +1031,13 @@ class Solver {
     vector<const MovingEntities*> allowedMovingConfigs;
     allowedMovingConfigurations(*crtState, allowedMovingConfigs);
 
-    for (const MovingEntities* movingCfg : allowedMovingConfigs) {
-      assert(movingCfg);
+    for (const gsl::not_null<const MovingEntities*> movingCfg :
+         allowedMovingConfigs) {
       unique_ptr<const IState> nextState{crtState->next(*movingCfg)};
 
 #ifndef NDEBUG
-      cout << "\nSimulating move " << *movingCfg << " => " << *nextState
-           << endl;
+      cout << "\nSimulating move " << *movingCfg << " => " << *nextState << '\n'
+           << flush;
 #endif  // NDEBUG
 
       if (!nextState->valid(scenarioDetails->banksConstraints.get()) ||
@@ -1035,7 +1045,7 @@ class Solver {
         continue;  // check next raft/bridge config
 
       if (dfsExplore(Move(*movingCfg, std::move(nextState),
-                          (unsigned)steps->length()))) {
+                          gsl::narrow_cast<unsigned>(steps->length())))) {
         stepManager.commitStep();
         return true;
       }

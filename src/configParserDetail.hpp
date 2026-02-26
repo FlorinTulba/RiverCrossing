@@ -100,33 +100,36 @@ class IdsConfigTag {};
 class IdsGroupTag {};
 
 // Declaring the rules
-bsx::rule<LogicalExprTag, std::shared_ptr<const rc::cond::LogicalExpr>>
+inline bsx::rule<LogicalExprTag, std::shared_ptr<const rc::cond::LogicalExpr>>
     logicalExpr{"logicalExpr"};
-bsx::rule<ConditionTag, std::shared_ptr<const rc::cond::LogicalExpr>> condition{
-    "condition"};
-bsx::rule<ValueSetTag, rc::cond::ValueSet> valueSet{"valueSet"};
-bsx::rule<ValueOrRangeTag, std::shared_ptr<const rc::cond::ValueOrRange>>
+inline bsx::rule<ConditionTag, std::shared_ptr<const rc::cond::LogicalExpr>>
+    condition{"condition"};
+inline bsx::rule<ValueSetTag, rc::cond::ValueSet> valueSet{"valueSet"};
+inline bsx::rule<ValueOrRangeTag, std::shared_ptr<const rc::cond::ValueOrRange>>
     valueOrRange{"valueOrRange"};
-bsx::rule<MathExprTag, std::shared_ptr<const rc::cond::NumericExpr>> mathExpr{
-    "mathExpr"};
-bsx::rule<LeftRecursiveMathExprTag,
-          std::shared_ptr<const rc::cond::NumericExpr>>
+inline bsx::rule<MathExprTag, std::shared_ptr<const rc::cond::NumericExpr>>
+    mathExpr{"mathExpr"};
+inline bsx::rule<LeftRecursiveMathExprTag,
+                 std::shared_ptr<const rc::cond::NumericExpr>>
     leftRecursiveMathExpr{"leftRecursiveMathExpr"};
-bsx::rule<OperandTag, std::shared_ptr<const rc::cond::NumericExpr>> operand{
-    "operand"};
-bsx::rule<UnfencedOperandTag, std::shared_ptr<const rc::cond::NumericExpr>>
+inline bsx::rule<OperandTag, std::shared_ptr<const rc::cond::NumericExpr>>
+    operand{"operand"};
+inline bsx::rule<UnfencedOperandTag,
+                 std::shared_ptr<const rc::cond::NumericExpr>>
     unfencedOperand{"unfencedOperand"};
-bsx::rule<ValueTag, std::shared_ptr<const rc::cond::NumericExpr>> value{
+inline bsx::rule<ValueTag, std::shared_ptr<const rc::cond::NumericExpr>> value{
     "value"};
-bsx::rule<VariableTag, std::string> variable{"variable"};
-bsx::rule<CrossingDurationForConfigurationsTag,
-          ConfigurationsTransferDurationInitType>
+inline bsx::rule<VariableTag, std::string> variable{"variable"};
+inline bsx::rule<CrossingDurationForConfigurationsTag,
+                 ConfigurationsTransferDurationInitType>
     crossingDurationForConfigurations{"crossingDurationForConfigurations"};
-bsx::rule<ConfigurationsTag, ConstraintsVec> configurations{"configurations"};
-bsx::rule<TypesConfigTag, rc::cond::TypesConstraint> typesConfig{"typesConfig"};
-bsx::rule<TypeNameTag, std::string> typeName{"typeName"};
-bsx::rule<IdsConfigTag, rc::cond::IdsConstraint> idsConfig{"idsConfig"};
-bsx::rule<IdsGroupTag, std::vector<unsigned>> idsGroup{"idsGroup"};
+inline bsx::rule<ConfigurationsTag, ConstraintsVec> configurations{
+    "configurations"};
+inline bsx::rule<TypesConfigTag, rc::cond::TypesConstraint> typesConfig{
+    "typesConfig"};
+inline bsx::rule<TypeNameTag, std::string> typeName{"typeName"};
+inline bsx::rule<IdsConfigTag, rc::cond::IdsConstraint> idsConfig{"idsConfig"};
+inline bsx::rule<IdsGroupTag, std::vector<unsigned>> idsGroup{"idsGroup"};
 
 // Defining the rules and their semantic actions
 namespace bsa = bsx::ascii;
@@ -145,16 +148,15 @@ using bsx::uint_;
 
 using boost::fusion::at_c;
 
-// TODO: find a way to prevent formatting syntax definitions
+// Suppress -Wglobal-constructors for parser-expression objects created here.
+MUTE_GLOBAL_CTOR_WARN
 
 // Semantic actions and definition for 'logicalExpr'
 template <class Type>
-const auto createWith1Param = [](const auto& ctx) noexcept {
+inline const auto createWith1Param = [](const auto& ctx) {
   _val(ctx) = std::make_shared<const Type>(_attr(ctx));
 };
-const auto forwardAttr = [](const auto& ctx) noexcept {
-  _val(ctx) = _attr(ctx);
-};
+const auto forwardAttr = [](const auto& ctx) { _val(ctx) = _attr(ctx); };
 const auto logicalExpr_def = omit[-("if" > +blank)] >
                              ((("not" >> omit[*blank]) > ('(' >> omit[*blank]) >
                                (condition >> omit[*blank]) >
@@ -162,7 +164,7 @@ const auto logicalExpr_def = omit[-("if" > +blank)] >
                               condition[forwardAttr]);
 
 // Semantic actions and definition for 'condition'
-const auto setBoolConst = [](const auto& ctx) noexcept {
+const auto setBoolConst = [](const auto& ctx) {
   using namespace std;
 
   bool b{true};
@@ -171,12 +173,13 @@ const auto setBoolConst = [](const auto& ctx) noexcept {
   _val(ctx) = make_shared<const rc::cond::BoolConst>(b);
 };
 
-const auto belongTo = [](const auto& ctx) noexcept {
+const auto belongTo = [](const auto& ctx) {
   using namespace rc::cond;
 
   auto belongExpr = std::make_shared<const BelongToCondition<double>>(
       boost::get<std::shared_ptr<const NumericExpr>>(at_c<0>(_attr(ctx))),
       std::make_shared<const ValueSet>(at_c<2>(_attr(ctx))));
+
   if (at_c<1>(_attr(ctx)))  // optional<bool> set on true when parsing 'not'
     _val(ctx) = std::make_shared<const Not>(belongExpr);
   else
@@ -191,7 +194,7 @@ const auto condition_def =
      valueSet > '}')[belongTo];
 
 // Semantic actions and definition for 'valueSet'
-const auto appendToValueSet = [](const auto& ctx) noexcept {
+const auto appendToValueSet = [](const auto& ctx) {
   _val(ctx).add(*_attr(ctx));
 };
 
@@ -203,7 +206,7 @@ const auto valueSet_def = omit[*blank] >> !blank >>
 
 // Semantic actions and definition for 'valueOrRange'
 template <class Type>
-const auto createWith2Params = [](const auto& ctx) {
+inline const auto createWith2Params = [](const auto& ctx) {
   _val(ctx) =
       std::make_shared<const Type>(at_c<0>(_attr(ctx)), at_c<1>(_attr(ctx)));
 };
@@ -244,7 +247,7 @@ const auto variable_def = '%' > typeName > '%';
 const auto setDurationForConfigs = [](const auto& ctx) {
   _val(ctx).setDuration(_attr(ctx));
 };
-const auto configsWithSameDuration = [](const auto& ctx) noexcept {
+const auto configsWithSameDuration = [](const auto& ctx) {
   _val(ctx).setConstraints(std::move(_attr(ctx)));
 };
 const auto crossingDurationForConfigurations_def =
@@ -290,7 +293,7 @@ const auto typeName_def = alpha > *(alnum | char_("-_")) > !alnum >
                           !char_("-_");
 
 // Semantic actions and definition for 'idsConfig'
-const auto unspecifiedMandatory = [](const auto& ctx) noexcept {
+const auto unspecifiedMandatory = [](const auto& ctx) {
   _val(ctx).addUnspecifiedMandatory();
 };
 
@@ -313,7 +316,7 @@ const auto handleIdGroup = [](const auto& ctx) {
     _val(ctx).addMandatoryGroup(at_c<0>(_attr(ctx)));
 };
 
-const auto unboundedIdConfig = [](const auto& ctx) noexcept {
+const auto unboundedIdConfig = [](const auto& ctx) {
   _val(ctx).setUnbounded();
 };
 
@@ -349,6 +352,8 @@ BOOST_SPIRIT_DEFINE(logicalExpr,
                     idsConfig,
                     idsGroup)
 
+UNMUTE_WARNING
+
 /**
   Extracts the semantic from an expression based on a given rule.
   Displays on cerr any encountered problem.
@@ -375,10 +380,10 @@ template <class RuleType>
 
     // Separate definition of problem avoids MSVC warning 4866
     const string problem{reachedPoint, itEnd};
-    oss << "\tThere is a problem with: " << quoted(problem, '`') << endl;
+    oss << "\tThere is a problem with: " << quoted(problem, '`') << '\n';
 
   } catch (const bsx::expectation_failure<string::const_iterator>& e) {
-    oss << "\tExpecting " << boost::core::demangle(e.which().c_str()) << endl;
+    oss << "\tExpecting " << boost::core::demangle(e.which().c_str()) << '\n';
 
     // Separate definition of problem avoids MSVC warning 4866
     const string got{e.where(), itEnd};
@@ -389,7 +394,8 @@ template <class RuleType>
   }
 
   cerr << "Expression `" << s << "` didn't parse correctly.\n"
-       << oss.str() << endl;
+       << oss.str() << '\n'
+       << flush;
 
   return false;
 }

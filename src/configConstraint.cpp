@@ -15,9 +15,9 @@
 #ifdef UNIT_TESTING
 
 /*
-  This include allows recompiling only the Unit tests project when updating the
-  tests. It also keeps the count of total code units to recompile to a minimum
-  value.
+This include allows recompiling only the Unit tests project when updating the
+tests. It also keeps the count of total code units to recompile to a minimum
+value.
 */
 #define CPP_CONFIG_CONSTRAINT
 #include "configConstraint.hpp"
@@ -32,6 +32,7 @@
 #include "warnings.h"
 
 #include <cmath>
+#include <exception>
 #include <iomanip>
 #include <ranges>
 
@@ -70,21 +71,30 @@ DefConfigConstraintValidatorExt::INST() noexcept {
   return inst;
 }
 
-#pragma warning(disable : WARN_MSVC_EXPLICIT_NEW_DELETE)
+MUTE_EXPLICIT_NEW_DELETE_WARN
 unique_ptr<const DefConfigConstraintValidatorExt>
-DefConfigConstraintValidatorExt::NEW_INST() {
+DefConfigConstraintValidatorExt::NEW_INST() noexcept {
   // Using new instead of make_unique, since the ctor is private
   // and not a friend of make_unique
   return unique_ptr<const DefConfigConstraintValidatorExt>{
-      new DefConfigConstraintValidatorExt};
+      makeNoexcept([]() -> gsl::owner<DefConfigConstraintValidatorExt*> {
+        // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new)
+        return new DefConfigConstraintValidatorExt;
+      })};
 }
 
 const shared_ptr<const DefContextValidator>&
-DefContextValidator::SHARED_INST() {
+DefContextValidator::SHARED_INST() noexcept {
+  MUTE_EXIT_TIME_DTOR_WARN
   // Using new instead of make_shared, since the ctor is private
   // and not a friend of make_shared
-  static const shared_ptr<const DefContextValidator> inst{
-      new DefContextValidator};
+  static const shared_ptr<const DefContextValidator> inst{makeNoexcept([] {
+    return shared_ptr<const DefContextValidator>{
+        // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new)
+        new DefContextValidator};
+  })};
+  UNMUTE_WARNING
+
   return inst;
 }
 
@@ -113,7 +123,7 @@ bool AbsContextValidator::validate(const ent::MovingEntities& ents,
       if (boost::logic::indeterminate(excAssessment))
         throw;  // not an exempted case
 
-      resultOwnValidator = (bool)excAssessment;
+      resultOwnValidator = static_cast<bool>(excAssessment);
 
     } else
       throw;  // no saving exception handler
@@ -137,11 +147,11 @@ DefTransferConstraintsExt::NEW_INST() {
   return unique_ptr<const DefTransferConstraintsExt>{
       new DefTransferConstraintsExt};
 }
-#pragma warning(default : WARN_MSVC_EXPLICIT_NEW_DELETE)
+UNMUTE_WARNING
 
 unique_ptr<const IConfigConstraintValidatorExt>
-DefTransferConstraintsExt::configValidatorExt() const {
-  return {DefConfigConstraintValidatorExt::NEW_INST()};
+DefTransferConstraintsExt::configValidatorExt() const noexcept {
+  return DefConfigConstraintValidatorExt::NEW_INST();
 }
 
 AbsTransferConstraintsExt::~AbsTransferConstraintsExt() noexcept {
@@ -149,7 +159,7 @@ AbsTransferConstraintsExt::~AbsTransferConstraintsExt() noexcept {
 }
 
 AbsTransferConstraintsExt::AbsTransferConstraintsExt(
-    unique_ptr<const ITransferConstraintsExt> nextExt_)
+    unique_ptr<const ITransferConstraintsExt> nextExt_) noexcept
     : nextExt{nextExt_.release()} {}
 
 unique_ptr<const IConfigConstraintValidatorExt>
@@ -191,15 +201,18 @@ bool ConfigConstraints::check(const ent::IsolatedEntities& ents) const {
       found = true;
 #ifndef NDEBUG
       if (!_allowed)
-        cout << "violates NOT{" << *c
-             << "} : " << ContView{ents.ids(), {"", " ", "\n"}};
+        cout << "violates NOT{" << *c << "} : "
+             << ContView{ents.ids(),
+                         {.before = "", .between = " ", .after = "\n"}}
+             << flush;
 #endif  // NDEBUG
       break;
     }
 #ifndef NDEBUG
   if (_allowed != found)
     cout << "violates " << *this << " : "
-         << ContView{ents.ids(), {"", " ", "\n"}};
+         << ContView{ents.ids(), {.before = "", .between = " ", .after = "\n"}}
+         << flush;
 #endif  // NDEBUG
   return found == _allowed;
 }
@@ -212,10 +225,11 @@ string ConfigConstraints::toString() const {
   if (!_allowed)
     oss << "NOT";
 
-  oss << ContView{
-      constraints,
-      {"{ ", " ; ", " }"},
-      [](const auto& pConf) -> const IConfigConstraint& { return *pConf; }};
+  oss << ContView{constraints,
+                  {.before = "{ ", .between = " ; ", .after = " }"},
+                  [](const auto& pConf) noexcept -> const IConfigConstraint& {
+                    return *pConf;
+                  }};
   return oss.str();
 }
 
@@ -242,10 +256,12 @@ bool TransferConstraints::check(const ent::IsolatedEntities& ents) const {
   const auto& entsIds = ents.ids();
 #endif  // NDEBUG
 
-  if ((unsigned)ents.count() > *capacity) {
+  if (ents.count() > static_cast<size_t>(*capacity)) {
 #ifndef NDEBUG
     cout << "violates capacity constraint [ " << ents.count() << " > "
-         << *capacity << " ] : " << ContView{entsIds, {"", " ", "\n"}};
+         << *capacity << " ] : "
+         << ContView{entsIds, {.before = "", .between = " ", .after = "\n"}}
+         << flush;
 #endif  // NDEBUG
     return false;
   }
@@ -262,19 +278,17 @@ unsigned TransferConstraints::minRequiredCapacity() const noexcept {
     cap = 0U;
     for (const auto& c : constraints) {
       const unsigned longestMatchLength{c->longestMatchLength()};
-      if (cap < longestMatchLength)
-        cap = longestMatchLength;
+      cap = std::max(cap, longestMatchLength);
     }
   } else {  // disallowed
     cap = UINT_MAX;
     for (const auto& c : constraints) {
       const unsigned longestMismatchLength{c->longestMismatchLength()};
-      if (cap > longestMismatchLength)
-        cap = longestMismatchLength;
+      cap = std::min(cap, longestMismatchLength);
     }
   }
 
-  return min(cap, ((unsigned)allEnts->count() - 1U));
+  return min(cap, (static_cast<unsigned>(allEnts->count()) - 1U));
 }
 
 ConfigurationsTransferDuration::ConfigurationsTransferDuration(
@@ -285,7 +299,11 @@ ConfigurationsTransferDuration::ConfigurationsTransferDuration(
     /* = DefTransferConstraintsExt::INST()*/)
     : constraints{std::move(initType.moveConstraints()), allEnts_, capacity,
                   true, extension_},
-      _duration{initType.duration()} {}
+      _duration{initType.duration()} {
+  // Silence 'rvalue never moved' warning for initType, since the move is
+  // already done in the member initializer list
+  const auto dummy{std::move(initType)};
+}
 
 const TransferConstraints& ConfigurationsTransferDuration::configConstraints()
     const noexcept {
@@ -322,7 +340,7 @@ void TypesConstraint::validate(
   for (const auto& typeAndLimits : mandatoryTypes) {
     const string& t{typeAndLimits.first};
     const set<unsigned>& matchingIds{idsByTypes.at(t)};
-    const size_t minLim{(size_t)typeAndLimits.second.first};
+    const size_t minLim{static_cast<size_t>(typeAndLimits.second.first)};
     const size_t available{size(matchingIds)};
     if (minLim > available)
       throw logic_error{HERE.function_name() + " - Constraint `"s + toString() +
@@ -333,7 +351,7 @@ void TypesConstraint::validate(
     minRequiredCount += minLim;
   }
 
-  if (minRequiredCount > (size_t)capacity)
+  if (minRequiredCount > static_cast<size_t>(capacity))
     throw logic_error{HERE.function_name() + " - Constraint `"s + toString() +
                       "` is asking for more entities ("s +
                       to_string(minRequiredCount) + ") than the capacity ("s +
@@ -357,7 +375,8 @@ TypesConstraint& TypesConstraint::addTypeRange(
   if (!maxIncl) {
     cout << "[Notification] " << HERE.function_name()
          << ": Unnecessary term within the configuration: 0 x " << newType
-         << endl;
+         << '\n'
+         << flush;
     return *this;
   }
 
@@ -383,33 +402,37 @@ bool TypesConstraint::matches(
   if (size(entsByTypes) > size(mandatoryTypes) + size(optionalTypes))
     return false;  // too many types
 
-  const auto itEnd = entsByTypes.cend();
+  const auto itEnd{entsByTypes.cend()};
 
   for (const auto& typeRange : mandatoryTypes) {
-    auto it = entsByTypes.find(typeRange.first);
+    const auto it{makeNoexcept([&entsByTypes, &typeRange] {
+      return entsByTypes.find(typeRange.first);
+    })};
     if (it == itEnd)
       return false;  // expected type not present
 
-    const unsigned count{(unsigned)size(it->second)};
+    const unsigned count{gsl::narrow_cast<unsigned>(size(it->second))};
     if (count < typeRange.second.first || count > typeRange.second.second)
       return false;  // too few / many of this expected type
   }
 
   for (const auto& typeRange : optionalTypes) {
-    auto it = entsByTypes.find(typeRange.first);
+    const auto it{makeNoexcept([&entsByTypes, &typeRange] {
+      return entsByTypes.find(typeRange.first);
+    })};
     if (it == itEnd)
       continue;  // type not present
     const unsigned maxIncl{typeRange.second};
-    const unsigned count{(unsigned)size(it->second)};
+    const unsigned count{gsl::narrow_cast<unsigned>(size(it->second))};
     if (count > maxIncl)
       return false;  // too many of this optional type
   }
 
   for (const auto& idsWithType : entsByTypes) {
     const string& type{idsWithType.first};
-    if (mandatoryTypes.contains(type))
+    if (makeNoexcept([this, &type] { return mandatoryTypes.contains(type); }))
       continue;
-    if (!optionalTypes.contains(type))
+    if (!makeNoexcept([this, &type] { return optionalTypes.contains(type); }))
       return false;  // found unwanted type
   }
 
@@ -471,9 +494,10 @@ void IdsConstraint::validate(
     const IConfigConstraintValidatorExt& valExt
     /* = DefConfigConstraintValidatorExt::INST()*/) const {
   const size_t requiredIdsCount{size(mandatoryGroups) +
-                                (size_t)expectedExtraIds},
-      available{allEnts.count()};
-  if (requiredIdsCount > (size_t)capacity)
+                                static_cast<size_t>(expectedExtraIds)};
+  const size_t available{allEnts.count()};
+
+  if (requiredIdsCount > static_cast<size_t>(capacity))
     throw logic_error{HERE.function_name() + " - Constraint `"s + toString() +
                       "` is asking for more entities ("s +
                       to_string(requiredIdsCount) + ") than the capacity ("s +
@@ -500,7 +524,7 @@ IdsConstraint& IdsConstraint::addMandatoryId(unsigned id) {
     throw logic_error{HERE.function_name() + " - Duplicate id parameter: "s +
                       to_string(id)};
 
-  mandatoryGroups.push_back({});
+  mandatoryGroups.emplace_back();
   mandatoryGroups.back().insert(id);
 
   if (_longestMatchLength != UINT_MAX)
@@ -514,7 +538,7 @@ IdsConstraint& IdsConstraint::addOptionalId(unsigned id) {
     throw logic_error{HERE.function_name() + " - Duplicate id parameter: "s +
                       to_string(id)};
 
-  optionalGroups.push_back({});
+  optionalGroups.emplace_back();
   optionalGroups.back().insert(id);
 
   if (_longestMatchLength != UINT_MAX)
@@ -549,45 +573,57 @@ IdsConstraint& IdsConstraint::setUnbounded() noexcept {
   return *this;
 }
 
+bool IdsConstraint::satisfiedGroups(set<unsigned>& ids,
+                                    bool forMandatory) const noexcept {
+  const auto& groups{forMandatory ? mandatoryGroups : optionalGroups};
+
+  for (const auto& group : groups) {
+    bool found{};
+    for (const unsigned id : group)
+      if (ids.erase(id)) {
+        if (found)       // detected a 2nd entity from this group
+          return false;  // only 1 entity from a group can appear
+
+        found = true;  // detected 1st entity from this group
+      }
+
+    if (!found && forMandatory)
+      return false;  // mandatory group not covered
+  }
+
+  return true;
+}
+
+bool IdsConstraint::canSatisfyMandatoryGroups(
+    set<unsigned>& ids) const noexcept {
+  const size_t expectedMandatoryIds{size(mandatoryGroups) +
+                                    static_cast<size_t>(expectedExtraIds)};
+
+  if (size(ids) < expectedMandatoryIds)
+    return false;  // there can't be enough mandatory id-s
+
+  return satisfiedGroups(ids, true);
+}
+
 bool IdsConstraint::matches(const ent::IsolatedEntities& ents) const noexcept {
-  set<unsigned> ids{ents.ids()};
+  set<unsigned> ids{makeCopyNoexcept(ents.ids())};
 
   for (const unsigned id : avoidedIds)
     if (ids.erase(id))
       return false;  // found unwanted entity id
 
-  const unsigned expectedMandatoryIds{(unsigned)size(mandatoryGroups) +
-                                      expectedExtraIds};
+  if (!canSatisfyMandatoryGroups(ids))
+    return false;
 
-  if (size(ids) < (size_t)expectedMandatoryIds)
-    return false;  // there can't be enough mandatory id-s
+  if (!satisfiedGroups(ids, false))
+    return false;
 
-  for (const auto& group : mandatoryGroups) {
-    bool found{};
-    for (const unsigned id : group)
-      if (ids.erase(id)) {
-        if (found)       // detected a 2nd entity from this mandatory group
-          return false;  // only 1 entity from a mandatory group can appear
-        found = true;    // detected 1st entity from this mandatory group
-      }
-    if (!found)
-      return false;  // mandatory group not covered
-  }
-
-  for (const auto& group : optionalGroups) {
-    bool found{};
-    for (const unsigned id : group)
-      if (ids.erase(id)) {
-        if (found)       // detected a 2nd entity from this optional group
-          return false;  // only 1 entity from a optional group can appear
-        found = true;    // detected 1st entity from this optional group
-      }
-  }
-
-  if (size(ids) < (size_t)expectedExtraIds)
+  const auto remainingIdsCount{size(ids)};
+  if (remainingIdsCount < static_cast<size_t>(expectedExtraIds))
     return false;  // not enough mandatory extra id-s
 
-  if (capacityLimit && (size(ids) > (size_t)expectedExtraIds))
+  if (capacityLimit &&
+      (remainingIdsCount > static_cast<size_t>(expectedExtraIds)))
     return false;  // more id-s than the limit
 
   return true;
@@ -622,7 +658,7 @@ string IdsConstraint::toString() const {
       if (size(group) == 1ULL)
         oss << *cbegin(group);
       else
-        oss << ContView{group, {"(", "|", ")"}};
+        oss << ContView{group, {.before = "(", .between = "|", .after = ")"}};
       oss << ' ';
     }
 
@@ -635,7 +671,8 @@ string IdsConstraint::toString() const {
   }
 
   if (!avoidedIds.empty())
-    oss << " Avoided=" << ContView{avoidedIds, {"{", ",", "}"}};
+    oss << " Avoided="
+        << ContView{avoidedIds, {.before = "{", .between = ",", .after = "}"}};
 
   if (!optionalGroups.empty()) {
     oss << " Optional={";
@@ -643,7 +680,7 @@ string IdsConstraint::toString() const {
       if (size(group) == 1ULL)
         oss << *cbegin(group);
       else
-        oss << ContView{group, {"(", "|", ")"}};
+        oss << ContView{group, {.before = "(", .between = "|", .after = ")"}};
       oss << ' ';
     }
 
@@ -659,9 +696,7 @@ string IdsConstraint::toString() const {
   return oss.str();
 }
 
-BoolConst::BoolConst(bool b) noexcept : LogicalExpr{} {
-  val = b;
-}
+BoolConst::BoolConst(bool b) noexcept : LogicalExpr{b} {}
 
 bool BoolConst::eval(const SymbolsTable&) const noexcept {
   return *val;
@@ -673,19 +708,16 @@ string BoolConst::toString() const {
   return oss.str();
 }
 
-Not::Not(const shared_ptr<const LogicalExpr>& le) : LogicalExpr{}, _le{le} {
-  if (_le->constValue())
-    val = !*_le->constValue();
-}
+Not::Not(const shared_ptr<const LogicalExpr>& le)
+    : LogicalExpr{le->constValue().transform([](bool b) { return !b; })},
+      _le{le} {}
 
 bool Not::dependsOnVariable(const string& varName) const noexcept {
   return _le->dependsOnVariable(varName);
 }
 
 bool Not::eval(const SymbolsTable& st) const {
-  if (val)
-    return *val;
-  return !_le->eval(st);
+  return val.value_or(!_le->eval(st));
 }
 
 string Not::toString() const {
@@ -716,7 +748,7 @@ void ValueOrRange::validate() const {
     const auto& [from_, to_] = get<RangeType>(_valueOrRange);
     const optional<double>& from{
         gsl::not_null<const ValueType>(from_)->constValue()};
-    if (from)
+    if (from.has_value())
       validateDouble(*from);
 
     if (to_) {
@@ -746,8 +778,7 @@ ValueOrRange::~ValueOrRange() noexcept {
   _valueOrRange = {};
 }
 
-ValueOrRange::ValueOrRange(const ValueOrRange& other) noexcept
-    : _valueOrRange{other._valueOrRange} {}
+ValueOrRange::ValueOrRange(const ValueOrRange&) noexcept = default;
 
 ValueOrRange::ValueOrRange(ValueOrRange&& other) noexcept
     : _valueOrRange{std::move(other._valueOrRange)} {}
@@ -791,7 +822,8 @@ pair<double, double> ValueOrRange::range(const SymbolsTable& st) const {
     throw logic_error{HERE.function_name() +
                       " - cannot be called on a simple value!"s};
   const RangeType range{get<RangeType>(_valueOrRange)};
-  const double from{range.first->eval(st)}, to{range.second->eval(st)};
+  const double from{range.first->eval(st)};
+  const double to{range.second->eval(st)};
   validateDouble(from);
   validateDouble(to);
   validateRange(from, to);
@@ -811,7 +843,8 @@ string ValueOrRange::toString() const {
 }
 
 ValueSet& ValueSet::add(const ValueOrRange& vor) noexcept {
-  vors.push_back(vor);
+  makeNoexcept([this, &vor] { vors.push_back(vor); });
+
   if (isConst && !vor.isConst())
     isConst = false;
 
@@ -826,11 +859,9 @@ bool ValueSet::dependsOnVariable(const string& varName) const noexcept {
   if (isConst)
     return false;
 
-  for (const ValueOrRange& vor : vors)
-    if (vor.dependsOnVariable(varName))
-      return true;
-
-  return false;
+  return ranges::any_of(vors, [&varName](const ValueOrRange& vor) noexcept {
+    return vor.dependsOnVariable(varName);
+  });
 }
 
 bool ValueSet::constSet() const noexcept {
@@ -839,24 +870,25 @@ bool ValueSet::constSet() const noexcept {
 
 bool ValueSet::contains(const double& v,
                         const SymbolsTable& st /* = {}*/) const {
-  for (const ValueOrRange& vor : vors) {
+  return ranges::any_of(vors, [&st, v](const ValueOrRange& vor) {
     if (vor.isRange()) {
       const auto limits = vor.range(st);
       if (limits.first <= v && limits.second >= v)
         return true;
+
     } else if (abs(v - vor.value(st)) < Eps)
       return true;
-  }
-  return false;
+
+    return false;
+  });
 }
 
 string ValueSet::toString() const {
-  return ContView{vors, {"{", ", ", "}"}}.toString();
+  return ContView{vors, {.before = "{", .between = ", ", .after = "}"}}
+      .toString();
 }
 
-NumericConst::NumericConst(double d) noexcept : NumericExpr() {
-  val = d;
-}
+NumericConst::NumericConst(double d) noexcept : NumericExpr{d} {}
 
 double NumericConst::eval(const SymbolsTable&) const noexcept {
   return *val;
@@ -868,8 +900,8 @@ string NumericConst::toString() const {
   return oss.str();
 }
 
-NumericVariable::NumericVariable(const string& varName) noexcept
-    : NumericExpr{}, name(varName) {}
+NumericVariable::NumericVariable(string varName) noexcept
+    : name{std::move(varName)} {}
 
 bool NumericVariable::dependsOnVariable(const string& varName) const noexcept {
   return name == varName;
@@ -880,27 +912,27 @@ double NumericVariable::eval(const SymbolsTable& st) const {
 }
 
 string NumericVariable::toString() const noexcept {
-  return name;
+  return makeCopyNoexcept(name);
 }
 
 Addition::Addition(const shared_ptr<const NumericExpr>& left_,
-                   const shared_ptr<const NumericExpr>& right_)
-    : left(left_), right(right_) {
-  // when both terms are constants, set the result directly
-  if (left_->constValue() && right_->constValue()) {
-    val = *(left_->constValue()) + *(right_->constValue());
-  }
-}
+                   const shared_ptr<const NumericExpr>& right_) noexcept
+    : NumericExpr{[&left_, &right_]() noexcept -> optional<double> {
+        if (const auto &lOpt{left_->constValue()}, &rOpt{right_->constValue()};
+            lOpt.has_value() && rOpt.has_value())
+          return make_optional(lOpt.value() + rOpt.value());
+        return nullopt;
+      }()},
+      left(left_),
+      right(right_) {}
 
 bool Addition::dependsOnVariable(const string& varName) const noexcept {
-  return !val && (left->dependsOnVariable(varName) ||
-                  right->dependsOnVariable(varName));
+  return !val.has_value() && (left->dependsOnVariable(varName) ||
+                              right->dependsOnVariable(varName));
 }
 
 double Addition::eval(const SymbolsTable& st) const {
-  if (val)  // return the sum directly if it involves only constants
-    return *val;
-  return left->eval(st) + right->eval(st);
+  return val.value_or(left->eval(st) + right->eval(st));
 }
 
 string Addition::toString() const {
@@ -910,8 +942,8 @@ string Addition::toString() const {
 }
 
 long Modulus::validLong(double v) {
-  const long result{(long)v};
-  if (abs(v - (double)result) > Eps)
+  const long result{static_cast<long>(v)};
+  if (abs(v - static_cast<double>(result)) > Eps)
     throw logic_error{HERE.function_name() +
                       " - Operands of modulus need to be integer values!"s};
   return result;
@@ -929,40 +961,42 @@ long Modulus::validOperation(long numeratorL, long denominatorL) {
 
 Modulus::Modulus(const shared_ptr<const NumericExpr>& numerator_,
                  const shared_ptr<const NumericExpr>& denominator_)
-    : numerator(numerator_), denominator(denominator_) {
+    : numerator(numerator_),
+      denominator(denominator_) {
   // when the denominator is 1 or -1, the result is always 0
-  const bool hasConstDenominator{(bool)denominator_->constValue()};
-  if (hasConstDenominator &&
-      1L == abs(validLong(*denominator_->constValue()))) {
+  const auto& denomValOpt{denominator->constValue()};
+  const bool hasConstDenominator{denomValOpt.has_value()};
+  if (hasConstDenominator && 1L == abs(validLong(denomValOpt.value()))) {
     val = 0.;
     return;
   }
 
-  const bool hasConstNumerator{(bool)numerator_->constValue()};
+  const auto& numerValOpt{numerator->constValue()};
+  const bool hasConstNumerator{numerValOpt.has_value()};
   if (hasConstNumerator) {
-    const long numeratorL{validLong(*(numerator_->constValue()))};
+    const long numeratorL{validLong(numerValOpt.value())};
 
     // when both terms are constants, set the result directly
     if (hasConstDenominator) {
-      const long denominatorL{validLong(*(denominator_->constValue()))};
-      val = (double)validOperation(numeratorL, denominatorL);
+      const long denominatorL{validLong(denomValOpt.value())};
+      val = static_cast<double>(validOperation(numeratorL, denominatorL));
       return;
     }
   }
 }
 
 bool Modulus::dependsOnVariable(const string& varName) const noexcept {
-  return !val && (numerator->dependsOnVariable(varName) ||
-                  denominator->dependsOnVariable(varName));
+  return !val.has_value() && (numerator->dependsOnVariable(varName) ||
+                              denominator->dependsOnVariable(varName));
 }
 
 double Modulus::eval(const SymbolsTable& st) const {
   if (val)  // return the modulus directly if it involves only constants
     return *val;
 
-  const long numeratorL{validLong(numerator->eval(st))},
-      denominatorL{validLong(denominator->eval(st))};
-  return (double)validOperation(numeratorL, denominatorL);
+  const long numeratorL{validLong(numerator->eval(st))};
+  const long denominatorL{validLong(denominator->eval(st))};
+  return static_cast<double>(validOperation(numeratorL, denominatorL));
 }
 
 string Modulus::toString() const {

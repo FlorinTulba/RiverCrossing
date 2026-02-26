@@ -15,9 +15,9 @@
 #ifdef UNIT_TESTING
 
 /*
-  This include allows recompiling only the Unit tests project when updating the
-  tests. It also keeps the count of total code units to recompile to a minimum
-  value.
+This include allows recompiling only the Unit tests project when updating the
+tests. It also keeps the count of total code units to recompile to a minimum
+value.
 */
 #define CPP_ENTITIES_MANAGER
 #include "entitiesManager.hpp"
@@ -162,23 +162,31 @@ const vector<unsigned>& AllEntities::idsStartingFromRightBank() const noexcept {
 }
 
 string AllEntities::toString() const {
-  return ContView{entities,
-                  {"Entities: [ ", ", ", " ]"},
-                  [](const auto& pEnt) -> const IEntity& { return *pEnt; }}
+  return ContView{
+      entities,
+      {.before = "Entities: [ ", .between = ", ", .after = " ]"},
+      [](const auto& pEnt) noexcept -> const IEntity& { return *pEnt; }}
       .toString();
 }
 
+bool IsolatedEntities::refersToSameScenario(
+    const IsolatedEntities& other) const noexcept {
+  return all.get() == other.all.get();
+}
+
 IsolatedEntities::IsolatedEntities(const IsolatedEntities& other) noexcept
-    : all{other.all}, _ids{other._ids}, byType{other.byType} {}
+    : all{other.all},
+      _ids{makeCopyNoexcept(other._ids)},
+      byType{makeCopyNoexcept(other.byType)} {}
 
 IsolatedEntities::IsolatedEntities(IsolatedEntities&& other) noexcept
     : all{other.all},
-      _ids{std::move(other._ids)},
-      byType{std::move(other.byType)} {}
+      _ids{makeMoveNoexcept(std::move(other._ids))},
+      byType{makeMoveNoexcept(std::move(other.byType))} {}
 
 IsolatedEntities& IsolatedEntities::operator=(const IsolatedEntities& other) {
   if (&other != this) {
-    if (all.get() != other.all.get())
+    if (!refersToSameScenario(other))
       throw logic_error{HERE.function_name() +
                         " - Don't assign a group that refers entities from a "
                         "different scenario!"s};
@@ -187,21 +195,11 @@ IsolatedEntities& IsolatedEntities::operator=(const IsolatedEntities& other) {
   }
   return *this;
 }
-IsolatedEntities& IsolatedEntities::operator=(IsolatedEntities&& other) {
-  if (&other != this) {
-    if (all.get() != other.all.get())
-      throw logic_error{HERE.function_name() +
-                        " - Don't move assign a group that refers entities "
-                        "from a different scenario!"s};
-    _ids = std::move(other._ids);
-    byType = std::move(other.byType);
-  }
-  return *this;
-}
 
 IsolatedEntities& IsolatedEntities::operator=(
     const initializer_list<unsigned>& ids_) {
-  return operator=(vector(ids_));
+  operator=(vector(ids_));
+  return *this;
 }
 
 void IsolatedEntities::clear() noexcept {
@@ -252,10 +250,8 @@ const map<string, set<unsigned>>& IsolatedEntities::idsByTypes()
 }
 
 bool IsolatedEntities::anyRowCapableEnts(const SymbolsTable& st) const {
-  for (const unsigned id : _ids)
-    if ((*all)[id]->canRow(st))
-      return true;
-  return false;
+  return ranges::any_of(
+      _ids, [this, &st](unsigned id) { return (*all)[id]->canRow(st); });
 }
 
 string IsolatedEntities::toString() const {
@@ -263,7 +259,7 @@ string IsolatedEntities::toString() const {
     return "[]"s;
 
   return ContView{_ids,
-                  {"[ ", ", ", " ]"},
+                  {.before = "[ ", .between = ", ", .after = " ]"},
                   [this](unsigned id) {
                     ostringstream oss;
                     oss << (*all)[id]->name() << '(' << id << ')';
@@ -279,7 +275,8 @@ unique_ptr<IMovingEntitiesExt> DefMovingEntitiesExt::clone() const noexcept {
 AbsMovingEntitiesExt::AbsMovingEntitiesExt(
     const shared_ptr<const AllEntities>& all_,
     unique_ptr<IMovingEntitiesExt> nextExt_) noexcept
-    : all{all_}, nextExt{std::move(nextExt_)} {
+    : all{all_},
+      nextExt{std::move(nextExt_)} {
   Expects(nextExt);
 }
 
@@ -316,36 +313,31 @@ unique_ptr<IMovingEntitiesExt> AbsMovingEntitiesExt::clone() const noexcept {
 
 string AbsMovingEntitiesExt::toString(
     bool suffixesInsteadOfPrefixes /* = true*/) const noexcept {
-  // Only the matching extension categories will return non-empty strings
-  // given suffixesInsteadOfPrefixes
-  // (some display only as prefixes, the rest only as suffixes)
-  return _toString(suffixesInsteadOfPrefixes) +
-         nextExt->toString(suffixesInsteadOfPrefixes);
+  return makeNoexcept([this, suffixesInsteadOfPrefixes] {
+    // Only the matching extension categories will return non-empty strings
+    // given suffixesInsteadOfPrefixes
+    // (some display only as prefixes, the rest only as suffixes)
+    return _toString(suffixesInsteadOfPrefixes) +
+           nextExt->toString(suffixesInsteadOfPrefixes);
+  });
 }
 
 MovingEntities::MovingEntities(const MovingEntities& other) noexcept
-    : IsolatedEntities{other}, extension{other.extension->clone()} {}
-
-MovingEntities::MovingEntities(MovingEntities&& other) noexcept
-    : IsolatedEntities{std::move(other)},
-      extension{std::move(other.extension)} {}
+    : IsolatedEntities{other},
+      extension{other.extension->clone()} {}
 
 MovingEntities& MovingEntities::operator=(const MovingEntities& other) {
-  IsolatedEntities::operator=(other);
-  extension = other.extension->clone();
-  return *this;
-}
-
-MovingEntities& MovingEntities::operator=(MovingEntities&& other) noexcept(
-    !UT) {
-  IsolatedEntities::operator=(std::move(other));
-  extension = std::move(other.extension);
+  if (&other != this) {
+    IsolatedEntities::operator=(other);
+    extension = other.extension->clone();
+  }
   return *this;
 }
 
 MovingEntities& MovingEntities::operator=(
     const initializer_list<unsigned>& ids_) {
-  return operator=(vector(ids_));
+  operator=(vector(ids_));
+  return *this;
 }
 
 MovingEntities& MovingEntities::operator+=(unsigned id) {
@@ -362,7 +354,7 @@ MovingEntities& MovingEntities::operator-=(unsigned id) {
 
 void MovingEntities::clear() noexcept {
   IsolatedEntities::clear();
-  extension->newGroup({});
+  makeNoexcept([this] { extension->newGroup({}); });
 }
 
 string MovingEntities::toString() const {
@@ -373,22 +365,6 @@ string MovingEntities::toString() const {
     oss << IsolatedEntities::toString();
   }  // ensures tsm's destructor flushes to oss before the return
   return oss.str();
-}
-
-BankEntities::BankEntities(const BankEntities& other) noexcept
-    : IsolatedEntities{other} {}
-
-BankEntities::BankEntities(BankEntities&& other) noexcept
-    : IsolatedEntities{std::move(other)} {}
-
-BankEntities& BankEntities::operator=(const BankEntities& other) {
-  IsolatedEntities::operator=(other);
-  return *this;
-}
-
-BankEntities& BankEntities::operator=(BankEntities&& other) noexcept(!UT) {
-  IsolatedEntities::operator=(std::move(other));
-  return *this;
 }
 
 BankEntities& BankEntities::operator=(const initializer_list<unsigned>& ids_) {
@@ -409,10 +385,11 @@ BankEntities& BankEntities::operator-=(const MovingEntities& leftEnts) {
 }
 
 BankEntities BankEntities::operator~() const noexcept {
-  const set<unsigned> allIds{all->ids()}, theseIds{ids()};
-  vector<unsigned> restIds;
-  ranges::set_difference(allIds, theseIds, back_inserter(restIds));
-  return BankEntities{all, restIds};
+  return makeNoexcept([this] {
+    vector<unsigned> restIds;
+    ranges::set_difference(all->ids(), ids(), back_inserter(restIds));
+    return BankEntities{all, restIds};
+  });
 }
 
 size_t BankEntities::differencesCount(
@@ -420,10 +397,12 @@ size_t BankEntities::differencesCount(
   if (this == &other)
     return 0ULL;
 
-  const set<unsigned> theseIds{ids()}, otherIds{other.ids()};
-  vector<unsigned> diffIds;
-  ranges::set_symmetric_difference(otherIds, theseIds, back_inserter(diffIds));
-  return size(diffIds);
+  return makeNoexcept([this, &other] {
+    vector<unsigned> diffIds;
+    ranges::set_symmetric_difference(other.ids(), ids(),
+                                     back_inserter(diffIds));
+    return size(diffIds);
+  });
 }
 
 }  // namespace rc::ent

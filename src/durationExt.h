@@ -35,16 +35,14 @@ class TimeStateExt : public AbsStateExt {
                const std::shared_ptr<const IStateExt>& nextExt_ =
                    DefStateExt::SHARED_INST()) noexcept;
   TimeStateExt(const TimeStateExt&) = delete;
-  void operator=(const TimeStateExt&) = delete;
-  void operator=(TimeStateExt&&) = delete;
+  TimeStateExt& operator=(const TimeStateExt&) = delete;
+  TimeStateExt& operator=(TimeStateExt&&) noexcept = delete;
 
   [[nodiscard]] unsigned time() const noexcept;
 
   PROTECTED :
-
-      [[nodiscard]] std::unique_ptr<const IStateExt>
-      _clone(const std::shared_ptr<const IStateExt>& nextExt_)
-          const noexcept override;
+  [[nodiscard]] std::unique_ptr<const IStateExt> _clone(
+      const std::shared_ptr<const IStateExt>& nextExt_) const noexcept override;
 
   /// Validates the parameter state based on the constraints of the extension
   [[nodiscard]] bool _validate() const override;

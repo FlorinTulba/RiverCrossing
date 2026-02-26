@@ -36,9 +36,8 @@ class ConfigurationsTransferDurationInitType {
   [[nodiscard]] unsigned duration() const noexcept;
 
   PROTECTED :
-
-      /// Unchecked vector of configuration of same duration
-      ConstraintsVec _constraints;
+  /// Unchecked vector of configuration of same duration
+  ConstraintsVec _constraints;
   unsigned _duration{};  ///< duration of the provided configurations
 };
 
@@ -48,7 +47,7 @@ Read a NightMode syntax.
 @return the contained logical expression or NULL when reporting errors
 */
 [[nodiscard]] std::shared_ptr<const cond::LogicalExpr> parseNightModeExpr(
-    const std::string& s) noexcept;
+    const std::string& s);
 
 /**
 Read a CanRow syntax.
@@ -56,7 +55,7 @@ Read a CanRow syntax.
 @return the contained logical expression or NULL when reporting errors
 */
 [[nodiscard]] std::shared_ptr<const cond::LogicalExpr> parseCanRowExpr(
-    const std::string& s) noexcept;
+    const std::string& s);
 
 /**
 Read an AllowedLoads syntax.
@@ -64,7 +63,7 @@ Read an AllowedLoads syntax.
 @return the contained value set or NULL when reporting errors
 */
 [[nodiscard]] std::unique_ptr<const cond::IValues<double>>
-parseAllowedLoadsExpr(const std::string& s) noexcept;
+parseAllowedLoadsExpr(const std::string& s);
 
 /**
 Read a Configurations syntax.
@@ -72,7 +71,7 @@ Read a Configurations syntax.
 @return the contained configurations or None when reporting errors
 */
 [[nodiscard]] std::optional<ConstraintsVec> parseConfigurationsExpr(
-    const std::string& s) noexcept;
+    const std::string& s);
 
 /**
 Read a CrossingDurationForConfigurations syntax.
@@ -81,7 +80,7 @@ Read a CrossingDurationForConfigurations syntax.
 errors
 */
 [[nodiscard]] std::optional<ConfigurationsTransferDurationInitType>
-parseCrossingDurationForConfigurationsExpr(const std::string& s) noexcept;
+parseCrossingDurationForConfigurationsExpr(const std::string& s);
 
 }  // namespace rc::grammar
 

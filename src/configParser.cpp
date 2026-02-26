@@ -63,8 +63,7 @@ unsigned ConfigurationsTransferDurationInitType::duration() const noexcept {
   return _duration;
 }
 
-std::shared_ptr<const LogicalExpr> parseNightModeExpr(
-    const std::string& s) noexcept {
+std::shared_ptr<const LogicalExpr> parseNightModeExpr(const std::string& s) {
   std::shared_ptr<const LogicalExpr> result;
   if (tackle(s, logicalExpr, result))
     return result;
@@ -72,8 +71,7 @@ std::shared_ptr<const LogicalExpr> parseNightModeExpr(
   return {};
 }
 
-std::shared_ptr<const LogicalExpr> parseCanRowExpr(
-    const std::string& s) noexcept {
+std::shared_ptr<const LogicalExpr> parseCanRowExpr(const std::string& s) {
   std::shared_ptr<const LogicalExpr> result;
   if (tackle(s, logicalExpr, result))
     return result;
@@ -82,7 +80,7 @@ std::shared_ptr<const LogicalExpr> parseCanRowExpr(
 }
 
 std::unique_ptr<const IValues<double>> parseAllowedLoadsExpr(
-    const std::string& s) noexcept {
+    const std::string& s) {
   ValueSet result;
   if (tackle(s, valueSet, result))
     return std::make_unique<const ValueSet>(result);
@@ -90,8 +88,7 @@ std::unique_ptr<const IValues<double>> parseAllowedLoadsExpr(
   return {};
 }
 
-std::optional<ConstraintsVec> parseConfigurationsExpr(
-    const std::string& s) noexcept {
+std::optional<ConstraintsVec> parseConfigurationsExpr(const std::string& s) {
   ConstraintsVec result;
   if (tackle(s, configurations, result))
     return result;
@@ -100,7 +97,7 @@ std::optional<ConstraintsVec> parseConfigurationsExpr(
 }
 
 std::optional<ConfigurationsTransferDurationInitType>
-parseCrossingDurationForConfigurationsExpr(const std::string& s) noexcept {
+parseCrossingDurationForConfigurationsExpr(const std::string& s) {
   ConfigurationsTransferDurationInitType result;
   if (tackle(s, crossingDurationForConfigurations, result))
     return result;

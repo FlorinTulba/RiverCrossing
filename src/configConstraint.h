@@ -51,8 +51,10 @@ class AbsConfigConstraintValidatorExt
   AbsConfigConstraintValidatorExt(const AbsConfigConstraintValidatorExt&) =
       delete;
   AbsConfigConstraintValidatorExt(AbsConfigConstraintValidatorExt&&) = delete;
-  void operator=(const AbsConfigConstraintValidatorExt&) = delete;
-  void operator=(AbsConfigConstraintValidatorExt&&) = delete;
+  AbsConfigConstraintValidatorExt& operator=(
+      const AbsConfigConstraintValidatorExt&) = delete;
+  AbsConfigConstraintValidatorExt& operator=(
+      AbsConfigConstraintValidatorExt&&) noexcept = delete;
 
   /// @throw logic_error if cfg does not respect all the extensions
   void check(const IConfigConstraint& cfg,
@@ -73,9 +75,7 @@ class AbsConfigConstraintValidatorExt
                            const ent::AllEntities& /*allEnts*/) const {}
 
   PROTECTED :
-
-      gsl::not_null<gsl::owner<const IConfigConstraintValidatorExt*>>
-          nextExt;
+  gsl::not_null<gsl::owner<const IConfigConstraintValidatorExt*>> nextExt;
 };
 
 /**
@@ -94,8 +94,8 @@ class ConfigConstraints {
                     bool postponeValidation = false);
   virtual ~ConfigConstraints() noexcept = default;
 
-  void operator=(const ConfigConstraints&) = delete;
-  void operator=(ConfigConstraints&&) = delete;
+  ConfigConstraints& operator=(const ConfigConstraints&) = delete;
+  ConfigConstraints& operator=(ConfigConstraints&&) noexcept = delete;
 
   /// Are these constraints allowing certain configurations or disallowing them?
   [[nodiscard]] bool allowed() const noexcept;
@@ -121,9 +121,8 @@ class ConfigConstraints {
   ConfigConstraints(ConfigConstraints&&) noexcept = default;
 
   PROTECTED :
-
-      /// Parsed constraints to be validated
-      grammar::ConstraintsVec constraints;
+  /// Parsed constraints to be validated
+  grammar::ConstraintsVec constraints;
 
   gsl::not_null<const ent::AllEntities*> allEnts;  ///< all known entities
 
@@ -139,8 +138,8 @@ class IContextValidator {
 
   IContextValidator(const IContextValidator&) = delete;
   IContextValidator(IContextValidator&&) = delete;
-  void operator=(const IContextValidator&) = delete;
-  void operator=(IContextValidator&&) = delete;
+  IContextValidator& operator=(const IContextValidator&) = delete;
+  IContextValidator& operator=(IContextValidator&&) noexcept = delete;
 
   /// @return true if `ents` is a valid raft/bridge configuration within `st`
   /// context
@@ -159,18 +158,18 @@ class DefContextValidator final : public IContextValidator {
 
   DefContextValidator(const DefContextValidator&) = delete;
   DefContextValidator(DefContextValidator&&) = delete;
-  void operator=(const DefContextValidator&) = delete;
-  void operator=(DefContextValidator&&) = delete;
+  DefContextValidator& operator=(const DefContextValidator&) = delete;
+  DefContextValidator& operator=(DefContextValidator&&) noexcept = delete;
 
   /// Allows sharing the default instance
-  static const std::shared_ptr<const DefContextValidator>& SHARED_INST();
+  static const std::shared_ptr<const DefContextValidator>&
+  SHARED_INST() noexcept;
 
   [[nodiscard]] bool validate(const ent::MovingEntities&,
                               const SymbolsTable&) const noexcept final;
 
   PRIVATE :
-
-      DefContextValidator() noexcept = default;
+  DefContextValidator() noexcept = default;
 };
 
 /**
@@ -193,8 +192,10 @@ class IValidatorExceptionHandler {
 
   IValidatorExceptionHandler(const IValidatorExceptionHandler&) = delete;
   IValidatorExceptionHandler(IValidatorExceptionHandler&&) = delete;
-  void operator=(const IValidatorExceptionHandler&) = delete;
-  void operator=(IValidatorExceptionHandler&&) = delete;
+  IValidatorExceptionHandler& operator=(const IValidatorExceptionHandler&) =
+      delete;
+  IValidatorExceptionHandler& operator=(IValidatorExceptionHandler&&) noexcept =
+      delete;
 
   /**
   Assesses the context of the exception.
@@ -216,8 +217,8 @@ class AbsContextValidator : public IContextValidator {
 
   AbsContextValidator(const AbsContextValidator&) = delete;
   AbsContextValidator(AbsContextValidator&&) = delete;
-  void operator=(const AbsContextValidator&) = delete;
-  void operator=(AbsContextValidator&&) = delete;
+  AbsContextValidator& operator=(const AbsContextValidator&) = delete;
+  AbsContextValidator& operator=(AbsContextValidator&&) noexcept = delete;
 
   /**
   Performs local validation and then delegates to the next validator.
@@ -244,12 +245,10 @@ class AbsContextValidator : public IContextValidator {
                                         const SymbolsTable& st) const = 0;
 
   PROTECTED :
+  // using shared_ptr as more configurations might use these fields
 
-      // using shared_ptr as more configurations might use these fields
-
-      /// A chained next validator
-      gsl::not_null<std::shared_ptr<const IContextValidator>>
-          nextValidator;
+  /// A chained next validator
+  gsl::not_null<std::shared_ptr<const IContextValidator>> nextValidator;
 
   /// Possible handler for particular contexts
   std::shared_ptr<const IValidatorExceptionHandler> ownValidatorExcHandler;
@@ -262,12 +261,13 @@ class ITransferConstraintsExt {
 
   ITransferConstraintsExt(const ITransferConstraintsExt&) = delete;
   ITransferConstraintsExt(ITransferConstraintsExt&&) = delete;
-  void operator=(const ITransferConstraintsExt&) = delete;
-  void operator=(ITransferConstraintsExt&&) = delete;
+  ITransferConstraintsExt& operator=(const ITransferConstraintsExt&) = delete;
+  ITransferConstraintsExt& operator=(ITransferConstraintsExt&&) noexcept =
+      delete;
 
   /// @return validator extensions of a configuration
   [[nodiscard]] virtual std::unique_ptr<const IConfigConstraintValidatorExt>
-  configValidatorExt() const = 0;
+  configValidatorExt() const noexcept = 0;
 
   /// @return true only if cfg satisfies these extensions
   [[nodiscard]] virtual bool check(const ent::MovingEntities& cfg) const = 0;
@@ -283,8 +283,10 @@ class DefTransferConstraintsExt final : public ITransferConstraintsExt {
 
   DefTransferConstraintsExt(const DefTransferConstraintsExt&) = delete;
   DefTransferConstraintsExt(DefTransferConstraintsExt&&) = delete;
-  void operator=(const DefTransferConstraintsExt&) = delete;
-  void operator=(DefTransferConstraintsExt&&) = delete;
+  DefTransferConstraintsExt& operator=(const DefTransferConstraintsExt&) =
+      delete;
+  DefTransferConstraintsExt& operator=(DefTransferConstraintsExt&&) noexcept =
+      delete;
 
   /// Allows sharing the default instance
   static const DefTransferConstraintsExt& INST() noexcept;
@@ -295,7 +297,7 @@ class DefTransferConstraintsExt final : public ITransferConstraintsExt {
 
   /// @return new validator extensions of a configuration
   [[nodiscard]] std::unique_ptr<const IConfigConstraintValidatorExt>
-  configValidatorExt() const final;
+  configValidatorExt() const noexcept final;
 
   /// @return true only if cfg satisfies these extensions
   [[nodiscard]] bool check(const ent::MovingEntities&) const noexcept final {
@@ -303,8 +305,7 @@ class DefTransferConstraintsExt final : public ITransferConstraintsExt {
   }
 
   PRIVATE :
-
-      DefTransferConstraintsExt() noexcept = default;
+  DefTransferConstraintsExt() noexcept = default;
 };
 
 /**
@@ -328,8 +329,10 @@ class AbsTransferConstraintsExt
 
   AbsTransferConstraintsExt(const AbsTransferConstraintsExt&) = delete;
   AbsTransferConstraintsExt(AbsTransferConstraintsExt&&) = delete;
-  void operator=(const AbsTransferConstraintsExt&) = delete;
-  void operator=(AbsTransferConstraintsExt&&) = delete;
+  AbsTransferConstraintsExt& operator=(const AbsTransferConstraintsExt&) =
+      delete;
+  AbsTransferConstraintsExt& operator=(AbsTransferConstraintsExt&&) noexcept =
+      delete;
 
   /// @return validator extensions of a configuration
   [[nodiscard]] std::unique_ptr<const IConfigConstraintValidatorExt>
@@ -340,7 +343,7 @@ class AbsTransferConstraintsExt
 
  protected:
   AbsTransferConstraintsExt(
-      std::unique_ptr<const ITransferConstraintsExt> nextExt_);
+      std::unique_ptr<const ITransferConstraintsExt> nextExt_) noexcept;
 
   /// @return validator extensions of a configuration
   [[nodiscard]] virtual std::unique_ptr<const IConfigConstraintValidatorExt>
@@ -354,9 +357,7 @@ class AbsTransferConstraintsExt
   }
 
   PROTECTED :
-
-      gsl::not_null<gsl::owner<const ITransferConstraintsExt*>>
-          nextExt;
+  gsl::not_null<gsl::owner<const ITransferConstraintsExt*>> nextExt;
 };
 
 /// ConfigConstraints for raft/bridge configurations
@@ -373,8 +374,8 @@ class TransferConstraints : public ConfigConstraints {
   TransferConstraints(TransferConstraints&&) noexcept = default;
   ~TransferConstraints() noexcept override = default;
 
-  void operator=(const TransferConstraints&) = delete;
-  void operator=(TransferConstraints&&) = delete;
+  TransferConstraints& operator=(const TransferConstraints&) = delete;
+  TransferConstraints& operator=(TransferConstraints&&) noexcept = delete;
 
   /**
     For _allowed == true - are these entities respecting
@@ -394,9 +395,7 @@ class TransferConstraints : public ConfigConstraints {
   [[nodiscard]] unsigned minRequiredCapacity() const noexcept;
 
   PROTECTED :
-
-      gsl::not_null<const ITransferConstraintsExt*>
-          extension;
+  gsl::not_null<const ITransferConstraintsExt*> extension;
 
   /// How many entities are allowed on the raft/bridge at once
   gsl::not_null<const unsigned*> capacity;
@@ -418,8 +417,10 @@ class ConfigurationsTransferDuration {
       default;
   ~ConfigurationsTransferDuration() noexcept = default;
 
-  void operator=(const ConfigurationsTransferDuration&) = delete;
-  void operator=(ConfigurationsTransferDuration&&) = delete;
+  ConfigurationsTransferDuration& operator=(
+      const ConfigurationsTransferDuration&) = delete;
+  ConfigurationsTransferDuration& operator=(
+      ConfigurationsTransferDuration&&) noexcept = delete;
 
   /// All configurations with the given duration
   [[nodiscard]] const TransferConstraints& configConstraints() const noexcept;
@@ -430,9 +431,8 @@ class ConfigurationsTransferDuration {
   [[nodiscard]] std::string toString() const;
 
   PROTECTED :
-
-      /// All configurations with the given duration
-      TransferConstraints constraints;
+  /// All configurations with the given duration
+  TransferConstraints constraints;
   unsigned _duration{};  ///< traversal duration for those configurations
 };
 
@@ -444,8 +444,8 @@ class TypesConstraint : public IConfigConstraint {
   TypesConstraint(TypesConstraint&&) noexcept = default;
   ~TypesConstraint() noexcept override = default;
 
-  void operator=(const TypesConstraint&) = delete;
-  void operator=(TypesConstraint&&) = delete;
+  TypesConstraint& operator=(const TypesConstraint&) = delete;
+  TypesConstraint& operator=(TypesConstraint&&) noexcept = delete;
 
   /**
     Expands the types constraint with a range for a new type.
@@ -488,10 +488,8 @@ class TypesConstraint : public IConfigConstraint {
   [[nodiscard]] std::string toString() const override;
 
   PROTECTED :
-
-      /// All the mentioned types
-      std::unordered_set<std::string>
-          mentionedTypes;
+  /// All the mentioned types
+  std::unordered_set<std::string> mentionedTypes;
 
   /// Map between expected types and the range for the count of each such type.
   /// The range comes as a pair of 2 unsigned values: min and max inclusive
@@ -512,8 +510,8 @@ class IdsConstraint : public IConfigConstraint {
 
   ~IdsConstraint() noexcept override = default;
 
-  void operator=(const IdsConstraint&) = delete;
-  void operator=(IdsConstraint&&) = delete;
+  IdsConstraint& operator=(const IdsConstraint&) = delete;
+  IdsConstraint& operator=(IdsConstraint&&) noexcept = delete;
 
   /// Creates a new mandatory group with this id
   IdsConstraint& addMandatoryId(unsigned id);
@@ -599,11 +597,26 @@ class IdsConstraint : public IConfigConstraint {
 
   [[nodiscard]] std::string toString() const override;
 
-  PROTECTED :
+ private:
+  /**
+  Removes the id-s from ids matching from mandatoryGroups/optionalGroups and
+  checks if all mandatory/optional groups are satisfied.
+  @param ids the set of ids to be checked and updated
+  @param forMandatory whether to check mandatory or optional groups
+  @return true if all mandatory/optional groups are satisfied; false otherwise
+  */
+  [[nodiscard]] bool satisfiedGroups(std::set<unsigned>& ids,
+                                     bool forMandatory) const noexcept;
 
-      /// All id-s mentioned by the constraint
-      std::unordered_set<unsigned>
-          mentionedIds;
+  /// Helper to validate mandatory groups
+  /// @param ids the set of ids to be checked and updated
+  /// @return true if all mandatory groups are satisfied; false otherwise
+  [[nodiscard]] bool canSatisfyMandatoryGroups(
+      std::set<unsigned>& ids) const noexcept;
+
+  PROTECTED :
+  /// All id-s mentioned by the constraint
+  std::unordered_set<unsigned> mentionedIds;
 
   /// Set of mandatory groups
   std::vector<std::unordered_set<unsigned>> mandatoryGroups;
@@ -640,8 +653,8 @@ class BoolConst : public LogicalExpr {
 
   BoolConst(const BoolConst&) = delete;
   BoolConst(BoolConst&&) = delete;
-  void operator=(const BoolConst&) = delete;
-  void operator=(BoolConst&&) = delete;
+  BoolConst& operator=(const BoolConst&) = delete;
+  BoolConst& operator=(BoolConst&&) noexcept = delete;
 
   /// @return the contained bool constant
   [[nodiscard]] bool eval(const SymbolsTable&) const noexcept override;
@@ -657,8 +670,8 @@ class Not : public LogicalExpr {
 
   Not(const Not&) = delete;
   Not(Not&&) = delete;
-  void operator=(const Not&) = delete;
-  void operator=(Not&&) = delete;
+  Not& operator=(const Not&) = delete;
+  Not& operator=(Not&&) noexcept = delete;
 
   /// Checks if there is a dependency on `varName`
   [[nodiscard]] bool dependsOnVariable(
@@ -669,10 +682,8 @@ class Not : public LogicalExpr {
   [[nodiscard]] std::string toString() const override;
 
   PROTECTED :
-
-      /// The expression to negate
-      gsl::not_null<std::shared_ptr<const LogicalExpr>>
-          _le;
+  /// The expression to negate
+  gsl::not_null<std::shared_ptr<const LogicalExpr>> _le;
 };
 
 /// Value of a numeric expression or a range provided as 2 numeric expressions
@@ -735,9 +746,7 @@ class ValueOrRange {
   void validate() const;
 
   PROTECTED :
-
-      std::variant<ValueType, RangeType>
-          _valueOrRange;
+  std::variant<ValueType, RangeType> _valueOrRange;
 };
 
 /// A mixture of values and ranges
@@ -748,8 +757,8 @@ class ValueSet : public IValues<double> {
   ValueSet(ValueSet&&) noexcept = default;
   ~ValueSet() noexcept override = default;
 
-  void operator=(const ValueSet&) = delete;
-  void operator=(ValueSet&&) = delete;
+  ValueSet& operator=(const ValueSet&) = delete;
+  ValueSet& operator=(ValueSet&&) noexcept = delete;
 
   /// Appends a value / range; Returns *this
   ValueSet& add(const ValueOrRange& vor) noexcept;
@@ -771,10 +780,8 @@ class ValueSet : public IValues<double> {
   [[nodiscard]] std::string toString() const override;
 
   PROTECTED :
-
-      /// The values and the ranges
-      std::vector<ValueOrRange>
-          vors;
+  /// The values and the ranges
+  std::vector<ValueOrRange> vors;
 
   bool isConst{true};  ///< true if the values / ranges are all constant
 };
@@ -785,16 +792,18 @@ class BelongToCondition : public LogicalExpr {
  public:
   BelongToCondition(const std::shared_ptr<const AbsExpr<Type>>& e,
                     const std::shared_ptr<const IValues<Type>>& valueSet_)
-      : _e{e}, _valueSet{valueSet_} {
-    if (_e->constValue() && _valueSet->constSet())
-      val = _valueSet->contains(*_e->constValue());
+      : _e{e},
+        _valueSet{valueSet_} {
+    if (const auto& constValOpt{_e->constValue()};
+        constValOpt.has_value() && _valueSet->constSet())
+      val = _valueSet->contains(constValOpt.value());
   }
   ~BelongToCondition() noexcept override = default;
 
   BelongToCondition(const BelongToCondition&) = delete;
   BelongToCondition(BelongToCondition&&) = delete;
-  void operator=(const BelongToCondition&) = delete;
-  void operator=(BelongToCondition&&) = delete;
+  BelongToCondition& operator=(const BelongToCondition&) = delete;
+  BelongToCondition& operator=(BelongToCondition&&) noexcept = delete;
 
   /// Checks if there is a dependency on `varName`
   [[nodiscard]] bool dependsOnVariable(
@@ -818,10 +827,8 @@ class BelongToCondition : public LogicalExpr {
   }
 
   PROTECTED :
-
-      /// Expression to be checked
-      gsl::not_null<std::shared_ptr<const AbsExpr<Type>>>
-          _e;
+  /// Expression to be checked
+  gsl::not_null<std::shared_ptr<const AbsExpr<Type>>> _e;
 
   /// The set of values
   gsl::not_null<std::shared_ptr<const IValues<Type>>> _valueSet;
@@ -835,8 +842,8 @@ class NumericConst : public NumericExpr {
 
   NumericConst(const NumericConst&) = delete;
   NumericConst(NumericConst&&) = delete;
-  void operator=(const NumericConst&) = delete;
-  void operator=(NumericConst&&) = delete;
+  NumericConst& operator=(const NumericConst&) = delete;
+  NumericConst& operator=(NumericConst&&) noexcept = delete;
 
   /// @return the contained constant
   [[nodiscard]] double eval(const SymbolsTable&) const noexcept override;
@@ -847,13 +854,13 @@ class NumericConst : public NumericExpr {
 /// The name of a variable
 class NumericVariable : public NumericExpr {
  public:
-  explicit NumericVariable(const std::string& varName) noexcept;
+  explicit NumericVariable(std::string varName) noexcept;
   ~NumericVariable() noexcept override = default;
 
   NumericVariable(const NumericVariable&) = delete;
   NumericVariable(NumericVariable&&) = delete;
-  void operator=(const NumericVariable&) = delete;
-  void operator=(NumericVariable&&) = delete;
+  NumericVariable& operator=(const NumericVariable&) = delete;
+  NumericVariable& operator=(NumericVariable&&) noexcept = delete;
 
   /// Checks if there is a dependency on `varName`
   [[nodiscard]] bool dependsOnVariable(
@@ -865,22 +872,21 @@ class NumericVariable : public NumericExpr {
   [[nodiscard]] std::string toString() const noexcept override;
 
   PROTECTED :
-
-      /// The considered name
-      std::string name;
+  /// The considered name
+  std::string name;
 };
 
 /// Adding 2 numeric expressions
 class Addition : public NumericExpr {
  public:
   Addition(const std::shared_ptr<const NumericExpr>& left_,
-           const std::shared_ptr<const NumericExpr>& right_);
+           const std::shared_ptr<const NumericExpr>& right_) noexcept;
   ~Addition() noexcept override = default;
 
   Addition(const Addition&) = delete;
   Addition(Addition&&) = delete;
-  void operator=(const Addition&) = delete;
-  void operator=(Addition&&) = delete;
+  Addition& operator=(const Addition&) = delete;
+  Addition& operator=(Addition&&) noexcept = delete;
 
   /// Checks if there is a dependency on `varName`
   [[nodiscard]] bool dependsOnVariable(
@@ -892,9 +898,7 @@ class Addition : public NumericExpr {
   [[nodiscard]] std::string toString() const override;
 
   PROTECTED :
-
-      gsl::not_null<std::shared_ptr<const NumericExpr>>
-          left;
+  gsl::not_null<std::shared_ptr<const NumericExpr>> left;
   gsl::not_null<std::shared_ptr<const NumericExpr>> right;
 };
 
@@ -911,8 +915,8 @@ class Modulus : public NumericExpr {
 
   Modulus(const Modulus&) = delete;
   Modulus(Modulus&&) = delete;
-  void operator=(const Modulus&) = delete;
-  void operator=(Modulus&&) = delete;
+  Modulus& operator=(const Modulus&) = delete;
+  Modulus& operator=(Modulus&&) noexcept = delete;
 
   /// Checks if there is a dependency on `varName`
   [[nodiscard]] bool dependsOnVariable(
@@ -942,9 +946,7 @@ class Modulus : public NumericExpr {
   [[nodiscard]] static long validOperation(long numeratorL, long denominatorL);
 
   PROTECTED :
-
-      gsl::not_null<std::shared_ptr<const NumericExpr>>
-          numerator;
+  gsl::not_null<std::shared_ptr<const NumericExpr>> numerator;
   gsl::not_null<std::shared_ptr<const NumericExpr>> denominator;
 };
 

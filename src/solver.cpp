@@ -15,9 +15,9 @@
 #ifdef UNIT_TESTING
 
 /*
-  This include allows recompiling only the Unit tests project when updating the
-  tests. It also keeps the count of total code units to recompile to a minimum
-  value.
+This include allows recompiling only the Unit tests project when updating the
+tests. It also keeps the count of total code units to recompile to a minimum
+value.
 */
 #define CPP_SOLVER
 #include "solver.hpp"
@@ -32,6 +32,7 @@
 #include "transferredLoadExt.h"
 #include "warnings.h"
 
+#include <exception>
 #include <iomanip>
 #include <queue>
 
@@ -41,20 +42,31 @@ namespace rc {
 
 namespace sol {
 
-#pragma warning(disable : WARN_MSVC_EXPLICIT_NEW_DELETE)
+MUTE_EXPLICIT_NEW_DELETE_WARN
 const shared_ptr<const DefStateExt>& DefStateExt::SHARED_INST() noexcept {
+  MUTE_EXIT_TIME_DTOR_WARN
   // Using new instead of make_shared, since the ctor is private
   // and not a friend of make_shared
-  static const shared_ptr<const DefStateExt> inst{new DefStateExt};
+  static const shared_ptr<const DefStateExt> inst{makeNoexcept([] {
+    return shared_ptr<const DefStateExt>{
+        // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new)
+        new DefStateExt};
+  })};
+  UNMUTE_WARNING
+
   return inst;
 }
 
 unique_ptr<const IStateExt> DefStateExt::clone() const noexcept {
   // Using new instead of make_unique, since the ctor is private
   // and not a friend of make_unique
-  return unique_ptr<const IStateExt>{new DefStateExt};
+  return unique_ptr<const IStateExt>{
+      makeNoexcept([]() -> gsl::owner<DefStateExt*> {
+        // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new)
+        return new DefStateExt;
+      })};
 }
-#pragma warning(default : WARN_MSVC_EXPLICIT_NEW_DELETE)
+UNMUTE_WARNING
 
 shared_ptr<const IStateExt> DefStateExt::extensionForNextState(
     const ent::MovingEntities&) const noexcept {
@@ -63,10 +75,12 @@ shared_ptr<const IStateExt> DefStateExt::extensionForNextState(
 
 AbsStateExt::AbsStateExt(const rc::ScenarioDetails& info_,
                          const shared_ptr<const IStateExt>& nextExt_) noexcept
-    : info{&info_}, nextExt{nextExt_} {}
+    : info{&info_},
+      nextExt{nextExt_} {}
 
 unique_ptr<const IStateExt> AbsStateExt::clone() const noexcept {
-  return _clone(nextExt->clone());
+  return _clone(makeNoexcept(
+      [this] { return shared_ptr<const IStateExt>{nextExt->clone()}; }));
 }
 
 bool AbsStateExt::validate() const {
@@ -99,7 +113,11 @@ string AbsStateExt::toString(bool suffixesInsteadOfPrefixes /* = true*/) const {
 }  // namespace sol
 
 const SymbolsTable& InitialSymbolsTable() noexcept {
-  static const SymbolsTable st{{"CrossingIndex", 0.}};
+  MUTE_EXIT_TIME_DTOR_WARN
+  static const SymbolsTable st{
+      makeNoexcept([] { return SymbolsTable{{"CrossingIndex", 0.}}; })};
+  UNMUTE_WARNING
+
   return st;
 }
 
@@ -153,7 +171,7 @@ const Scenario::Results& Scenario::solution(bool usingBFS /* = true*/,
     const gsl::not_null<const Results*> safeResults{results};
     outputResults(*safeResults, interactiveSol);
   } catch (const exception&) {
-    cerr << "Unable to prepare the solution animation!" << endl;
+    cerr << "Unable to prepare the solution animation!\n" << flush;
   }
 
   return *results;

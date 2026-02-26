@@ -13,6 +13,10 @@
 #ifndef H_UTIL
 #define H_UTIL
 
+#include "warnings.h"
+
+#include <cstdio>
+
 #include <concepts>
 #include <exception>
 #include <filesystem>
@@ -25,6 +29,7 @@
 
 #ifdef __cpp_lib_source_location
 #include <source_location>
+
 #else
 #include <boost/assert/source_location.hpp>
 #endif  // defined(__cpp_lib_source_location)
@@ -35,13 +40,11 @@ using namespace std::literals;
 
 #ifdef UNIT_TESTING
 
-constexpr bool UT{true};
 #define PROTECTED public
 #define PRIVATE public
 
 #else  // UNIT_TESTING not defined
 
-constexpr bool UT{};
 #define PROTECTED protected
 #define PRIVATE private
 
@@ -55,8 +58,11 @@ constexpr bool UT{};
 
 // Access to source location information(file, line, col, function)
 #ifdef __cpp_lib_source_location
+#define LOC_INFO std::source_location
 #define HERE std::source_location::current()
+
 #else
+#define LOC_INFO boost::source_location
 #define HERE BOOST_CURRENT_LOCATION
 #endif  // defined(__cpp_lib_source_location)
 
@@ -77,12 +83,92 @@ constexpr bool UT{};
 namespace rc {
 
 /**
+Invokes 'f' callable. If 'f' throws, terminate() is called, simulating a
+noexcept 'f'. Additionally, makeNoexcept logs a thrown exception.
+
+@param f the callable to invoke
+@param where location information used for exception reporting
+@return the result of 'f' if it does not throw
+*/
+template <typename Func>
+  requires(!noexcept(std::invoke(std::declval<Func>())))
+decltype(auto) makeNoexcept(Func&& f, const LOC_INFO where = HERE) noexcept {
+  // Default error message for the exception thrown by 'f', if any
+  const char* errMsg{"unknown exception"};
+
+  try {
+    return std::invoke(std::forward<Func>(f));
+
+  } catch (const std::exception& e) {
+    if (e.what())
+      errMsg = e.what();
+
+  } catch (...) {
+    // Empty because errMsg is already set to "unknown exception"
+  }
+
+  MUTE_UNSAFE_BUFF_USE_WARN
+  std::fprintf(stderr,
+               "\nFatal Error: Noexcept-marked code threw!\n"
+               "Exception: %s\n"
+               "Function: %s\n"
+               "File: %s:%u\n",
+               errMsg, where.function_name(), where.file_name(), where.line());
+  UNMUTE_WARNING
+
+  std::terminate();
+}
+
+/**
+Copy ctors are not noexcept by default.
+This function allows making a copy of an object whose copy ctor is not noexcept,
+by invoking it inside makeNoexcept. It reports the exception thrown
+by the copy ctor, if any, and terminates the program,
+since the copy operation is expected to succeed.
+
+@param val the value to copy
+@param where location information used for exception reporting
+@return a copy of 'val' if the copy ctor does not throw; otherwise, the program
+terminates.
+*/
+template <typename T>
+decltype(auto) makeCopyNoexcept(const T& val,
+                                const LOC_INFO where = HERE) noexcept {
+  if constexpr (std::is_nothrow_copy_constructible_v<T>)
+    return val;
+  else
+    // Keep the trailing result type to force the copy ctor inside makeNoexcept
+    return makeNoexcept([&val]() -> T { return val; }, where);
+}
+
+/**
+Move ctors should be noexcept.
+Notable exceptions: std::set and std::map in MSVC, but not in GCC.
+This function allows moving an object whose move ctor is not noexcept,
+by invoking it inside makeNoexcept. It reports the exception thrown
+by the move ctor, if any, and terminates the program,
+since the move operation is expected to succeed.
+
+@param val the value to move
+@param where location information used for exception reporting
+@return 'val' as rvalue if the move ctor does not throw; otherwise, the program
+terminates.
+*/
+template <typename T>
+decltype(auto) makeMoveNoexcept(T&& val, const LOC_INFO where = HERE) noexcept {
+  if constexpr (std::is_nothrow_move_constructible_v<T>)
+    return std::forward<T>(val);
+  else
+    return makeNoexcept([&val]() -> T { return std::move(val); }, where);
+}
+
+/**
 Takes the working directory and hopes
 it is (a subfolder of) RiverCrossing directory.
 
 @return RiverCrossing folder if found; otherwise an empty path
 */
-[[nodiscard]] const std::filesystem::path projectFolder() noexcept;
+[[nodiscard]] std::filesystem::path projectFolder() noexcept;
 
 /// Delimiters when displaying a container
 struct ContViewDelims {
@@ -96,16 +182,21 @@ template <class FwCont, class Proj = std::identity>
   requires std::ranges::forward_range<FwCont>
 class ContView {
  public:
-  explicit ContView(const FwCont& cont,
-                    const ContViewDelims& delims_ = {},
-                    const Proj& proj_ = {})
-      : pCont{&cont}, delims{delims_}, proj{proj_} {}
+  explicit ContView(
+      const FwCont& cont,
+      const ContViewDelims& delims_ = {},
+      const Proj& proj_ =
+          {}) noexcept(std::is_nothrow_copy_constructible_v<Proj> &&
+                       std::is_nothrow_default_constructible_v<Proj>)
+      : pCont{&cont},
+        delims{delims_},
+        proj{proj_} {}
 
   ContView(const ContView&) = default;
   ContView(ContView&&) noexcept = delete;
   ~ContView() noexcept = default;
 
-  ContView& operator=(const ContView&) = default;
+  ContView& operator=(const ContView&) = delete;
   ContView& operator=(ContView&&) noexcept = delete;
 
   std::string toString() const {
@@ -117,13 +208,11 @@ class ContView {
     const auto itBeg{pCont->begin()}, itEnd{pCont->end()};
     if (itBeg != itEnd) {
       oss << proj(*pCont->begin());
-      for (const auto& elem : *pCont | std::ranges::views::drop(1))
+
+      // The saved view prevents getting -Wdangling-reference in GCC
+      for (auto view{*pCont | std::views::drop(1)}; auto&& elem : view)
         oss << delims.between << proj(elem);
     }
-
-    // Used the technique [first + 'std::ranges::views::drop(1)'], instead of
-    // 'std::ranges::views::join_with', because the latter requires 'proj(elem)'
-    // to return string-like
 
     oss << delims.after;
     return oss.str();
@@ -134,6 +223,13 @@ class ContView {
   ContViewDelims delims;
   Proj proj;
 };
+
+template <class FwCont, class Proj>
+ContView(const FwCont&, const ContViewDelims&, const Proj&)
+    -> ContView<FwCont, Proj>;
+
+template <class FwCont>
+ContView(const FwCont&) -> ContView<FwCont, std::identity>;
 
 /**
 The template parameter represents a visitor displaying extended information
@@ -155,22 +251,25 @@ template <class ExtendedInfo>
 class ToStringManager {
  public:
   ToStringManager(const ExtendedInfo& ext_, std::ostringstream& oss_)
-      : ext{&ext_}, oss{&oss_} {
+      : ext{&ext_},
+        oss{&oss_} {
     (*oss) << ext->toString(false);
   }
 
-  ~ToStringManager() noexcept { (*oss) << ext->toString(true); }
+  ~ToStringManager() noexcept try {
+    (*oss) << ext->toString(true);
+  } catch (...) {
+    // Ensures a noexcept dtor
+  }
 
   // Makes no sense to copy / move
   ToStringManager(const ToStringManager&) = delete;
   ToStringManager(ToStringManager&&) = delete;
-  void operator=(const ToStringManager&) = delete;
-  void operator=(ToStringManager&&) = delete;
+  ToStringManager& operator=(const ToStringManager&) = delete;
+  ToStringManager& operator=(ToStringManager&&) noexcept = delete;
 
   PROTECTED :
-
-      gsl::not_null<const ExtendedInfo*>
-          ext;
+  gsl::not_null<const ExtendedInfo*> ext;
   gsl::not_null<std::ostringstream*> oss;
 };
 

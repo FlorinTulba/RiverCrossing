@@ -17,7 +17,7 @@
 isnan(NaN) might evaluate to false due to compilation flags.
 Substituting isnan() by the code below might be a solution:
 
-  constexpr double nanV{std::numeric_limits<T>::quiet_NaN()};
+  constexpr T nanV{std::numeric_limits<T>::quiet_NaN()};
   return !std::memcmp(&v, &nanV, sizeof(T));
 
 Gcc/Clang specific

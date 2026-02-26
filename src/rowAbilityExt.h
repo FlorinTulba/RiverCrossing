@@ -30,7 +30,6 @@ namespace rc::cond {
 /// Can row validator
 class CanRowValidator : public AbsContextValidator {
  public:
-  /// @throw invalid_argument if nextValidator_ is NULL
   CanRowValidator(const std::shared_ptr<const IContextValidator>&
                       nextValidator_ = DefContextValidator::SHARED_INST(),
                   const std::shared_ptr<const IValidatorExceptionHandler>&
@@ -39,17 +38,15 @@ class CanRowValidator : public AbsContextValidator {
 
   CanRowValidator(const CanRowValidator&) = delete;
   CanRowValidator(CanRowValidator&&) = delete;
-  void operator=(const CanRowValidator&) = delete;
-  void operator=(CanRowValidator&&) = delete;
+  CanRowValidator& operator=(const CanRowValidator&) = delete;
+  CanRowValidator& operator=(CanRowValidator&&) noexcept = delete;
 
   PROTECTED :
-
-      /// @return true if `ents` is a valid raft/bridge configuration within
-      /// `st` context
-      /// @throw logic_error if ents misses some extension(s)
-      [[nodiscard]] bool
-      doValidate(const ent::MovingEntities& ents,
-                 const SymbolsTable& st) const override;
+  /// @return true if `ents` is a valid raft/bridge configuration within
+  /// `st` context
+  /// @throw logic_error if ents misses some extension(s)
+  [[nodiscard]] bool doValidate(const ent::MovingEntities& ents,
+                                const SymbolsTable& st) const override;
 };
 
 }  // namespace rc::cond

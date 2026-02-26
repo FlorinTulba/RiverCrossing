@@ -39,7 +39,7 @@ class ScenarioDetails {
   ~ScenarioDetails() noexcept = default;
 
   ScenarioDetails(const ScenarioDetails&) = delete;
-  void operator=(const ScenarioDetails&) = delete;
+  ScenarioDetails& operator=(const ScenarioDetails&) = delete;
 
   /**
   The specific type of the initial state depends on the values above and on
@@ -121,6 +121,9 @@ class ScenarioDetails {
   If provided, it needs to allow at least 2 entities (but not all of them)
   using the raft/bridge at the same time in order to have a feasible and
   non-trivial scenario.
+  Checking against the sentinel value DBL_MAX with '==' or '!=' triggers
+  floating-point compare warnings which can be silenced by using the test:
+  isgreaterequal(maxLoad, DBL_MAX)
   */
   double maxLoad{DBL_MAX};
 

@@ -37,7 +37,8 @@ bool TimeStateExt::_validate() const {
   if (_time > info->maxDuration) {
 #ifndef NDEBUG
     cout << "violates duration constraint [" << _time << " > "
-         << info->maxDuration << ']' << endl;
+         << info->maxDuration << "]\n"
+         << flush;
 #endif  // NDEBUG
     return false;
   }
@@ -99,7 +100,8 @@ TimeStateExt::TimeStateExt(unsigned time_,
                            const rc::ScenarioDetails& info_,
                            const shared_ptr<const IStateExt>& nextExt_
                            /*= DefStateExt::SHARED_INST()*/) noexcept
-    : AbsStateExt{info_, nextExt_}, _time{time_} {}
+    : AbsStateExt{info_, nextExt_},
+      _time{time_} {}
 
 unsigned TimeStateExt::time() const noexcept {
   return _time;

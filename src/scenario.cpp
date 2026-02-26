@@ -15,9 +15,9 @@
 #ifdef UNIT_TESTING
 
 /*
-  This include allows recompiling only the Unit tests project when updating the
-  tests. It also keeps the count of total code units to recompile to a minimum
-  value.
+This include allows recompiling only the Unit tests project when updating the
+tests. It also keeps the count of total code units to recompile to a minimum
+value.
 */
 #define CPP_SCENARIO
 #include "scenario.hpp"
@@ -30,9 +30,12 @@
 #include "transferredLoadExt.h"
 #include "util.h"
 
+#include <array>
 #include <climits>
 #include <cmath>
 #include <ranges>
+#include <span>
+#include <string_view>
 #include <tuple>
 
 #include <boost/property_tree/json_parser.hpp>
@@ -45,10 +48,10 @@ using namespace boost::property_tree;
 namespace {
 
 /// @throw domain_error mentioning the set of keys to choose only one from
-void duplicateKeyExc(const vector<string>& keys) {
+[[noreturn]] void duplicateKeyExc(std::span<const string_view> keys) {
   ostringstream oss;
   oss << "There must appear only one from the keys: ";
-  oss << rc::ContView{keys, {"", ", ", ""}};
+  oss << rc::ContView{keys, {.before = "", .between = ", ", .after = ""}};
   throw domain_error{oss.str()};
 }
 
@@ -60,11 +63,12 @@ void duplicateKeyExc(const vector<string>& keys) {
 @throw domain_error when the tree node contains more keys from the set
 */
 [[nodiscard]] bool onlyOneExpected(const ptree& pt,
-                                   const vector<string>& keyNames,
+                                   std::span<const string_view> keyNames,
                                    string& firstFoundKeyName) {
   firstFoundKeyName = "";
   size_t keysCount{};
-  for (const string& keyName : keyNames) {
+  for (const string_view keyNameSv : keyNames) {
+    const string keyName{keyNameSv};
     if (!keysCount) {
       keysCount = pt.count(keyName);
       if (keysCount > 0ULL)
@@ -79,10 +83,8 @@ void duplicateKeyExc(const vector<string>& keys) {
   return keysCount == 1ULL;
 }
 
-/**
-  @return the semantic from nightModeExpr
-  @throw domain_error if nightModeExpr is incorrect
-*/
+/// @return the semantic from nightModeExpr
+/// @throw domain_error if nightModeExpr is incorrect
 [[nodiscard]] shared_ptr<const rc::cond::LogicalExpr> nightModeSemantic(
     const string& nightModeExpr) {
   shared_ptr<const rc::cond::LogicalExpr> semantic{
@@ -100,7 +102,7 @@ Some scenarios mention how many entities can be simultaneously on the raft /
 bridge. For the other scenarios is helpful to deduce an upper bound for this
 transfer capacity.
 When the capacity needs to be determined, it must be between
-    2 and the count of all entities - 1,
+        2 and the count of all entities - 1,
 that is the raft / bridge must hold >= 2 entities and there must remain
 at least 1 entity on the other bank, to have a scenario that is not trivial.
 */
@@ -117,28 +119,27 @@ class TransferCapacityManager {
 
     // Not all entities are allowed to cross the river simultaneously
     // (just to keep the problem interesting)
-    *capacity = (unsigned)entities->count() - 1U;
+    *capacity = gsl::narrow_cast<unsigned>(entities->count()) - 1U;
   }
   ~TransferCapacityManager() noexcept = default;
 
   TransferCapacityManager(const TransferCapacityManager&) = delete;
-  void operator=(const TransferCapacityManager&) = delete;
-  void operator=(TransferCapacityManager&&) = delete;
+  TransferCapacityManager(TransferCapacityManager&&) noexcept = delete;
+  TransferCapacityManager& operator=(const TransferCapacityManager&) = delete;
+  TransferCapacityManager& operator=(TransferCapacityManager&&) noexcept =
+      delete;
 
   /// The scenario specifies the transfer capacity
   void providedCapacity(unsigned capacity_) {
-    if (capacity_ >= (unsigned)entities->count() || capacity_ < 2U)
+    if (static_cast<size_t>(capacity_) >= entities->count() || capacity_ < 2U)
       throw domain_error{HERE.function_name() +
                          " - RaftCapacity / BridgeCapacity should be "
                          "at least 2 and less than the number of entities!"s};
-    if (capacity_ < *capacity)
-      *capacity = capacity_;
+    *capacity = std::min(*capacity, capacity_);
   }
 
-  /**
-  The scenario specifies the raft / bridge max load, which might help
-  for deducing the capacity.
-  */
+  /// The scenario specifies the raft / bridge max load, which might help
+  /// for deducing the capacity.
   void setMaxLoad(double maxLoad) {
     // Count lightest entities among which 1 might row whose total weight <=
     // maxLoad
@@ -166,10 +167,11 @@ class TransferCapacityManager {
       if (sameWeightIds.contains(lightestEntWhoMightRow))
         --availableCount;
       const size_t newCount{
-          min(availableCount, (size_t)floor((maxLoad - totalWeight) / weight))};
+          min(availableCount,
+              static_cast<size_t>(floor((maxLoad - totalWeight) / weight)))};
       if (newCount) {
-        cap += (unsigned)newCount;
-        totalWeight += (double)newCount * weight;
+        cap += gsl::narrow_cast<unsigned>(newCount);
+        totalWeight += static_cast<double>(newCount) * weight;
       }
       if (newCount < availableCount)
         break;
@@ -182,7 +184,7 @@ class TransferCapacityManager {
                          "the raft can hold at most one of them at a time! "
                          "Please ensure the raft holds at least 2 entities!"s};
 
-    if (cap >= (unsigned)entities->count())
+    if (static_cast<size_t>(cap) >= entities->count())
       throw domain_error{
           HERE.function_name() +
           " - Based on the entities' weights and the "
@@ -190,14 +192,11 @@ class TransferCapacityManager {
           "the raft can hold all of them at a time! "
           "This constraint cannot be counted as a valid scenario condition!"s};
 
-    if (cap < *capacity)
-      *capacity = cap;
+    *capacity = std::min(*capacity, cap);
   }
 
-  /**
-  The scenario specifies several constraints about the (dis)allowed raft/bridge
-  configurations, which might help for deducing the capacity.
-  */
+  /// The scenario specifies several constraints about the (dis)allowed
+  /// raft/bridge configurations, which might help for deducing the capacity.
   void setTransferConstraints(const TransferConstraints& transferConstraints) {
     const unsigned cap{transferConstraints.minRequiredCapacity()};
 
@@ -209,8 +208,7 @@ class TransferCapacityManager {
           "the raft can hold at most one entity at a time! "
           "Please ensure the raft holds at least 2 entities!"s};
 
-    if (cap < *capacity)
-      *capacity = cap;
+    *capacity = std::min(*capacity, cap);
   }
 
   [[nodiscard]] const unsigned& getCapacity() const noexcept {
@@ -218,78 +216,39 @@ class TransferCapacityManager {
   }  ///< provided / deduced capacity
 
   PROTECTED :
-
-      /// All entities of the scenario
-      gsl::not_null<shared_ptr<const AllEntities>>
-          entities;
+  /// All entities of the scenario
+  gsl::not_null<std::shared_ptr<const AllEntities>> entities;
 
   /// Provided / deduced transfer capacity (&ScenarioDetails::capacity)
   gsl::not_null<unsigned*> capacity;
 };
 
-}  // anonymous namespace
-
-namespace rc {
-
-Scenario::Scenario(istream&& scenarioStream,
-                   bool solveNow /* = false*/,
-                   bool interactiveSol /* = false*/)
-    : Scenario{scenarioStream, solveNow, interactiveSol} {}
-
-Scenario::Scenario(istream& scenarioStream,
-                   bool solveNow /* = false*/,
-                   bool interactiveSol /* = false*/) {
-  ptree pt, crossingConstraintsTree, banksConstraintsTree, otherConstraintsTree;
-  const ptree empty;
-  try {
-    read_json(scenarioStream, pt);
-  } catch (const json_parser_error& ex) {
-    throw domain_error{
-        HERE.function_name() +
-        " - Couldn't parse puzzle data (json format expected)!\nReason:\n"s +
-        ex.what()};
-  }
-
-  // Extract mandatory sections
-  try {
-    descrTree = pt.get_child("ScenarioDescription");
-    entTree = pt.get_child("Entities");
-    crossingConstraintsTree = pt.get_child("CrossingConstraints");
-  } catch (const ptree_bad_path& ex) {
-    throw domain_error{HERE.function_name() +
-                       " - Missing mandatory section! "s + ex.what()};
-  }
-
-  // Store ScenarioDescription
+/// Extract scenario description string
+string parseScenarioDescription(const ptree& descrTree) {
   if (!descrTree.count(""))
     throw domain_error{
         HERE.function_name() +
         " - The scenario description should be an array of 1 or more strings!"s};
+
   ostringstream oss;
   for (const auto& descrLine : descrTree)
     if (descrLine.first.empty())
-      oss << descrLine.second.data() << endl;
+      oss << descrLine.second.data() << '\n';
     else
       throw domain_error{HERE.function_name() +
                          " - The scenario description should be an array of 1 "
                          "or more strings!"s};
-  descr = oss.str();
+  return oss.str();
+}
 
-  unsigned& capacity{details.capacity};
-  shared_ptr<const AllEntities>& entities{details.entities};
-  entities = make_shared<const AllEntities>(entTree);
-  assert(entities && entities->count() > 0ULL);
-  const shared_ptr<const IEntity> firstEntity{
-      (*entities)[*cbegin(entities->ids())]};
-  TransferCapacityManager capManager{entities, capacity};
-
-  banksConstraintsTree = pt.get_child("BanksConstraints", empty);
-  otherConstraintsTree = pt.get_child("OtherConstraints", empty);
-
-  unsigned uniqueConstraints{};
+/// Parse crossing-related constraint: Capacity
+void parseCapacityConstraint(const ptree& crossingConstraintsTree,
+                             TransferCapacityManager& capManager,
+                             unsigned& uniqueConstraints,
+                             bool& bridgeInsteadOfRaft) {
   string key;
-  static const vector<string> capacitySynonyms{"RaftCapacity",
-                                               "BridgeCapacity"};
+  static constexpr array<string_view, 2> capacitySynonyms{
+      {"RaftCapacity", "BridgeCapacity"}};
   if (onlyOneExpected(crossingConstraintsTree, capacitySynonyms, key)) {
     try {
       // get<unsigned> fails to signal negative values
@@ -299,7 +258,7 @@ Scenario::Scenario(istream& scenarioStream,
             HERE.function_name() +
             " - RaftCapacity / BridgeCapacity should be non-negative!"s};
 
-      capManager.providedCapacity((unsigned)readCapacity);
+      capManager.providedCapacity(gsl::narrow_cast<unsigned>(readCapacity));
     } catch (const ptree_bad_data& ex) {
       throw domain_error{HERE.function_name() +
                          " - Bad type for the raft capacity! "s + ex.what()};
@@ -310,9 +269,19 @@ Scenario::Scenario(istream& scenarioStream,
 
     ++uniqueConstraints;
   }
+}
 
+/// Parse crossing-related constraint: Max Load
+void parseMaxLoadConstraint(const ptree& crossingConstraintsTree,
+                            ScenarioDetails& details,
+                            const IEntity& firstEntity,
+                            TransferCapacityManager& capManager,
+                            unsigned& uniqueConstraints,
+                            bool& bridgeInsteadOfRaft) {
+  string key;
   double& maxLoad{details.maxLoad};
-  static const vector<string> maxLoadSynonyms{"RaftMaxLoad", "BridgeMaxLoad"};
+  static constexpr array<string_view, 2> maxLoadSynonyms{
+      {"RaftMaxLoad", "BridgeMaxLoad"}};
   if (onlyOneExpected(crossingConstraintsTree, maxLoadSynonyms, key)) {
     try {
       maxLoad = crossingConstraintsTree.get<double>(key);
@@ -327,7 +296,7 @@ Scenario::Scenario(istream& scenarioStream,
 
     // If 1st entity has no specified weight, then none have.
     // However max load requires those properties
-    if (!firstEntity->weight())
+    if (!firstEntity.weight())
       throw domain_error{
           HERE.function_name() +
           " - Please specify strictly positive weights for all entities "
@@ -341,10 +310,18 @@ Scenario::Scenario(istream& scenarioStream,
 
     ++uniqueConstraints;
   }
+}
 
+/// Parse crossing-related constraint: AllowedLoads
+void parseAllowedLoadsConstraint(const ptree& crossingConstraintsTree,
+                                 ScenarioDetails& details,
+                                 const IEntity& firstEntity,
+                                 unsigned& uniqueConstraints,
+                                 bool& bridgeInsteadOfRaft) {
+  string key;
   shared_ptr<const IValues<double>>& allowedLoads{details.allowedLoads};
-  static const vector<string> allowedLoadsSynonyms{"AllowedRaftLoads",
-                                                   "AllowedBridgeLoads"};
+  static constexpr array<string_view, 2> allowedLoadsSynonyms{
+      {"AllowedRaftLoads", "AllowedBridgeLoads"}};
   if (onlyOneExpected(crossingConstraintsTree, allowedLoadsSynonyms, key)) {
     allowedLoads = grammar::parseAllowedLoadsExpr(
         crossingConstraintsTree.get<string>(key));
@@ -355,7 +332,7 @@ Scenario::Scenario(istream& scenarioStream,
 
     // If 1st entity has no specified weight, then none have.
     // However max load requires these properties
-    if (!firstEntity->weight())
+    if (!firstEntity.weight())
       throw domain_error{
           HERE.function_name() +
           " - Please specify strictly positive weights for all entities "
@@ -367,13 +344,19 @@ Scenario::Scenario(istream& scenarioStream,
 
     ++uniqueConstraints;
   }
+}
 
-  // Keep this after capacitySynonyms, maxLoadSynonyms and allowedLoadsSynonyms
-  details.createTransferConstraintsExt();
-
-  static const vector<string> trConfigSpecifiers{
-      "AllowedRaftConfigurations", "AllowedBridgeConfigurations",
-      "DisallowedRaftConfigurations", "DisallowedBridgeConfigurations"};
+/// Parse crossing-related constraint: [Dis]Allowed{Raft,Bridge}Configurations
+void parseRaftCfgsConstraint(const ptree& crossingConstraintsTree,
+                             ScenarioDetails& details,
+                             const AllEntities& entities,
+                             TransferCapacityManager& capManager,
+                             unsigned& uniqueConstraints,
+                             bool& bridgeInsteadOfRaft) {
+  string key;
+  static constexpr array<string_view, 4> trConfigSpecifiers{
+      {"AllowedRaftConfigurations", "AllowedBridgeConfigurations",
+       "DisallowedRaftConfigurations", "DisallowedBridgeConfigurations"}};
   if (onlyOneExpected(crossingConstraintsTree, trConfigSpecifiers, key)) {
     std::optional<grammar::ConstraintsVec> readConstraints =
         grammar::parseConfigurationsExpr(
@@ -386,13 +369,13 @@ Scenario::Scenario(istream& scenarioStream,
     // AllowedRaftConfigurations or AllowedBridgeConfigurations
     // DisallowedRaftConfigurations or DisallowedBridgeConfigurations
     const bool allowed{key[0ULL] == 'A'};
-    if (!allowed)  // ensure that DisallowedRaftConfigurations contains the
-                   // empty set
+    // ensure that DisallowedRaftConfigurations contains the empty set
+    if (!allowed)
       (*readConstraints).push_back(make_shared<const IdsConstraint>());
 
     try {
       details.transferConstraints = make_unique<const TransferConstraints>(
-          std::move(*readConstraints), *entities, capManager.getCapacity(),
+          std::move(*readConstraints), entities, capManager.getCapacity(),
           allowed, *details.transferConstraintsExt);
     } catch (const logic_error& e) {
       throw domain_error{e.what()};
@@ -410,11 +393,17 @@ Scenario::Scenario(istream& scenarioStream,
     // Create a constraint checking only the capacity & maxLoad for the
     // raft/bridge
     details.transferConstraints = make_unique<const TransferConstraints>(
-        grammar::ConstraintsVec{}, *entities, capManager.getCapacity(), false,
+        grammar::ConstraintsVec{}, entities, capManager.getCapacity(), false,
         *details.transferConstraintsExt);
   }
+}
 
-  // Keep this after capacitySynonyms, maxLoadSynonyms and allowedLoadsSynonyms
+/// Parse crossing-related constraint: CrossingDurationsOfConfigurations
+void parseCrossTimesConstraint(const ptree& crossingConstraintsTree,
+                               ScenarioDetails& details,
+                               const AllEntities& entities,
+                               const TransferCapacityManager& capManager,
+                               unsigned& uniqueConstraints) {
   vector<ConfigurationsTransferDuration>& ctdItems{details.ctdItems};
   if (crossingConstraintsTree.count("CrossingDurationsOfConfigurations") >
       0ULL) {
@@ -441,7 +430,7 @@ Scenario::Scenario(istream& scenarioStream,
             HERE.function_name() +
             " - CrossingDurationsOfConfigurations parsing error! "
             "See the cause above."s};
-      ctdItems.emplace_back(std::move(*readCdc), *entities,
+      ctdItems.emplace_back(std::move(*readCdc), entities,
                             capManager.getCapacity(),
                             *details.transferConstraintsExt);
       const ConfigurationsTransferDuration& ctd{ctdItems.back()};
@@ -455,107 +444,214 @@ Scenario::Scenario(istream& scenarioStream,
 
     ++uniqueConstraints;
   }
+}
 
-  if (!uniqueConstraints)
+/// Parse crossing-related constraints: Capacity, MaxLoad, AllowedLoads,
+/// [Dis]Allowed{Raft,Bridge}Configurations and
+/// CrossingDurationsOfConfigurations.
+void parseCrossingConstraints(const ptree& crossingConstraintsTree,
+                              ScenarioDetails& details,
+                              const AllEntities& entities,
+                              const IEntity& firstEntity,
+                              TransferCapacityManager& capManager,
+                              unsigned& uniqueConstraints,
+                              bool& bridgeInsteadOfRaft) {
+  parseCapacityConstraint(crossingConstraintsTree, capManager,
+                          uniqueConstraints, bridgeInsteadOfRaft);
+  parseMaxLoadConstraint(crossingConstraintsTree, details, firstEntity,
+                         capManager, uniqueConstraints, bridgeInsteadOfRaft);
+  parseAllowedLoadsConstraint(crossingConstraintsTree, details, firstEntity,
+                              uniqueConstraints, bridgeInsteadOfRaft);
+
+  // Setup transfer constraints extension before parsing configs/ctd.
+  // Keep this after Capacity, Max Load and Allowed Loads.
+  details.createTransferConstraintsExt();
+
+  parseRaftCfgsConstraint(crossingConstraintsTree, details, entities,
+                          capManager, uniqueConstraints, bridgeInsteadOfRaft);
+
+  // Keep this after Capacity, Max Load and Allowed Loads
+  parseCrossTimesConstraint(crossingConstraintsTree, details, entities,
+                            capManager, uniqueConstraints);
+}
+
+/// Parse banks constraints block if present
+void parseBanksConstraints(const ptree& banksConstraintsTree,
+                           ScenarioDetails& details,
+                           const AllEntities& entities) {
+  if (banksConstraintsTree.empty())
+    return;
+
+  static constexpr array<string_view, 2> bankConfigSpecifiers{
+      {"AllowedBankConfigurations", "DisallowedBankConfigurations"}};
+  string key;
+  if (!onlyOneExpected(banksConstraintsTree, bankConfigSpecifiers, key))
+    return;
+
+  std::optional<grammar::ConstraintsVec> readConstraints{
+      grammar::parseConfigurationsExpr(banksConstraintsTree.get<string>(key))};
+  if (!readConstraints)
+    throw domain_error{HERE.function_name() +
+                       " - Constraints parsing error! See the cause above."s};
+
+  // key starts either with 'A' or with 'D':
+  // AllowedBankConfigurations  OR  DisallowedBankConfigurations
+  const bool allowed{key[0ULL] == 'A'};
+
+  // For AllowedBankConfigurations allow also start & final configurations
+  if (allowed) {
+    const vector<unsigned>& idsStartingFromLeftBank{
+        entities.idsStartingFromLeftBank()};
+    const vector<unsigned>& idsStartingFromRightBank{
+        entities.idsStartingFromRightBank()};
+
+    // Building constraints
+    auto pInitiallyOnLeftBank{make_unique<IdsConstraint>()};
+    auto pInitiallyOnRightBank{make_unique<IdsConstraint>()};
+
+    for (const unsigned id : idsStartingFromLeftBank)
+      pInitiallyOnLeftBank->addMandatoryId(id);
+    for (const unsigned id : idsStartingFromRightBank)
+      pInitiallyOnRightBank->addMandatoryId(id);
+
+    // Non-mutable final constraints
+    shared_ptr<const IdsConstraint> initiallyOnLeftBank{
+        pInitiallyOnLeftBank.release()};
+    shared_ptr<const IdsConstraint> initiallyOnRightBank{
+        pInitiallyOnRightBank.release()};
+
+    (*readConstraints).push_back(initiallyOnLeftBank);
+    (*readConstraints).push_back(initiallyOnRightBank);
+  }
+
+  try {
+    details.banksConstraints = make_unique<const ConfigConstraints>(
+        std::move(*readConstraints), entities, allowed);
+  } catch (const logic_error& e) {
+    throw domain_error{e.what()};
+  }
+}
+
+/// Parse OtherConstraints (TimeLimit, NightMode).
+/// Returns nightMode expression string (default "false").
+string parseOtherConstraints(const ptree& otherConstraintsTree,
+                             ScenarioDetails& details) {
+  string nightModeExpr{"false"};
+  if (otherConstraintsTree.empty())
+    return nightModeExpr;
+
+  static constexpr array<string_view, 1> timeLimitSpecifiers{{"TimeLimit"}};
+  string key;
+  if (onlyOneExpected(otherConstraintsTree, timeLimitSpecifiers, key)) {
+    try {
+      // get<unsigned> fails to signal negative values
+      const int readMaxDuration{otherConstraintsTree.get<int>(key)};
+      if (readMaxDuration <= 0)
+        throw domain_error{HERE.function_name() +
+                           " - TimeLimit should be > 0!"s};
+
+      details.maxDuration = gsl::narrow_cast<unsigned>(readMaxDuration);
+    } catch (const ptree_bad_data& ex) {
+      throw domain_error{HERE.function_name() +
+                         " - Bad type for the time limit! "s + ex.what()};
+    }
+
+    // TimeLimit requires CrossingDurationsOfConfigurations constraints
+    if (details.ctdItems.empty())
+      throw domain_error{
+          HERE.function_name() +
+          " - Please specify a CrossingDurationsOfConfigurations section "
+          "when using the `TimeLimit` constraint!"s};
+  }
+
+  static constexpr array<string_view, 1> nightModeSpecifiers{{"NightMode"}};
+  if (onlyOneExpected(otherConstraintsTree, nightModeSpecifiers, key))
+    nightModeExpr = otherConstraintsTree.get<string>(key);
+
+  return nightModeExpr;
+}
+
+}  // anonymous namespace
+
+namespace rc {
+
+Scenario::Scenario(istream& scenarioStream,
+                   bool solveNow /* = false*/,
+                   bool interactiveSol /* = false*/) {
+  ptree pt, crossingConstraintsTree, banksConstraintsTree, otherConstraintsTree;
+  const ptree empty;
+  try {
+    read_json(scenarioStream, pt);
+  } catch (const json_parser_error& ex) {
     throw domain_error{
         HERE.function_name() +
-        " - There must be at least one valid crossing constraint!"s};
-
-  if (!banksConstraintsTree.empty()) {
-    static const vector<string> bankConfigSpecifiers{
-        "AllowedBankConfigurations", "DisallowedBankConfigurations"};
-    if (onlyOneExpected(banksConstraintsTree, bankConfigSpecifiers, key)) {
-      std::optional<grammar::ConstraintsVec> readConstraints{
-          grammar::parseConfigurationsExpr(
-              banksConstraintsTree.get<string>(key))};
-      if (!readConstraints)
-        throw domain_error{
-            HERE.function_name() +
-            " - Constraints parsing error! See the cause above."s};
-
-      // key starts either with 'A' or with 'D':
-      // AllowedBankConfigurations  OR  DisallowedBankConfigurations
-      const bool allowed{key[0ULL] == 'A'};
-
-      // For AllowedBankConfigurations allow also start & final configurations
-      if (allowed) {
-        const vector<unsigned>&idsStartingFromLeftBank{
-            entities->idsStartingFromLeftBank()},
-            &idsStartingFromRightBank{entities->idsStartingFromRightBank()};
-
-        // Building constraints
-        IdsConstraint* pInitiallyOnLeftBank{new IdsConstraint};
-        IdsConstraint* pInitiallyOnRightBank{new IdsConstraint};
-
-        for (const unsigned id : idsStartingFromLeftBank)
-          pInitiallyOnLeftBank->addMandatoryId(id);
-        for (const unsigned id : idsStartingFromRightBank)
-          pInitiallyOnRightBank->addMandatoryId(id);
-
-        // Non-mutable final constraints
-        shared_ptr<const IdsConstraint> initiallyOnLeftBank{
-            pInitiallyOnLeftBank};
-        shared_ptr<const IdsConstraint> initiallyOnRightBank{
-            pInitiallyOnRightBank};
-
-        (*readConstraints).push_back(initiallyOnLeftBank);
-        (*readConstraints).push_back(initiallyOnRightBank);
-      }
-
-      try {
-        details.banksConstraints = make_unique<const ConfigConstraints>(
-            std::move(*readConstraints), *entities, allowed);
-      } catch (const logic_error& e) {
-        throw domain_error{e.what()};
-      }
-    }
+        " - Couldn't parse puzzle data (json format expected)!\nReason:\n"s +
+        ex.what()};
   }
 
-  unsigned& maxDuration{details.maxDuration};
-
-  string nightModeExpr{"false"};
-  if (!otherConstraintsTree.empty()) {
-    static const vector<string> timeLimitSpecifiers{"TimeLimit"};
-    if (onlyOneExpected(otherConstraintsTree, timeLimitSpecifiers, key)) {
-      try {
-        // get<unsigned> fails to signal negative values
-        const int readMaxDuration{otherConstraintsTree.get<int>(key)};
-        if (readMaxDuration <= 0)
-          throw domain_error{HERE.function_name() +
-                             " - TimeLimit should be > 0!"s};
-
-        maxDuration = (unsigned)readMaxDuration;
-      } catch (const ptree_bad_data& ex) {
-        throw domain_error{HERE.function_name() +
-                           " - Bad type for the time limit! "s + ex.what()};
-      }
-
-      // TimeLimit requires CrossingDurationsOfConfigurations constraints
-      if (ctdItems.empty())
-        throw domain_error{
-            HERE.function_name() +
-            " - Please specify a CrossingDurationsOfConfigurations section "
-            "when using the `TimeLimit` constraint!"s};
-    }
-
-    static const vector<string> nightModeSpecifiers{"NightMode"};
-    if (onlyOneExpected(otherConstraintsTree, nightModeSpecifiers, key))
-      nightModeExpr = otherConstraintsTree.get<string>(key);
+  // Extract mandatory sections
+  try {
+    descrTree = pt.get_child("ScenarioDescription");
+    entTree = pt.get_child("Entities");
+    crossingConstraintsTree = pt.get_child("CrossingConstraints");
+  } catch (const ptree_bad_path& ex) {
+    throw domain_error{HERE.function_name() +
+                       " - Missing mandatory section! "s + ex.what()};
   }
+
+  // Store ScenarioDescription (extracted into helper)
+  descr = parseScenarioDescription(descrTree);
+
+  // Entities and capacity manager
+  unsigned& capacity{details.capacity};
+  shared_ptr<const AllEntities>& entities{details.entities};
+  entities = make_shared<const AllEntities>(entTree);
+  assert(entities && entities->count() > 0ULL);
+
+  const shared_ptr<const IEntity> firstEntity{
+      (*entities)[*cbegin(entities->ids())]};
+  TransferCapacityManager capManager{entities, capacity};
+
+  // Optional trees
+  banksConstraintsTree = pt.get_child("BanksConstraints", empty);
+  otherConstraintsTree = pt.get_child("OtherConstraints", empty);
+
+  unsigned uniqueConstraints{};
+  bool bridgeInsteadOfRaftLocal{bridgeInsteadOfRaft};
+
+  // Move large crossing constraints parsing into helper
+  parseCrossingConstraints(crossingConstraintsTree, details, *entities,
+                           *firstEntity, capManager, uniqueConstraints,
+                           bridgeInsteadOfRaftLocal);
+
+  // Apply possible bridge flag change from helper
+  bridgeInsteadOfRaft = bridgeInsteadOfRaftLocal;
+
+  // Banks constraints parsing
+  parseBanksConstraints(banksConstraintsTree, details, *entities);
+
+  // Other constraints (TimeLimit and NightMode)
+  string nightModeExpr = parseOtherConstraints(otherConstraintsTree, details);
   nightMode = nightModeSemantic(nightModeExpr);
 
+  // Post-conditions / validations
   if (firstEntity->weight() > 0.  // all entities have then specified weights
-      && maxLoad == DBL_MAX && !allowedLoads)
+      && isgreaterequal(details.maxLoad, DBL_MAX) && !details.allowedLoads)
     throw domain_error{
         HERE.function_name() +
         " - Unnecessary weights of entities when not using none of the "
         "following constraints: "
         "{RaftMaxLoad/BridgeMaxLoad or AllowedRaftLoads/AllowedBridgeLoads}!"s};
 
-  if (!ctdItems.empty() && maxDuration == UINT_MAX)
+  if (!details.ctdItems.empty() && details.maxDuration == UINT_MAX)
     throw domain_error{HERE.function_name() +
                        " - Unnecessary CrossingDurationsOfConfigurations "
                        "when not using the TimeLimit constraint!"s};
+
+  if (!uniqueConstraints)
+    throw domain_error{
+        HERE.function_name() +
+        " - There must be at least one valid crossing constraint!"s};
 
   if (solveNow)
     ignore = solution(true, interactiveSol);
@@ -571,11 +667,11 @@ void Scenario::outputResults(const Results& res,
 
   if (!interactiveSol || !res.attempt->isSolution()) {
     cout << "Considered scenario:\n" << *this << "\n\n";
-    cout << res;
+    cout << res << flush;
     return;
   }
 
-  const unsigned solLen{(unsigned)res.attempt->length()};
+  const unsigned solLen{gsl::narrow_cast<unsigned>(res.attempt->length())};
   const shared_ptr<const sol::IState> initialState{res.attempt->initialState()};
   SymbolsTable st{InitialSymbolsTable()};
 
@@ -600,7 +696,7 @@ void Scenario::outputResults(const Results& res,
   };
 
   const auto addMove = [this, &addEntsSet, &movesTree, &st](
-                           shared_ptr<const sol::IState> state,
+                           const shared_ptr<const sol::IState>& state,
                            const IsolatedEntities* moved = {}) {
     const string otherDetails{state->getExtension()->detailsForDemo()};
 
@@ -645,7 +741,7 @@ ScenarioDetails::createTransferValidator() const {
 
 void ScenarioDetails::createTransferConstraintsExt() {
   auto res{cond::DefTransferConstraintsExt::NEW_INST()};
-  if (maxLoad == DBL_MAX) {
+  if (isgreaterequal(maxLoad, DBL_MAX)) {
     transferConstraintsExt = std::move(res);
     return;
   }
@@ -658,7 +754,7 @@ unique_ptr<ent::IMovingEntitiesExt> ScenarioDetails::createMovingEntitiesExt()
     const {
   unique_ptr<ent::IMovingEntitiesExt> res{make_unique<DefMovingEntitiesExt>()};
 
-  if (!allowedLoads && maxLoad == DBL_MAX)
+  if (!allowedLoads && isgreaterequal(maxLoad, DBL_MAX))
     return res;
 
   return make_unique<TotalLoadExt>(entities, 0., std::move(res));
@@ -668,15 +764,18 @@ void Scenario::Results::update(size_t attemptLen,
                                size_t crtDistToSol,
                                const ent::BankEntities& currentLeftBank,
                                size_t& bestMinDistToGoal) noexcept {
-  if (attemptLen > longestInvestigatedPath)
-    longestInvestigatedPath = attemptLen;
+  longestInvestigatedPath = std::max(longestInvestigatedPath, attemptLen);
 
   if (bestMinDistToGoal > crtDistToSol) {
     bestMinDistToGoal = crtDistToSol;
-    closestToTargetLeftBank = {currentLeftBank};
+    makeNoexcept([this, &currentLeftBank] {
+      closestToTargetLeftBank = {currentLeftBank};
+    });
 
   } else if (bestMinDistToGoal == crtDistToSol) {
-    closestToTargetLeftBank.push_back(currentLeftBank);
+    makeNoexcept([this, &currentLeftBank] {
+      closestToTargetLeftBank.push_back(currentLeftBank);
+    });
   }
 }
 
@@ -693,19 +792,21 @@ string Scenario::toString() const {
 string ScenarioDetails::toString() const {
   ostringstream oss;
   if (entities)
-    oss << *entities << endl;
+    oss << *entities << '\n';
 
   oss << "CrossingConstraints: { ";
   if (capacity != UINT_MAX)
     oss << "Capacity = " << capacity << "; ";
-  if (maxLoad != DBL_MAX)
+  if (isless(maxLoad, DBL_MAX))
     oss << "MaxLoad = " << maxLoad << "; ";
   if (transferConstraints && !transferConstraints->empty())
     oss << "TransferConstraints = " << *transferConstraints << "; ";
   if (allowedLoads)
     oss << "AllowedLoads = `" << *allowedLoads << "`; ";
   if (!ctdItems.empty())
-    oss << ContView{ctdItems, {"CrossingDurations: { ", " ; ", " }; "}};
+    oss << ContView{
+        ctdItems,
+        {.before = "CrossingDurations: { ", .between = " ; ", .after = " }; "}};
 
   // Replace last '; ' with ' }'
   oss.seekp(-2, ios_base::cur);
@@ -805,13 +906,13 @@ class Config {
 int main(int argc, zstring* argv) try {
   Expects(argv && argc >= 1);
 
-  std::span<zstring> args{argv, (size_t)argc};
+  const std::span<zstring> args{argv, static_cast<size_t>(argc)};
 
   const bool interactive{(size(args) >= 2ULL) &&
-                         (!strcmp("interactive", args[1ULL]))};
+                         (string_view{args[1ULL]} == "interactive")};
 
 #ifndef NDEBUG
-  cout << "Interactive:" << boolalpha << interactive << endl;
+  cout << "Interactive:" << boolalpha << interactive << '\n' << flush;
 #endif  // NDEBUG
 
   Config cfg;
@@ -824,7 +925,7 @@ int main(int argc, zstring* argv) try {
   return 0;
 
 } catch (const exception& e) {
-  cerr << e.what() << endl;
+  cerr << e.what() << '\n' << flush;
   return -1;
 }
 

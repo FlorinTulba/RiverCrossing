@@ -24,9 +24,11 @@
 #include <climits>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>
 #include <cstring>
 
 #include <algorithm>
+#include <array>
 #include <concepts>
 #include <exception>
 #include <filesystem>

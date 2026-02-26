@@ -17,22 +17,23 @@
 
 namespace rc {
 
-const std::filesystem::path projectFolder() noexcept {
+std::filesystem::path projectFolder() noexcept {
   using namespace std::filesystem;
+  return makeNoexcept([]() -> path {
+    path dir{absolute(".")};
 
-  path dir{absolute(".")};
+    for (;;) {
+      if (dir.filename() == path{"RiverCrossing"})
+        return dir;
 
-  for (;;) {
-    if (!dir.filename().compare(path{"RiverCrossing"}))
-      return dir;
+      if (!dir.has_parent_path())
+        break;
 
-    if (!dir.has_parent_path())
-      break;
+      dir = dir.parent_path();
+    }
 
-    dir = dir.parent_path();
-  }
-
-  return {};
+    return {};
+  });
 }
 
 }  // namespace rc

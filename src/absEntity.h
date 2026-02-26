@@ -28,8 +28,8 @@ class IEntity {
 
   IEntity(const IEntity&) = delete;
   IEntity(IEntity&&) = delete;
-  void operator=(const IEntity&) = delete;
-  void operator=(IEntity&&) = delete;
+  IEntity& operator=(const IEntity&) = delete;
+  IEntity& operator=(IEntity&&) noexcept = delete;
 
   // Mandatory information
   virtual unsigned id() const noexcept = 0;              ///< unique id

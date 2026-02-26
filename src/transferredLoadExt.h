@@ -41,16 +41,14 @@ class TotalLoadExt : public AbsMovingEntitiesExt {
 
   TotalLoadExt(const TotalLoadExt&) = delete;
   TotalLoadExt(TotalLoadExt&&) = delete;
-  void operator=(const TotalLoadExt&) = delete;
-  void operator=(TotalLoadExt&&) = delete;
+  TotalLoadExt& operator=(const TotalLoadExt&) = delete;
+  TotalLoadExt& operator=(TotalLoadExt&&) noexcept = delete;
 
   [[nodiscard]] double totalLoad() const noexcept { return load; }
 
   PROTECTED :
-
-      /// Selecting a new group of entities for moving to the other bank
-      void
-      _newGroup(const std::set<unsigned>& ids) override;
+  /// Selecting a new group of entities for moving to the other bank
+  void _newGroup(const std::set<unsigned>& ids) override;
 
   /// Adds a new entity to the group from the raft/bridge
   /// @throw out_of_range for invalid id
@@ -104,18 +102,16 @@ class MaxLoadValidatorExt : public AbsConfigConstraintValidatorExt {
 
   MaxLoadValidatorExt(const MaxLoadValidatorExt&) = delete;
   MaxLoadValidatorExt(MaxLoadValidatorExt&&) = delete;
-  void operator=(const MaxLoadValidatorExt&) = delete;
-  void operator=(MaxLoadValidatorExt&&) = delete;
+  MaxLoadValidatorExt& operator=(const MaxLoadValidatorExt&) = delete;
+  MaxLoadValidatorExt& operator=(MaxLoadValidatorExt&&) noexcept = delete;
 
   [[nodiscard]] double maxLoad() const noexcept;
 
   PROTECTED :
-
-      /// @throw logic_error if the types configuration does not respect current
-      /// extension
-      void
-      checkTypesCfg(const TypesConstraint& cfg,
-                    const ent::AllEntities& allEnts) const override;
+  /// @throw logic_error if the types configuration does not respect current
+  /// extension
+  void checkTypesCfg(const TypesConstraint& cfg,
+                     const ent::AllEntities& allEnts) const override;
 
   /// @throw logic_error if the ids configuration does not respect current
   /// extension
@@ -137,17 +133,18 @@ class MaxLoadTransferConstraintsExt : public AbsTransferConstraintsExt {
 
   MaxLoadTransferConstraintsExt(const MaxLoadTransferConstraintsExt&) = delete;
   MaxLoadTransferConstraintsExt(MaxLoadTransferConstraintsExt&&) = delete;
-  void operator=(const MaxLoadTransferConstraintsExt&) = delete;
-  void operator=(MaxLoadTransferConstraintsExt&&) = delete;
+  MaxLoadTransferConstraintsExt& operator=(
+      const MaxLoadTransferConstraintsExt&) = delete;
+  MaxLoadTransferConstraintsExt& operator=(
+      MaxLoadTransferConstraintsExt&&) noexcept = delete;
 
   [[nodiscard]] double maxLoad() const noexcept;
 
   PROTECTED :
-
-      /// @return validator extensions of a configuration
-      [[nodiscard]] std::unique_ptr<const IConfigConstraintValidatorExt>
-      _configValidatorExt(std::unique_ptr<const IConfigConstraintValidatorExt>
-                              fromNextExt) const noexcept override;
+  /// @return validator extensions of a configuration
+  [[nodiscard]] std::unique_ptr<const IConfigConstraintValidatorExt>
+  _configValidatorExt(std::unique_ptr<const IConfigConstraintValidatorExt>
+                          fromNextExt) const noexcept override;
 
   /// @return true only if cfg satisfies current extension
   /// @throw logic_error for invalid extension
@@ -176,8 +173,10 @@ class InitiallyNoPrevRaftLoadExcHandler : public IValidatorExceptionHandler {
       delete;
   InitiallyNoPrevRaftLoadExcHandler(InitiallyNoPrevRaftLoadExcHandler&&) =
       delete;
-  void operator=(const InitiallyNoPrevRaftLoadExcHandler&) = delete;
-  void operator=(InitiallyNoPrevRaftLoadExcHandler&&) = delete;
+  InitiallyNoPrevRaftLoadExcHandler& operator=(
+      const InitiallyNoPrevRaftLoadExcHandler&) = delete;
+  InitiallyNoPrevRaftLoadExcHandler& operator=(
+      InitiallyNoPrevRaftLoadExcHandler&&) noexcept = delete;
 
   /**
   Tries to detect if the algorithm is in / has back-tracked to the initial
@@ -189,10 +188,8 @@ class InitiallyNoPrevRaftLoadExcHandler : public IValidatorExceptionHandler {
       const SymbolsTable& st) const noexcept override;
 
   PROTECTED :
-
-      /// The allowed loads
-      gsl::not_null<std::shared_ptr<const IValues<double>>>
-          _allowedLoads;
+  /// The allowed loads
+  gsl::not_null<std::shared_ptr<const IValues<double>>> _allowedLoads;
   bool dependsOnPreviousRaftLoad;
 };
 
@@ -209,17 +206,15 @@ class AllowedLoadsValidator : public AbsContextValidator {
 
   AllowedLoadsValidator(const AllowedLoadsValidator&) = delete;
   AllowedLoadsValidator(AllowedLoadsValidator&&) = delete;
-  void operator=(const AllowedLoadsValidator&) = delete;
-  void operator=(AllowedLoadsValidator&&) = delete;
+  AllowedLoadsValidator& operator=(const AllowedLoadsValidator&) = delete;
+  AllowedLoadsValidator& operator=(AllowedLoadsValidator&&) noexcept = delete;
 
   PROTECTED :
-
-      /// @return true if `ents` is a valid raft/bridge configuration within
-      /// `st` context
-      /// @throw logic_error if ents misses some extension(s)
-      [[nodiscard]] bool
-      doValidate(const ent::MovingEntities& ents,
-                 const SymbolsTable& st) const override;
+  /// @return true if `ents` is a valid raft/bridge configuration within
+  /// `st` context
+  /// @throw logic_error if ents misses some extension(s)
+  [[nodiscard]] bool doValidate(const ent::MovingEntities& ents,
+                                const SymbolsTable& st) const override;
 
   /// The allowed loads
   gsl::not_null<std::shared_ptr<const IValues<double>>> _allowedLoads;
@@ -246,18 +241,16 @@ class PrevLoadStateExt : public AbsStateExt {
 
   PrevLoadStateExt(const PrevLoadStateExt&) = delete;
   PrevLoadStateExt(PrevLoadStateExt&&) = delete;
-  void operator=(const PrevLoadStateExt&) = delete;
-  void operator=(PrevLoadStateExt&&) = delete;
+  PrevLoadStateExt& operator=(const PrevLoadStateExt&) = delete;
+  PrevLoadStateExt& operator=(PrevLoadStateExt&&) noexcept = delete;
 
   [[nodiscard]] double prevRaftLoad() const noexcept;
   [[nodiscard]] unsigned crossingIdx() const noexcept;
 
   PROTECTED :
-
-      /// Clones the State extension
-      [[nodiscard]] std::unique_ptr<const IStateExt>
-      _clone(const std::shared_ptr<const IStateExt>& nextExt_)
-          const noexcept override;
+  /// Clones the State extension
+  [[nodiscard]] std::unique_ptr<const IStateExt> _clone(
+      const std::shared_ptr<const IStateExt>& nextExt_) const noexcept override;
 
   /**
   @return true if the state which is extended is not better than provided state

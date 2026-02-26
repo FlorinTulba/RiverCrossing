@@ -25,20 +25,20 @@ class Entity : public IEntity {
   /// @throw domain_error for invalid canRowExpr
   /// @throw invalid_argument for invalid weight_
   Entity(unsigned id_,
-         const std::string& name_,
-         const std::string& type_ = "",
+         std::string name_,
+         std::string type_ = "",
          bool startsFromRightBank_ = false,
          const std::string& canRowExpr = "false",
          double weight_ = 0.);
 
-  /// @throw domain_error for invalid pt content
-  explicit Entity(const boost::property_tree::ptree& pt);
+  /// @throw domain_error for invalid ent content
+  explicit Entity(const boost::property_tree::ptree& ent);
   ~Entity() noexcept override = default;
 
   Entity(const Entity&) = delete;
   Entity(Entity&&) = delete;
-  void operator=(const Entity&) = delete;
-  void operator=(Entity&&) = delete;
+  Entity& operator=(const Entity&) = delete;
+  Entity& operator=(Entity&&) noexcept = delete;
 
   [[nodiscard]] unsigned id() const noexcept final;  ///< unique id
 
@@ -71,9 +71,8 @@ class Entity : public IEntity {
   [[nodiscard]] std::string toString() const override;
 
   PROTECTED :
-
-      /// Name of the entity - mandatory
-      std::string _name;
+  /// Name of the entity - mandatory
+  std::string _name;
   std::string _type;  ///< type of the entity - optional
 
   /// Whether the entity can row / move by itself to the other bank

@@ -102,9 +102,7 @@ class AllEntities : public IEntities {
   [[nodiscard]] std::string toString() const override;
 
   PROTECTED :
-
-      AllEntities&
-      operator+=(const std::shared_ptr<const IEntity>& e);
+  AllEntities& operator+=(const std::shared_ptr<const IEntity>& e);
 
   /// The entire entities set
   std::vector<std::shared_ptr<const IEntity>> entities;
@@ -133,10 +131,13 @@ class IsolatedEntities : public IEntities {
  public:
   IsolatedEntities(const IsolatedEntities& other) noexcept;
   IsolatedEntities(IsolatedEntities&& other) noexcept;
+
+  /// @throw logic_error if entities to be moved are from a different scenario
   IsolatedEntities& operator=(const IsolatedEntities& other);
 
-  /// @throws logic_error if entities to be moved are from a different scenario
-  IsolatedEntities& operator=(IsolatedEntities&& other);
+  /// This must be noexcept. If entities to be moved are from a different
+  /// scenario it should throw. Thus it's better to delete it.
+  IsolatedEntities& operator=(IsolatedEntities&&) noexcept = delete;
 
   /// @return a new subset with the provided ids_ from the original pool
   template <class IdsCont>
@@ -180,14 +181,18 @@ class IsolatedEntities : public IEntities {
   [[nodiscard]] std::string toString() const override;
 
   PROTECTED :
-
-      template <class IdsCont = std::vector<unsigned>>
-      explicit IsolatedEntities(const std::shared_ptr<const AllEntities>& all_,
-                                const IdsCont& ids_ = {})
+  template <class IdsCont = std::vector<unsigned>>
+  explicit IsolatedEntities(const std::shared_ptr<const AllEntities>& all_,
+                            const IdsCont& ids_ = {})
       : all(all_) {
     for (const unsigned id : ids_)
       operator+=(id);
   }
+
+  /// Determines whether this and other refer to the same scenario.
+  /// @param other an other IsolatedEntities object to compare against
+  /// @return true if both objects refer to the same underlying scenario
+  bool refersToSameScenario(const IsolatedEntities& other) const noexcept;
 
   /// All entities from the scenario
   gsl::not_null<std::shared_ptr<const AllEntities>> all;
@@ -206,8 +211,8 @@ class IMovingEntitiesExt {
 
   IMovingEntitiesExt(const IMovingEntitiesExt&) = delete;
   IMovingEntitiesExt(IMovingEntitiesExt&&) = delete;
-  void operator=(const IMovingEntitiesExt&) = delete;
-  void operator=(IMovingEntitiesExt&&) = delete;
+  IMovingEntitiesExt& operator=(const IMovingEntitiesExt&) = delete;
+  IMovingEntitiesExt& operator=(IMovingEntitiesExt&&) noexcept = delete;
 
   /// Selecting a new group of entities for moving to the other bank
   virtual void newGroup(const std::set<unsigned>&) = 0;
@@ -255,8 +260,8 @@ class DefMovingEntitiesExt final : public IMovingEntitiesExt {
 
   DefMovingEntitiesExt(const DefMovingEntitiesExt&) = delete;
   DefMovingEntitiesExt(DefMovingEntitiesExt&&) = delete;
-  void operator=(const DefMovingEntitiesExt&) = delete;
-  void operator=(DefMovingEntitiesExt&&) = delete;
+  DefMovingEntitiesExt& operator=(const DefMovingEntitiesExt&) = delete;
+  DefMovingEntitiesExt& operator=(DefMovingEntitiesExt&&) noexcept = delete;
 
   /// Selecting a new group of entities for moving to the other bank
   void newGroup(const std::set<unsigned>&) noexcept final {}
@@ -291,8 +296,8 @@ class AbsMovingEntitiesExt
  public:
   AbsMovingEntitiesExt(const AbsMovingEntitiesExt&) = delete;
   AbsMovingEntitiesExt(AbsMovingEntitiesExt&&) = delete;
-  void operator=(const AbsMovingEntitiesExt&) = delete;
-  void operator=(AbsMovingEntitiesExt&&) = delete;
+  AbsMovingEntitiesExt& operator=(const AbsMovingEntitiesExt&) = delete;
+  AbsMovingEntitiesExt& operator=(AbsMovingEntitiesExt&&) noexcept = delete;
 
   /// Selecting a new group of entities for moving to the other bank
   void newGroup(const std::set<unsigned>& ids) final;
@@ -330,10 +335,8 @@ class AbsMovingEntitiesExt
       bool suffixesInsteadOfPrefixes /* = true*/) const noexcept final;
 
   PROTECTED :
-
-      AbsMovingEntitiesExt(
-          const std::shared_ptr<const AllEntities>& all_,
-          std::unique_ptr<IMovingEntitiesExt> nextExt_) noexcept;
+  AbsMovingEntitiesExt(const std::shared_ptr<const AllEntities>& all_,
+                       std::unique_ptr<IMovingEntitiesExt> nextExt_) noexcept;
 
   /**
   Some extensions might want to change the content of the Symbols Table
@@ -387,11 +390,14 @@ class MovingEntities : public IsolatedEntities {
   }
 
   MovingEntities(const MovingEntities& other) noexcept;
-  MovingEntities(MovingEntities&& other) noexcept;
+  MovingEntities(MovingEntities&&) noexcept = default;
+
+  /// @throw logic_error if entities to be moved are from a different scenario
   MovingEntities& operator=(const MovingEntities& other);
 
-  /// @throws logic_error if entities to be moved are from a different scenario
-  MovingEntities& operator=(MovingEntities&& other) noexcept(!UT);
+  /// This must be noexcept. If entities to be moved are from a different
+  /// scenario it should throw. Thus it's better to delete it.
+  MovingEntities& operator=(MovingEntities&&) noexcept = delete;
 
   /// @return a new subset with the provided ids_ from the original pool
   template <class IdsCont>
@@ -430,9 +436,7 @@ class MovingEntities : public IsolatedEntities {
   [[nodiscard]] std::string toString() const override;
 
   PROTECTED :
-
-      std::unique_ptr<IMovingEntitiesExt>
-          extension;
+  std::unique_ptr<IMovingEntitiesExt> extension;
 };
 
 /// Entities from either bank
@@ -443,12 +447,16 @@ class BankEntities : public IsolatedEntities {
                         const IdsCont& ids_ = {})
       : IsolatedEntities{all_, ids_} {}
 
-  BankEntities(const BankEntities& other) noexcept;
-  BankEntities(BankEntities&& other) noexcept;
-  BankEntities& operator=(const BankEntities& other);
+  BankEntities(const BankEntities&) noexcept = default;
+  BankEntities(BankEntities&& other) noexcept = default;
 
-  /// @throws logic_error if entities to be moved are from a different scenario
-  BankEntities& operator=(BankEntities&& other) noexcept(!UT);
+  /// Defaults to base-class implementation
+  /// @throw logic_error if entities to be moved are from a different scenario
+  BankEntities& operator=(const BankEntities&) = default;
+
+  /// This must be noexcept. If entities to be moved are from a different
+  /// scenario it should throw. Thus it's better to delete it.
+  BankEntities& operator=(BankEntities&&) noexcept = delete;
 
   ~BankEntities() noexcept override = default;
 

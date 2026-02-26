@@ -51,17 +51,19 @@ void TotalLoadExt::_addMovePostProcessing(SymbolsTable& SymTb) const noexcept {
   // The initial fake move moves no entities, so the load is 0,
   // thus no need to update the Symbols Table
   if (load > Eps)
-    SymTb["PreviousRaftLoad"] = load;
+    makeNoexcept([this, &SymTb] { SymTb["PreviousRaftLoad"] = load; });
 }
 
 void TotalLoadExt::_removeMovePostProcessing(
     SymbolsTable& SymTb) const noexcept {
-  if (load > Eps)
-    SymTb["PreviousRaftLoad"] = load;
-  else
-    // The initial fake move moves no entities, so the load is 0,
-    // thus `PreviousRaftLoad` must be removed from the Symbols Table
-    SymTb.erase("PreviousRaftLoad");
+  makeNoexcept([this, &SymTb] {
+    if (load > Eps)
+      SymTb["PreviousRaftLoad"] = load;
+    else
+      // The initial fake move moves no entities, so the load is 0,
+      // thus `PreviousRaftLoad` must be removed from the Symbols Table
+      SymTb.erase("PreviousRaftLoad");
+  });
 }
 
 unique_ptr<IMovingEntitiesExt> TotalLoadExt::_clone(
@@ -84,7 +86,8 @@ TotalLoadExt::TotalLoadExt(const shared_ptr<const AllEntities>& all_,
                            double load_ /* = 0.*/,
                            unique_ptr<IMovingEntitiesExt> nextExt_
                            /* = make_unique<DefMovingEntitiesExt>()*/) noexcept
-    : AbsMovingEntitiesExt{all_, std::move(nextExt_)}, load{load_} {}
+    : AbsMovingEntitiesExt{all_, std::move(nextExt_)},
+      load{load_} {}
 
 }  // namespace ent
 
@@ -98,7 +101,7 @@ void MaxLoadValidatorExt::checkTypesCfg(const TypesConstraint& cfg,
   for (const auto& typeAndLimits : cfg.mandatoryTypeNames()) {
     const string& t{typeAndLimits.first};
     const set<unsigned>& matchingIds{idsByTypes.at(t)};
-    const size_t minLim{(size_t)typeAndLimits.second.first};
+    const size_t minLim{static_cast<size_t>(typeAndLimits.second.first)};
     assert(minLim <= size(matchingIds));
 
     // Add the lightest minLim entities of this type
@@ -107,7 +110,8 @@ void MaxLoadValidatorExt::checkTypesCfg(const TypesConstraint& cfg,
       weightsOfType.insert(allEnts[id]->weight());
     const auto weightsOfTypeBegin = cbegin(weightsOfType);
     minConfigWeight += accumulate(
-        weightsOfTypeBegin, next(weightsOfTypeBegin, (ptrdiff_t)minLim), 0.);
+        weightsOfTypeBegin,
+        next(weightsOfTypeBegin, gsl::narrow_cast<ptrdiff_t>(minLim)), 0.);
   }
 
   if (minConfigWeight - Eps > _maxLoad)
@@ -130,7 +134,8 @@ MaxLoadValidatorExt::MaxLoadValidatorExt(
     double maxLoad_,
     unique_ptr<const IConfigConstraintValidatorExt> nextExt_
     /* = DefConfigConstraintValidatorExt::NEW_INST()*/) noexcept
-    : AbsConfigConstraintValidatorExt{std::move(nextExt_)}, _maxLoad{maxLoad_} {
+    : AbsConfigConstraintValidatorExt{std::move(nextExt_)},
+      _maxLoad{maxLoad_} {
   assert(_maxLoad > 0.);
 }
 
@@ -157,7 +162,9 @@ bool MaxLoadTransferConstraintsExt::_check(
 #ifndef NDEBUG
     const auto& entsIds{cfg.ids()};
     cout << "violates maxWeight constraint [ " << entsWeight << " > "
-         << *_maxLoad << " ] : " << ContView{entsIds, {"", " ", "\n"}};
+         << *_maxLoad << " ] : "
+         << ContView{entsIds, {.before = "", .between = " ", .after = "\n"}}
+         << flush;
 #endif  // NDEBUG
     return false;
   }
@@ -169,7 +176,8 @@ MaxLoadTransferConstraintsExt::MaxLoadTransferConstraintsExt(
     const double& maxLoad_,
     unique_ptr<const ITransferConstraintsExt> nextExt_
     /* = DefTransferConstraintsExt::NEW_INST()*/)
-    : AbsTransferConstraintsExt{std::move(nextExt_)}, _maxLoad{&maxLoad_} {
+    : AbsTransferConstraintsExt{std::move(nextExt_)},
+      _maxLoad{&maxLoad_} {
   assert(*_maxLoad > 0.);
 }
 
@@ -195,9 +203,13 @@ boost::logic::tribool InitiallyNoPrevRaftLoadExcHandler::assess(
   if (!dependsOnPreviousRaftLoad)
     return boost::logic::indeterminate;
 
-  const auto stEnd = cend(st), itCrossingIndex = st.find("CrossingIndex");
+  const auto stEnd = cend(st);
+  const auto itCrossingIndex{
+      makeNoexcept([&st] { return st.find("CrossingIndex"); })};
   const bool isInitialState{
-      !st.contains("PreviousRaftLoad")            // missing PreviousRaftLoad
+      makeNoexcept([&st] {
+        return !st.contains("PreviousRaftLoad");
+      })                                          // missing PreviousRaftLoad
       && (itCrossingIndex != stEnd)               // existing CrossingIndex
       && (itCrossingIndex->second <= 1. + Eps)};  // CrossingIndex <= 1
   if (isInitialState)
@@ -217,7 +229,9 @@ bool AllowedLoadsValidator::doValidate(const ent::MovingEntities& ents,
 #ifndef NDEBUG
   if (!valid)
     cout << "Invalid load [" << entsWeight << " outside " << *_allowedLoads
-         << "] : " << ContView{ents.ids(), {"", " ", "\n"}};
+         << "] : "
+         << ContView{ents.ids(), {.before = "", .between = " ", .after = "\n"}}
+         << flush;
 #endif  // NDEBUG
   return valid;
 }
