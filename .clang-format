@@ -1,0 +1,28 @@
+---
+BasedOnStyle: Chromium
+Language: Cpp
+Standard: Latest
+IndentWidth: 2
+ContinuationIndentWidth: 4
+ColumnLimit: 80
+KeepEmptyLinesAtTheStartOfBlocks: true
+ReflowComments: true
+AlignTrailingComments: true
+SpacesInContainerLiterals: true
+NamespaceIndentation: None
+DerivePointerAlignment: false
+PointerAlignment: Left
+BreakBeforeBraces: Attach
+SpaceAfterTemplateKeyword: true
+BinPackArguments: true
+BinPackParameters: false
+PackConstructorInitializers: CurrentLine
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+AllowAllConstructorInitializersOnNextLine: true
+Cpp11BracedListStyle: true
+AccessModifierOffset: -1
+Macros:
+- PROTECTED=protected
+- PRIVATE=private
+SortIncludes: CaseSensitive
+---
