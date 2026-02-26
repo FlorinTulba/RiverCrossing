@@ -236,7 +236,8 @@ SRC_DIR := src/
 TESTS_DIR := test/
 
 # Precompiled files
-PCH_GENERATED_FROM := $(SRC_DIR)precompiled.h
+STEM_PRECOMPILED_H := precompiled
+PCH_GENERATED_FROM := $(SRC_DIR)$(STEM_PRECOMPILED_H).h
 
 # The C++ sources of the project
 SOURCES := $(filter-out precompiledHeaderGenerator.cpp,\
@@ -484,6 +485,7 @@ define configPCH
   PCH_$(1) := $$(__PCH_PREFIX)$(1)
 
   $$(PCH_$(1)): BUILD_TYPE := $(1)
+  $$(PCH_$(1)): DEPDIR := $$($(1)_DEPDIR)
   $$(PCH_$(1)): CXXFLAGS := $(COMMON_CXXFLAGS) $(2)
 
   # The header to be precompiled contains no headers from TESTS_DIR,
@@ -641,7 +643,7 @@ define addRuleForExecutable
 
   $$($(p_1)_OUT_DIR)/$$(TARGET): $$($(p_2):%.cpp=$($(p_1)_OUT_DIR)/%.o) |\
       $$(LIB_DEPS_$(p_1))
-	@printf "\n[$$(BUILD_TYPE)] ==== Linking '$$(notdir $$@)' ====\n"
+	@printf "\n[$$(BUILD_TYPE)] ==== Linking '$$(@F)' ====\n"
 	$$(CC) $$(CXXFLAGS) $$(LINKFLAGS_$(p_1)) -o $$@ $$($(p_1)_OUT_DIR)/*.o\
 	  $$(LIB_DEPS_$(p_1)) &&\
 	$$(if $$(filter RELEASE,$(p_1)),strip $$(STRIP_FLAGS) $$@,true)
@@ -680,7 +682,6 @@ VPATH := $(VPATH):$(LIB_DIR_BOOST_NO_TRAILING_SLASH)
 	  exit 1;\
 	fi
 
-# Commands for compiling each '.cpp' ($< - the first prerequisite).
 # The dependency file '.d' generated during compilation might also be corrupt
 # if the make is interrupted while generating it.
 # Solution:
@@ -689,62 +690,99 @@ VPATH := $(VPATH):$(LIB_DIR_BOOST_NO_TRAILING_SLASH)
 #    from '.d.raw' into relative ones, which allow reuse between Cygwin/MSYS2/WSL.
 # 2. after a successful compilation, rename '.d.fixed' as the dependency '.d' file
 #    to be used and remove the '.d.raw' file.
-# 
-# This guarantees '.d' files are not incomplete/corrupt and can be set as '.PRECIOUS'.
 #
-# 'compileUnit' uses deferred expansion (= or no sign) because of:
-# - $@, $<, $*
-# - used target-specific variables: BUILD_TYPE, CXXFLAGS, PCH_FILE and DEPDIR
+# This guarantees '.d' files are not incomplete/corrupt and can be set as '.PRECIOUS'.
 #
 # Inplace sed (-i) needs special handling in macOS/FreeBSD and wasn't used here.
 # That explains the 2 files '.d.raw' and '.d.fixed' instead of just one.
-define compileUnit
-	@printf "\n[$(BUILD_TYPE)] ---- Compiling '$(notdir $<)' ----\n"
+#
+# $(basename $(notdir $<)) is the stem of both, the compiled and dependency file.
+define fixDepFile
+STEM_DEP_FILE=$(basename $(notdir $<)) && \
+sed -E 's@(^|$(SpRE))([a-zA-Z]:)?/$(NonSpRE)+/$(PROJECT_NAME)/@\1@g'\
+ $(DEPDIR)/$${STEM_DEP_FILE}.d.raw > $(DEPDIR)/$${STEM_DEP_FILE}.d.fixed && \
+mv -f $(DEPDIR)/$${STEM_DEP_FILE}.d.fixed $(DEPDIR)/$${STEM_DEP_FILE}.d && \
+rm -f $(DEPDIR)/$${STEM_DEP_FILE}.d.raw
+endef
+
+# Flags for compiling '*.cpp' and precompiled header files to generate their
+# dependency files '.d.raw'.
+# -MT $@: force a rule for enumerating the prerequisites of the target file
+# -MMD: generate dependency files for non-system headers only
+# -MP: add phony targets for each dependency to avoid errors when a header is removed
+# -MF file: specify the file to write the dependencies to
+#
+# $(basename $(notdir $<)) is the stem of both, the compiled and dependency file.
+define depFileCompileFlags
+-MT $@ -MMD -MP -MF $(DEPDIR)/$(basename $(notdir $<)).d.raw
+endef
+
+# Commands for compiling each '.cpp'
+define compileCpp
+	@printf "\n[$(BUILD_TYPE)] ---- Compiling '$(<F)' ----\n"
 	$(CXX) -c $(CXXFLAGS) $(BYPASSED_WARNINGS) $(INCLUDES)\
 	  $(if $(filter clang++,$(CC_TYPE)),-include-pch $(PCH_FILE))\
-	  -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d.raw -o $@ $< &&\
-	sed -E 's@(^|$(SpRE))([a-zA-Z]:)?/$(NonSpRE)+/$(PROJECT_NAME)/@\1@g'\
-	  $(DEPDIR)/$*.d.raw > $(DEPDIR)/$*.d.fixed &&\
-	mv -f $(DEPDIR)/$*.d.fixed $(DEPDIR)/$*.d &&\
-	rm -f $(DEPDIR)/$*.d.raw
+	  $(depFileCompileFlags) -o $@ $< &&\
+	$(fixDepFile)
 endef
 
 # Adds a compile rule *.cpp -> *.o for a build type.
 # Do not place $($(p_1)_DEPDIR)/%.d among the normal prerequisites!
-# They needs to remain among order-only prerequisites (after the '|') to avoid
+# They need to remain among order-only prerequisites (after the '|') to avoid
 # recompilations due to '.d' rewrites caused by the compilation process itself.
+#
 # Takes a single parameter - p_1 (the build type).
-define addCompileRule
+define addCompileCppRule
   $(eval p_1 := $(strip $(1)))
 
   $($(p_1)_OUT_DIR)/%.o: $(SRC_DIR)%.cpp $(PCH_$(p_1)) |\
       $($(p_1)_OUT_DIR) $($(p_1)_DEPDIR) $($(p_1)_DEPDIR)/%.d
-	$(value compileUnit)
+	$(value compileCpp)
 endef
 
-$(foreach buildType,$(BUILD_TYPES),$(eval $(call addCompileRule,$(buildType))))
+$(foreach bt,$(BUILD_TYPES),$(eval $(call addCompileCppRule,$(bt))))
 
 # A part of the sources for the 'tests' target can be found only in TESTS_DIR
 $(TESTS_OUT_DIR)/%.o: $(TESTS_DIR)%.cpp $(PCH_TESTS) |\
   $(TESTS_OUT_DIR) $(TESTS_DEPDIR) $(TESTS_DEPDIR)/%.d
-	$(compileUnit)
+	$(compileCpp)
 
 __ALL_OBJ_FILES :=\
-  $(foreach buildType,$(BUILD_TYPES),$(SOURCES:%.cpp=$($(buildType)_OUT_DIR)/%.o))\
+  $(foreach bt,$(BUILD_TYPES),$(SOURCES:%.cpp=$($(bt)_OUT_DIR)/%.o))\
   $(TESTS_ONLY_SOURCES:%.cpp=$(TESTS_OUT_DIR)/%.o)
 
 GOALS_NEEDING_DEPFILES += $(__ALL_OBJ_FILES)
 
-PCH_FILES :=\
-  $(foreach buildType,$(BUILD_TYPES),$(PCH_$(buildType)))
-DEPFILES_NEUTRAL_GOALS += $(PCH_FILES)
+# Commands for generating a precompiled header
+define generatePch
+	@printf "\n[$(BUILD_TYPE)] **** Compiling PCH '$(@F)' ****\n"
+	$(CXX) -c $(CXXFLAGS) $(BYPASSED_WARNINGS) $(INCLUDES) -x c++-header\
+	  $(depFileCompileFlags) -o $@ $< &&\
+	$(fixDepFile)
+endef
 
-# Generating PCH files except for FreeBSD when using g++
-$(PCH_FILES): $(PCH_GENERATED_FROM) | $(PCH_STORE_FOLDER)
+# Adds a compile rule 'precompiled.h' -> $(PCH_$(buildType)).
+# g++ on FreeBSD won't generate/use a precompiled header!
+#
+# Do not place $($(p_1)_DEPDIR)/$(STEM_PRECOMPILED_H).d among the normal prerequisites!
+# It needs to remain among order-only prerequisites (after the '|') to avoid
+# regenerations due to '.d' rewrite caused by the generation process itself.
+#
+# Takes a single parameter - p_1 (the build type).
+define addGeneratePchRule
+  $(eval p_1 := $(strip $(1)))
+
+  $(PCH_$(p_1)): $(PCH_GENERATED_FROM) |\
+      $(PCH_STORE_FOLDER) $($(p_1)_DEPDIR)\
+      $($(p_1)_DEPDIR)/$(STEM_PRECOMPILED_H).d
 ifneq (FreeBSD_g++,$(CURRENT_OS)_$(CC_TYPE))
-	@printf "\n[$(BUILD_TYPE)] **** Compiling PCH '$(notdir $@)' ****\n"
-	$(CXX) -c $(CXXFLAGS) $(BYPASSED_WARNINGS) $(INCLUDES) -o $@ -x c++-header $<
+	$(value generatePch)
 endif
+
+  GOALS_NEEDING_DEPFILES += $(PCH_$(p_1))
+endef
+
+$(foreach bt,$(BUILD_TYPES),$(eval $(call addGeneratePchRule,$(bt))))
 
 ################################################################################
 # The following variables should not be modified below this region!
@@ -764,7 +802,7 @@ ifneq ($(Empty),$(INVALID_GOALS))
 endif
 
 # Adding the generated additional prerequisites for the rules for compiling *.o
-# except when make has to build only targets from
+# and precompiled headers except when make has to build only targets from
 # DEPFILES_NEUTRAL_GOALS OR DEPFILES_AVERSE_GOALS.
 USED_DEPFILES_AVERSE_GOALS := $(filter $(DEPFILES_AVERSE_GOALS),$(MAKECMDGOALS))
 USED_GOALS_NEEDING_DEPFILES :=\
@@ -799,6 +837,9 @@ ifneq ($(Empty),$(USED_GOALS_NEEDING_DEPFILES))
     $(SOURCES:%.cpp=$(RELEASE_DEPDIR)/%.d $(DEBUG_DEPDIR)/%.d)\
     $(TESTS_SOURCES:%.cpp=$(TESTS_DEPDIR)/%.d)
 
-  # The '-' before 'include' cancels errors about missing '*_DEPDIR' folders
+  $(foreach bt,$(BUILD_TYPES),\
+    $(eval __ALL_DEP_FILES += $($(bt)_DEPDIR)/$(STEM_PRECOMPILED_H).d))
+
+  # The '-' before 'include' cancels errors about missing dependencies
   -include $(__ALL_DEP_FILES)
 endif
