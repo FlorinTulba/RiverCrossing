@@ -344,10 +344,10 @@ endif
 
 # Flags for stripping the release executable ('-s').
 # MacOS strip command uses None OR '-u -r'
-STRIP_FLAGS := $(if $(filter-out MacOS,$(CURRENT_OS)),-s,$(Empty))
+STRIP_FLAGS := $(if $(filter-out MacOS,$(CURRENT_OS)),-s)
 
 # Executables have '.exe' extensions (on MSYS2/Cygwin[/MSVC]) or none.
-TARGET_EXT := $(if $(filter MSYS2 Cygwin,$(CURRENT_OS)),.exe,$(Empty))
+TARGET_EXT := $(if $(filter MSYS2 Cygwin,$(CURRENT_OS)),.exe)
 
 # The included file below must define the path: INCLUDE_DIR_GSL
 include GSL_Dirs$(CURRENT_OS).mk
