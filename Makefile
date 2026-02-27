@@ -727,6 +727,8 @@ define compileCpp
 endef
 
 # Adds a compile rule *.cpp -> *.o for a build type.
+# g++ on FreeBSD won't use a precompiled header!
+#
 # Do not place $($(p_1)_DEPDIR)/%.d among the normal prerequisites!
 # They need to remain among order-only prerequisites (after the '|') to avoid
 # recompilations due to '.d' rewrites caused by the compilation process itself.
@@ -735,7 +737,8 @@ endef
 define addCompileCppRule
   $(eval p_1 := $(strip $(1)))
 
-  $($(p_1)_OUT_DIR)/%.o: $(SRC_DIR)%.cpp $(PCH_$(p_1)) |\
+  $($(p_1)_OUT_DIR)/%.o: $(SRC_DIR)%.cpp\
+      $(if $(filter-out FreeBSD_g++,$(CURRENT_OS)_$(CC_TYPE)),$(PCH_$(p_1))) |\
       $($(p_1)_OUT_DIR) $($(p_1)_DEPDIR) $($(p_1)_DEPDIR)/%.d
 	$(value compileCpp)
 endef
@@ -762,7 +765,7 @@ define generatePch
 endef
 
 # Adds a compile rule 'precompiled.h' -> $(PCH_$(buildType)).
-# g++ on FreeBSD won't generate/use a precompiled header!
+# g++ on FreeBSD won't generate a precompiled header!
 #
 # Do not place $($(p_1)_DEPDIR)/$(STEM_PRECOMPILED_H).d among the normal prerequisites!
 # It needs to remain among order-only prerequisites (after the '|') to avoid
