@@ -85,9 +85,9 @@ namespace {
 
 /// @return the semantic from nightModeExpr
 /// @throw domain_error if nightModeExpr is incorrect
-[[nodiscard]] shared_ptr<const rc::cond::LogicalExpr> nightModeSemantic(
+[[nodiscard]] std::shared_ptr<const rc::cond::LogicalExpr> nightModeSemantic(
     const string& nightModeExpr) {
-  shared_ptr<const rc::cond::LogicalExpr> semantic{
+  std::shared_ptr<const rc::cond::LogicalExpr> semantic{
       rc::grammar::parseNightModeExpr(nightModeExpr)};
   return CP_EX_MSG(semantic, domain_error,
                    "NightMode parsing error! See the cause above.");
@@ -108,7 +108,7 @@ at least 1 entity on the other bank, to have a scenario that is not trivial.
 */
 class TransferCapacityManager {
  public:
-  TransferCapacityManager(const shared_ptr<const AllEntities>& entities_,
+  TransferCapacityManager(const std::shared_ptr<const AllEntities>& entities_,
                           unsigned& capacity_)
       :  // capacity_ is &ScenarioDetails::capacity
         entities{entities_},
@@ -318,7 +318,7 @@ void parseAllowedLoadsConstraint(const ptree& crossingConstraintsTree,
                                  unsigned& uniqueConstraints,
                                  bool& bridgeInsteadOfRaft) {
   string key;
-  shared_ptr<const IValues<double>>& allowedLoads{details.allowedLoads};
+  std::shared_ptr<const IValues<double>>& allowedLoads{details.allowedLoads};
   static constexpr array<string_view, 2> allowedLoadsSynonyms{
       {"AllowedRaftLoads", "AllowedBridgeLoads"}};
   if (onlyOneExpected(crossingConstraintsTree, allowedLoadsSynonyms, key)) {
@@ -514,9 +514,9 @@ void parseBanksConstraints(const ptree& banksConstraintsTree,
       pInitiallyOnRightBank->addMandatoryId(id);
 
     // Non-mutable final constraints
-    shared_ptr<const IdsConstraint> initiallyOnLeftBank{
+    std::shared_ptr<const IdsConstraint> initiallyOnLeftBank{
         pInitiallyOnLeftBank.release()};
-    shared_ptr<const IdsConstraint> initiallyOnRightBank{
+    std::shared_ptr<const IdsConstraint> initiallyOnRightBank{
         pInitiallyOnRightBank.release()};
 
     (*readConstraints).push_back(initiallyOnLeftBank);
@@ -603,11 +603,11 @@ Scenario::Scenario(istream& scenarioStream,
 
   // Entities and capacity manager
   unsigned& capacity{details.capacity};
-  shared_ptr<const AllEntities>& entities{details.entities};
+  std::shared_ptr<const AllEntities>& entities{details.entities};
   entities = make_shared<const AllEntities>(entTree);
   assert(entities && entities->count() > 0ULL);
 
-  const shared_ptr<const IEntity> firstEntity{
+  const std::shared_ptr<const IEntity> firstEntity{
       (*entities)[*cbegin(entities->ids())]};
   TransferCapacityManager capManager{entities, capacity};
 
@@ -671,7 +671,8 @@ void Scenario::outputResults(const Results& res,
   }
 
   const unsigned solLen{gsl::narrow_cast<unsigned>(res.attempt->length())};
-  const shared_ptr<const sol::IState> initialState{res.attempt->initialState()};
+  const std::shared_ptr<const sol::IState> initialState{
+      res.attempt->initialState()};
   SymbolsTable st{InitialSymbolsTable()};
 
   ptree root, movesTree;
@@ -695,7 +696,7 @@ void Scenario::outputResults(const Results& res,
   };
 
   const auto addMove = [this, &addEntsSet, &movesTree, &st](
-                           const shared_ptr<const sol::IState>& state,
+                           const std::shared_ptr<const sol::IState>& state,
                            const IsolatedEntities* moved = {}) {
     const string otherDetails{state->getExtension()->detailsForDemo()};
 
@@ -716,7 +717,8 @@ void Scenario::outputResults(const Results& res,
 
   for (unsigned step{}; step < solLen; ++step) {
     const sol::IMove& aMove{res.attempt->move(step)};
-    const shared_ptr<const sol::IState> resultedState{aMove.resultedState()};
+    const std::shared_ptr<const sol::IState> resultedState{
+        aMove.resultedState()};
 
     addMove(aMove.resultedState(), &aMove.movedEntities());
   }
@@ -726,9 +728,9 @@ void Scenario::outputResults(const Results& res,
   write_json(cout, root);
 }
 
-shared_ptr<const cond::IContextValidator>
+std::shared_ptr<const cond::IContextValidator>
 ScenarioDetails::createTransferValidator() const {
-  const shared_ptr<const cond::IContextValidator>& res{
+  const std::shared_ptr<const cond::IContextValidator>& res{
       cond::DefContextValidator::SHARED_INST()};
   if (!allowedLoads)
     return res;
@@ -749,9 +751,10 @@ void ScenarioDetails::createTransferConstraintsExt() {
       make_unique<const MaxLoadTransferConstraintsExt>(maxLoad, std::move(res));
 }
 
-unique_ptr<ent::IMovingEntitiesExt> ScenarioDetails::createMovingEntitiesExt()
-    const {
-  unique_ptr<ent::IMovingEntitiesExt> res{make_unique<DefMovingEntitiesExt>()};
+std::unique_ptr<ent::IMovingEntitiesExt>
+ScenarioDetails::createMovingEntitiesExt() const {
+  std::unique_ptr<ent::IMovingEntitiesExt> res{
+      make_unique<DefMovingEntitiesExt>()};
 
   if (!allowedLoads && isgreaterequal(maxLoad, DBL_MAX))
     return res;
