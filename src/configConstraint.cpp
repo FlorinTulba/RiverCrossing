@@ -31,6 +31,7 @@ value.
 #include "util.h"
 #include "warnings.h"
 
+#include <cassert>
 #include <cmath>
 #include <exception>
 #include <iomanip>
@@ -699,12 +700,14 @@ string IdsConstraint::toString() const {
 BoolConst::BoolConst(bool b) noexcept : LogicalExpr{b} {}
 
 bool BoolConst::eval(const SymbolsTable&) const noexcept {
-  return *val;
+  assert(val.has_value());
+  return val.value_or(false);
 }
 
 string BoolConst::toString() const {
   ostringstream oss;
-  oss << boolalpha << *val;
+  assert(val.has_value());
+  oss << boolalpha << val.value_or(false);
   return oss.str();
 }
 
@@ -891,12 +894,14 @@ string ValueSet::toString() const {
 NumericConst::NumericConst(double d) noexcept : NumericExpr{d} {}
 
 double NumericConst::eval(const SymbolsTable&) const noexcept {
-  return *val;
+  assert(val.has_value());
+  return val.value_or(0.);
 }
 
 string NumericConst::toString() const {
   ostringstream oss;
-  oss << *val;
+  assert(val.has_value());
+  oss << val.value_or(0.);
   return oss.str();
 }
 
