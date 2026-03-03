@@ -69,7 +69,7 @@ namespace {
   size_t keysCount{};
   for (const string_view keyNameSv : keyNames) {
     const string keyName{keyNameSv};
-    if (!keysCount) {
+    if (keysCount == 0ULL) {
       keysCount = pt.count(keyName);
       if (keysCount > 0ULL)
         firstFoundKeyName = keyName;
@@ -168,7 +168,7 @@ class TransferCapacityManager {
       const size_t newCount{
           min(availableCount,
               static_cast<size_t>(floor((maxLoad - totalWeight) / weight)))};
-      if (newCount) {
+      if (newCount != 0ULL) {
         cap += gsl::narrow_cast<unsigned>(newCount);
         totalWeight += static_cast<double>(newCount) * weight;
       }
@@ -224,7 +224,7 @@ class TransferCapacityManager {
 
 /// Extract scenario description string
 string parseScenarioDescription(const ptree& descrTree) {
-  if (!descrTree.count(""))
+  if (descrTree.count("") == 0ULL)
     throw domain_error{
         HERE.function_name() +
         " - The scenario description should be an array of 1 or more strings!"s};
@@ -295,7 +295,7 @@ void parseMaxLoadConstraint(const ptree& crossingConstraintsTree,
 
     // If 1st entity has no specified weight, then none have.
     // However max load requires those properties
-    if (!firstEntity.weight())
+    if (firstEntity.weight() <= 0.)
       throw domain_error{
           HERE.function_name() +
           " - Please specify strictly positive weights for all entities "
@@ -331,7 +331,7 @@ void parseAllowedLoadsConstraint(const ptree& crossingConstraintsTree,
 
     // If 1st entity has no specified weight, then none have.
     // However max load requires these properties
-    if (!firstEntity.weight())
+    if (firstEntity.weight() <= 0.)
       throw domain_error{
           HERE.function_name() +
           " - Please specify strictly positive weights for all entities "
@@ -408,7 +408,7 @@ void parseCrossTimesConstraint(const ptree& crossingConstraintsTree,
       0ULL) {
     const ptree cdcTree{
         crossingConstraintsTree.get_child("CrossingDurationsOfConfigurations")};
-    if (!cdcTree.count(""))
+    if (cdcTree.count("") == 0ULL)
       throw domain_error{
           HERE.function_name() +
           " - The CrossingDurationsOfConfigurations section should be an array "
@@ -647,7 +647,7 @@ Scenario::Scenario(istream& scenarioStream,
                        " - Unnecessary CrossingDurationsOfConfigurations "
                        "when not using the TimeLimit constraint!"s};
 
-  if (!uniqueConstraints)
+  if (0U == uniqueConstraints)
     throw domain_error{
         HERE.function_name() +
         " - There must be at least one valid crossing constraint!"s};

@@ -482,8 +482,8 @@ BOOST_AUTO_TEST_CASE(movingEntities_usecases) {
     BOOST_CHECK(me.empty());
     const TotalLoadExt* meLoadExt{std::move(
         AbsMovingEntitiesExt::selectExt<TotalLoadExt>(me.getExtension()))};
-    bool b{};
-    BOOST_CHECK(b = static_cast<bool>(meLoadExt));
+    bool b{nullptr != meLoadExt};
+    BOOST_CHECK(b);
     if (b)
       BOOST_TEST(!meLoadExt->totalLoad());
 
@@ -494,8 +494,8 @@ BOOST_AUTO_TEST_CASE(movingEntities_usecases) {
     BOOST_CHECK(!me.empty());
     BOOST_CHECK(me.count() == 1ULL);
 
-    b = false;
-    BOOST_CHECK(b = static_cast<bool>(meLoadExt));
+    b = (nullptr != meLoadExt);
+    BOOST_CHECK(b);
     if (b)
       BOOST_TEST(meLoadExt->totalLoad() == 1.);
 
@@ -509,8 +509,8 @@ BOOST_AUTO_TEST_CASE(movingEntities_usecases) {
     (me += 3U).clear();
     BOOST_CHECK(me.empty());
 
-    b = false;
-    BOOST_CHECK(b = static_cast<bool>(meLoadExt));
+    b = (nullptr != meLoadExt);
+    BOOST_CHECK(b);
     if (b)
       BOOST_TEST(!meLoadExt->totalLoad());
 
@@ -524,8 +524,8 @@ BOOST_AUTO_TEST_CASE(movingEntities_usecases) {
     BOOST_CHECK(!me.anyRowCapableEnts(
         InitialSymbolsTable()));  // CrossingIndex % 2 == 0
 
-    b = false;
-    BOOST_CHECK(b = static_cast<bool>(meLoadExt));
+    b = (nullptr != meLoadExt);
+    BOOST_CHECK(b);
     if (b)
       BOOST_TEST(meLoadExt->totalLoad() == 3.);
 

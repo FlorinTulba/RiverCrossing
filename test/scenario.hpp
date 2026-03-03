@@ -1066,8 +1066,8 @@ BOOST_AUTO_TEST_CASE(raftConfigurationsValidation) {
           }
         }
       )"}};
-    bool b{};
-    BOOST_CHECK(b = static_cast<bool>(s.details.transferConstraints));
+    bool b{nullptr != s.details.transferConstraints};
+    BOOST_CHECK(b);
     if (b) {
       rc::ent::MovingEntities me{s.details.entities};
 
@@ -1389,10 +1389,9 @@ BOOST_AUTO_TEST_CASE(bankConfigurationsValidation) {
           }
         }
       )"}};
-    bool b{};
-    BOOST_CHECK(
-        b = static_cast<bool>(s.details.transferConstraints));  // default
-    BOOST_CHECK(b = static_cast<bool>(s.details.banksConstraints));
+    bool b{nullptr != s.details.transferConstraints};  // default
+    BOOST_CHECK(b);
+    BOOST_CHECK(b = (nullptr != s.details.banksConstraints));
     if (b) {
       rc::ent::BankEntities be{s.details.entities};
 

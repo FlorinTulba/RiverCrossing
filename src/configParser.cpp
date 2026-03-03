@@ -52,7 +52,7 @@ ConfigurationsTransferDurationInitType::moveConstraints() noexcept {
 
 ConfigurationsTransferDurationInitType&
 ConfigurationsTransferDurationInitType::setDuration(unsigned d) {
-  if (!d)
+  if (0U == d)
     throw std::logic_error{HERE.function_name() +
                            " - 0 isn't allowed as duration parameter!"s};
   _duration = d;

@@ -48,7 +48,7 @@ bool IEntities::operator==(const IEntities& other) const noexcept {
 }
 
 AllEntities::AllEntities(const ptree& entTree) {
-  if (!entTree.count(""))
+  if (entTree.count("") == 0ULL)
     throw domain_error{
         HERE.function_name() +
         " - The entities section should be an array of 3 or more entities!"s};
@@ -220,7 +220,7 @@ IsolatedEntities& IsolatedEntities::operator+=(unsigned id) {
 
 IsolatedEntities& IsolatedEntities::operator-=(unsigned id) {
   const string& entType{(*all)[id]->type()};
-  if (!_ids.erase(id))
+  if (_ids.erase(id) == 0ULL)
     throw domain_error{HERE.function_name() + " - Missing entity id: "s +
                        to_string(id)};
 

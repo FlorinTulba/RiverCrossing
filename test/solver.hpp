@@ -576,8 +576,8 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
       BOOST_CHECK(configsForABank == expectedConfigs);
       const shared_ptr<const IContextValidator> validator{
           sd.createTransferValidator()};  // allows anything now
-      bool b{};
-      BOOST_CHECK(b = static_cast<bool>(validator));
+      bool b{nullptr != validator};
+      BOOST_CHECK(b);
       if (b) {
         // allows even an unexpected config, where no entity can row
         BOOST_CHECK(validator->validate(
@@ -727,8 +727,8 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
       BOOST_CHECK(configsForABank == expectedConfigs);
       const shared_ptr<const IContextValidator> validator{
           sd.createTransferValidator()};  // allows anything weighing 12
-      bool b{};
-      BOOST_CHECK(b = static_cast<bool>(validator));
+      bool b{nullptr != validator};
+      BOOST_CHECK(b);
       if (b) {
         // allows even an unexpected config weighing 12, where no entity can row
         BOOST_CHECK(validator->validate(
@@ -850,8 +850,8 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
     try {
       shared_ptr<const TimeStateExt> timeExt{
           AbsStateExt::selectExt<TimeStateExt>(s.getExtension())};
-      bool b{};
-      BOOST_CHECK(b = static_cast<bool>(timeExt));
+      bool b{nullptr != timeExt};
+      BOOST_CHECK(b);
       if (b)
         BOOST_CHECK(t == timeExt->time());
     } catch (...) {
@@ -897,8 +897,8 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
         try {
           shared_ptr<const TimeStateExt> timeExtCloneNextS{
               AbsStateExt::selectExt<TimeStateExt>(cloneNextS->getExtension())};
-          bool b1{};
-          BOOST_CHECK(b1 = static_cast<bool>(timeExtCloneNextS));
+          bool b1{nullptr != timeExtCloneNextS};
+          BOOST_CHECK(b1);
           if (b1)
             BOOST_CHECK(5555U == timeExtCloneNextS->time());
         } catch (...) {
@@ -979,10 +979,10 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
           AbsStateExt::selectExt<PrevLoadStateExt>(cloneOfS5->getExtension())};
       shared_ptr<const TimeStateExt> pCloneOfTse5{
           AbsStateExt::selectExt<TimeStateExt>(cloneOfS5->getExtension())};
-      bool b{};
-      bool b1{};
-      BOOST_CHECK(b = static_cast<bool>(pCloneOfPlse5));
-      BOOST_CHECK(b1 = static_cast<bool>(pCloneOfTse5));
+      bool b{nullptr != pCloneOfPlse5};
+      bool b1{nullptr != pCloneOfTse5};
+      BOOST_CHECK(b);
+      BOOST_CHECK(b1);
       if (b && b1) {
         BOOST_CHECK(pCloneOfTse5->time() == t);
 
@@ -1000,9 +1000,10 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
           AbsStateExt::selectExt<PrevLoadStateExt>(nextOfS5->getExtension())};
       shared_ptr<const TimeStateExt> pNextOfTse5{
           AbsStateExt::selectExt<TimeStateExt>(nextOfS5->getExtension())};
-      b = b1 = false;
-      BOOST_CHECK(b = static_cast<bool>(pNextOfPlse5));
-      BOOST_CHECK(b1 = static_cast<bool>(pNextOfTse5));
+      b = (nullptr != pNextOfPlse5);
+      b1 = (nullptr != pNextOfTse5);
+      BOOST_CHECK(b);
+      BOOST_CHECK(b1);
       if (b && b1) {
         BOOST_CHECK(pNextOfTse5->time() == 5555U);
 
@@ -1032,8 +1033,8 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
       unique_ptr<const IState> initS{
           d.createInitialState(InitialSymbolsTable())};
 
-      bool b{};
-      BOOST_CHECK(b = static_cast<bool>(initS));
+      bool b{nullptr != initS};
+      BOOST_CHECK(b);
       if (b) {
         BOOST_CHECK(
             !AbsStateExt::selectExt<TimeStateExt>(initS->getExtension()));
@@ -1053,8 +1054,8 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
       unique_ptr<const IState> initS{
           d.createInitialState(InitialSymbolsTable())};
 
-      bool b{};
-      BOOST_CHECK(b = static_cast<bool>(initS));
+      bool b{nullptr != initS};
+      BOOST_CHECK(b);
       if (b) {
         BOOST_CHECK(
             !AbsStateExt::selectExt<TimeStateExt>(initS->getExtension()));
@@ -1074,8 +1075,8 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
       unique_ptr<const IState> initS{
           d.createInitialState(InitialSymbolsTable())};
 
-      bool b{};
-      BOOST_CHECK(b = static_cast<bool>(initS));
+      bool b{nullptr != initS};
+      BOOST_CHECK(b);
       if (b) {
         BOOST_CHECK(
             !AbsStateExt::selectExt<TimeStateExt>(initS->getExtension()));
@@ -1094,8 +1095,8 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
       unique_ptr<const IState> initS{
           d.createInitialState(InitialSymbolsTable())};
 
-      bool b{};
-      BOOST_CHECK(b = static_cast<bool>(initS));
+      bool b{nullptr != initS};
+      BOOST_CHECK(b);
       if (b) {
         BOOST_CHECK(
             AbsStateExt::selectExt<TimeStateExt>(initS->getExtension()));

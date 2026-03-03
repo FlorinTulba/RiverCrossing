@@ -861,8 +861,8 @@ BOOST_AUTO_TEST_CASE(typesConstraint_usecases) {
     const auto clonedC = tc.clone();
     TypesConstraint* clonedTc{dynamic_cast<TypesConstraint*>(
         const_cast<IConfigConstraint*>(clonedC.get()))};
-    b = false;
-    BOOST_CHECK(b = static_cast<bool>(clonedTc));
+    b = (nullptr != clonedTc);
+    BOOST_CHECK(b);
     if (b) {
       BOOST_CHECK_NO_THROW(clonedTc->addTypeRange("t"));
       BOOST_CHECK(clonedTc->longestMatchLength() == UINT_MAX);
@@ -877,8 +877,8 @@ BOOST_AUTO_TEST_CASE(typesConstraint_usecases) {
     const auto clonedC = tc.clone();
     TypesConstraint* clonedTc{dynamic_cast<TypesConstraint*>(
         const_cast<IConfigConstraint*>(clonedC.get()))};
-    b = false;
-    BOOST_CHECK(b = static_cast<bool>(clonedTc));
+    b = (nullptr != clonedTc);
+    BOOST_CHECK(b);
     if (b) {
       BOOST_CHECK_NO_THROW(clonedTc->addTypeRange("t0", 3U, 3U));
       BOOST_CHECK(clonedTc->longestMatchLength() == 4U);

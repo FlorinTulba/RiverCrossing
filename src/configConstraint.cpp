@@ -372,7 +372,7 @@ TypesConstraint& TypesConstraint::addTypeRange(
     throw logic_error{HERE.function_name() +
                       " - Duplicate newType parameter: "s + newType};
 
-  if (!maxIncl) {
+  if (0U == maxIncl) {
     cout << "[Notification] " << HERE.function_name()
          << ": Unnecessary term within the configuration: 0 x " << newType
          << '\n'
@@ -387,7 +387,7 @@ TypesConstraint& TypesConstraint::addTypeRange(
       _longestMatchLength = UINT_MAX;
   }
 
-  if (!minIncl)
+  if (0U == minIncl)
     optionalTypes.emplace(newType, maxIncl);
   else
     mandatoryTypes.emplace(newType, make_pair(minIncl, maxIncl));
@@ -580,7 +580,7 @@ bool IdsConstraint::satisfiedGroups(set<unsigned>& ids,
   for (const auto& group : groups) {
     bool found{};
     for (const unsigned id : group)
-      if (ids.erase(id)) {
+      if (ids.erase(id) != 0ULL) {
         if (found)       // detected a 2nd entity from this group
           return false;  // only 1 entity from a group can appear
 
@@ -609,7 +609,7 @@ bool IdsConstraint::matches(const ent::IsolatedEntities& ents) const noexcept {
   set<unsigned> ids{makeCopyNoexcept(ents.ids())};
 
   for (const unsigned id : avoidedIds)
-    if (ids.erase(id))
+    if (ids.erase(id) != 0ULL)
       return false;  // found unwanted entity id
 
   if (!canSatisfyMandatoryGroups(ids))
@@ -950,8 +950,8 @@ long Modulus::validLong(double v) {
 }
 
 long Modulus::validOperation(long numeratorL, long denominatorL) {
-  if (!denominatorL) {
-    if (numeratorL)
+  if (0L == denominatorL) {
+    if (0L != numeratorL)
       throw overflow_error{HERE.function_name() + " - denominator is 0!"s};
     throw logic_error{HERE.function_name() + " - both operands are 0!"s};
   }
