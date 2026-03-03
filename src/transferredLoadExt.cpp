@@ -346,8 +346,9 @@ PrevLoadStateExt::PrevLoadStateExt(const SymbolsTable& symbols,
 
     previousRaftLoad = numeric_limits<double>::quiet_NaN();
 
-  } else
+  } else {
     previousRaftLoad = itPreviousRaftLoad->second;
+  }
 }
 
 double PrevLoadStateExt::prevRaftLoad() const noexcept {

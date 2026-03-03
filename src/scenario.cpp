@@ -73,8 +73,9 @@ namespace {
       keysCount = pt.count(keyName);
       if (keysCount > 0ULL)
         firstFoundKeyName = keyName;
-    } else
+    } else {
       keysCount += pt.count(keyName);
+    }
 
     if (keysCount >= 2ULL)
       duplicateKeyExc(keyNames);

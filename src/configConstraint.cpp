@@ -126,8 +126,9 @@ bool AbsContextValidator::validate(const ent::MovingEntities& ents,
 
       resultOwnValidator = static_cast<bool>(excAssessment);
 
-    } else
+    } else {
       throw;  // no saving exception handler
+    }
   }
 
   if (!resultOwnValidator)
@@ -835,9 +836,9 @@ pair<double, double> ValueOrRange::range(const SymbolsTable& st) const {
 
 string ValueOrRange::toString() const {
   ostringstream oss;
-  if (const ValueType* value_{get_if<ValueType>(&_valueOrRange)})
+  if (const ValueType* value_{get_if<ValueType>(&_valueOrRange)}) {
     oss << **value_;
-  else {
+  } else {
     const RangeType range{get<RangeType>(_valueOrRange)};
     oss << *range.first << " .. " << *range.second;
   }
@@ -879,9 +880,9 @@ bool ValueSet::contains(const double& v,
       if (limits.first <= v && limits.second >= v)
         return true;
 
-    } else if (abs(v - vor.value(st)) < Eps)
+    } else if (abs(v - vor.value(st)) < Eps) {
       return true;
-
+    }
     return false;
   });
 }
