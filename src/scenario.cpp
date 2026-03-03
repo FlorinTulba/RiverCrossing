@@ -148,8 +148,7 @@ class TransferCapacityManager {
     double totalWeight{};
     for (const auto& idsOfWeight : idsByWeights) {
       for (const unsigned id : idsOfWeight.second)
-        if (!!(*entities)[id]
-                  ->canRow()) {  // !!(tribool) => true or indeterminate
+        if (static_cast<bool>((*entities)[id]->canRow())) {
           lightestEntWhoMightRow = id;
           totalWeight = idsOfWeight.first;
           break;

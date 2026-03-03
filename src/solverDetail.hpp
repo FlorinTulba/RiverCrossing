@@ -173,10 +173,16 @@ class MovingConfigsManager {
     size_t neverRowIdsCount{};
     for (const unsigned id : allIds) {
       const shared_ptr<const IEntity> ent{(*entities)[id]};
-      if (ent->canRow())
+
+      if (const auto rowAbility{ent->canRow()}; static_cast<bool>(rowAbility))
         alwaysRowIds.insert(id);
-      else if (!ent->canRow())
+
+      // !tribool returns tribool, that's why:
+      // (bool)(!rowAbility) returns false for indeterminate, while
+      // !(bool)rowAbility returns true for indeterminate
+      else if (static_cast<bool>(!rowAbility))  // false for indeterminate
         ++neverRowIdsCount;
+
       else
         rowSometimesIds.insert(id);
     }

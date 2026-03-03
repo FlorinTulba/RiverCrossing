@@ -43,7 +43,11 @@ BOOST_AUTO_TEST_CASE(construction_fieldsAsParams) {
     BOOST_CHECK(e.type().empty());
     BOOST_CHECK(!e.startsFromRightBank());
     BOOST_TEST(!e.weight());
-    BOOST_CHECK(!static_cast<bool>(e.canRow()));
+
+    // !tribool returns tribool, that's why:
+    // (bool)(!e.canRow()) returns false for indeterminate, while
+    // !(bool)e.canRow() returns true for indeterminate
+    BOOST_CHECK(static_cast<bool>(!e.canRow()));  // false for indeterminate
     BOOST_CHECK_NO_THROW(BOOST_CHECK(!e.canRow({})));
   } catch (...) {
     BOOST_CHECK(false);  // Unexpected exception
@@ -92,7 +96,11 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
     BOOST_CHECK(e.type().empty());
     BOOST_CHECK(!e.startsFromRightBank());
     BOOST_TEST(!e.weight());
-    BOOST_CHECK(!static_cast<bool>(e.canRow()));
+
+    // !tribool returns tribool, that's why:
+    // (bool)(!e.canRow()) returns false for indeterminate, while
+    // !(bool)e.canRow() returns true for indeterminate
+    BOOST_CHECK(static_cast<bool>(!e.canRow()));  // false for indeterminate
     BOOST_CHECK_NO_THROW(BOOST_CHECK(!e.canRow({})));
   } catch (...) {
     BOOST_CHECK(false);  // Unexpected exception
