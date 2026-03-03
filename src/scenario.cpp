@@ -829,6 +829,7 @@ string ScenarioDetails::toString() const {
 
 namespace std {
 
+// NOLINTNEXTLINE(bugprone-std-namespace-modification)
 ostream& operator<<(ostream& os, const rc::Scenario::Results& o) {
   const gsl::not_null<std::shared_ptr<const rc::sol::IAttempt>> attempt{
       o.attempt};

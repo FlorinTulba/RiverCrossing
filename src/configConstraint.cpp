@@ -1014,6 +1014,7 @@ string Modulus::toString() const {
 
 namespace std {
 
+// NOLINTNEXTLINE(bugprone-std-namespace-modification)
 auto& operator<<(auto& os, const rc::cond::ValueSet& vs) {
   os << vs.toString();
   return os;
