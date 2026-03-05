@@ -325,7 +325,9 @@ string ConfigurationsTransferDuration::toString() const {
 }
 
 unique_ptr<const IConfigConstraint> TypesConstraint::clone() const noexcept {
+  return makeNoexcept([this]() -> unique_ptr<const IConfigConstraint> {
   return make_unique<const TypesConstraint>(*this);
+  });
 }
 
 void TypesConstraint::validate(
@@ -489,7 +491,9 @@ string TypesConstraint::toString() const {
 }
 
 unique_ptr<const IConfigConstraint> IdsConstraint::clone() const noexcept {
+  return makeNoexcept([this]() -> unique_ptr<const IConfigConstraint> {
   return make_unique<const IdsConstraint>(*this);
+  });
 }
 
 void IdsConstraint::validate(
@@ -796,7 +800,8 @@ bool ValueOrRange::dependsOnVariable(const string& varName) const noexcept {
   if (const ValueType* value_{get_if<ValueType>(&_valueOrRange)})
     return (*value_)->dependsOnVariable(varName);
 
-  const RangeType range{get<RangeType>(_valueOrRange)};
+  const RangeType& range{makeNoexcept(
+      [this]() -> const RangeType& { return get<RangeType>(_valueOrRange); })};
   return range.first->dependsOnVariable(varName) ||
          range.second->dependsOnVariable(varName);
 }
@@ -805,7 +810,8 @@ bool ValueOrRange::isConst() const noexcept {
   if (const ValueType* value_{get_if<ValueType>(&_valueOrRange)})
     return (*value_)->constValue().has_value();
 
-  const RangeType range{get<RangeType>(_valueOrRange)};
+  const RangeType& range{makeNoexcept(
+      [this]() -> const RangeType& { return get<RangeType>(_valueOrRange); })};
   return range.first->constValue().has_value() &&
          range.second->constValue().has_value();
 }
