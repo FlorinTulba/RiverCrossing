@@ -215,7 +215,7 @@ class TransferCapacityManager {
     return *capacity;
   }  ///< provided / deduced capacity
 
-  PROTECTED :
+  PROTECTED:
   /// All entities of the scenario
   gsl::not_null<std::shared_ptr<const AllEntities>> entities;
 

@@ -74,7 +74,7 @@ class AbsConfigConstraintValidatorExt
   virtual void checkIdsCfg(const IdsConstraint& /*cfg*/,
                            const ent::AllEntities& /*allEnts*/) const {}
 
-  PROTECTED :
+  PROTECTED:
   gsl::not_null<gsl::owner<const IConfigConstraintValidatorExt*>> nextExt;
 };
 
@@ -120,7 +120,7 @@ class ConfigConstraints {
   ConfigConstraints(const ConfigConstraints&) = default;
   ConfigConstraints(ConfigConstraints&&) noexcept = default;
 
-  PROTECTED :
+  PROTECTED:
   /// Parsed constraints to be validated
   grammar::ConstraintsVec constraints;
 
@@ -244,7 +244,7 @@ class AbsContextValidator : public IContextValidator {
   [[nodiscard]] virtual bool doValidate(const ent::MovingEntities& ents,
                                         const SymbolsTable& st) const = 0;
 
-  PROTECTED :
+  PROTECTED:
   // using shared_ptr as more configurations might use these fields
 
   /// A chained next validator
@@ -356,7 +356,7 @@ class AbsTransferConstraintsExt
     return true;
   }
 
-  PROTECTED :
+  PROTECTED:
   gsl::not_null<gsl::owner<const ITransferConstraintsExt*>> nextExt;
 };
 
@@ -394,7 +394,7 @@ class TransferConstraints : public ConfigConstraints {
   /// @return the minimal capacity suitable for these constraints
   [[nodiscard]] unsigned minRequiredCapacity() const noexcept;
 
-  PROTECTED :
+  PROTECTED:
   gsl::not_null<const ITransferConstraintsExt*> extension;
 
   /// How many entities are allowed on the raft/bridge at once
@@ -430,7 +430,7 @@ class ConfigurationsTransferDuration {
 
   [[nodiscard]] std::string toString() const;
 
-  PROTECTED :
+  PROTECTED:
   /// All configurations with the given duration
   TransferConstraints constraints;
   unsigned _duration{};  ///< traversal duration for those configurations
@@ -487,7 +487,7 @@ class TypesConstraint : public IConfigConstraint {
 
   [[nodiscard]] std::string toString() const override;
 
-  PROTECTED :
+  PROTECTED:
   /// All the mentioned types
   std::unordered_set<std::string> mentionedTypes;
 
@@ -614,7 +614,7 @@ class IdsConstraint : public IConfigConstraint {
   [[nodiscard]] bool canSatisfyMandatoryGroups(
       std::set<unsigned>& ids) const noexcept;
 
-  PROTECTED :
+  PROTECTED:
   /// All id-s mentioned by the constraint
   std::unordered_set<unsigned> mentionedIds;
 
@@ -681,7 +681,7 @@ class Not : public LogicalExpr {
 
   [[nodiscard]] std::string toString() const override;
 
-  PROTECTED :
+  PROTECTED:
   /// The expression to negate
   gsl::not_null<std::shared_ptr<const LogicalExpr>> _le;
 };
@@ -745,7 +745,7 @@ class ValueOrRange {
   /// @throw logic_error for NULL / NaN values or for out of order values
   void validate() const;
 
-  PROTECTED :
+  PROTECTED:
   std::variant<ValueType, RangeType> _valueOrRange;
 };
 
@@ -779,7 +779,7 @@ class ValueSet : public IValues<double> {
 
   [[nodiscard]] std::string toString() const override;
 
-  PROTECTED :
+  PROTECTED:
   /// The values and the ranges
   std::vector<ValueOrRange> vors;
 
@@ -826,7 +826,7 @@ class BelongToCondition : public LogicalExpr {
     return oss.str();
   }
 
-  PROTECTED :
+  PROTECTED:
   /// Expression to be checked
   gsl::not_null<std::shared_ptr<const AbsExpr<Type>>> _e;
 
@@ -871,7 +871,7 @@ class NumericVariable : public NumericExpr {
 
   [[nodiscard]] std::string toString() const noexcept override;
 
-  PROTECTED :
+  PROTECTED:
   /// The considered name
   std::string name;
 };
@@ -897,7 +897,7 @@ class Addition : public NumericExpr {
 
   [[nodiscard]] std::string toString() const override;
 
-  PROTECTED :
+  PROTECTED:
   gsl::not_null<std::shared_ptr<const NumericExpr>> left;
   gsl::not_null<std::shared_ptr<const NumericExpr>> right;
 };
@@ -945,7 +945,7 @@ class Modulus : public NumericExpr {
   */
   [[nodiscard]] static long validOperation(long numeratorL, long denominatorL);
 
-  PROTECTED :
+  PROTECTED:
   gsl::not_null<std::shared_ptr<const NumericExpr>> numerator;
   gsl::not_null<std::shared_ptr<const NumericExpr>> denominator;
 };

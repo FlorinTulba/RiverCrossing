@@ -128,7 +128,7 @@ class MovingConfigOption {
     return cfg;
   }
 
-  PROTECTED :
+  PROTECTED:
   /// Raft/bridge configuration
   const rc::ent::MovingEntities cfg;
 
@@ -289,7 +289,7 @@ class MovingConfigsManager {
 #endif  // NDEBUG
   }
 
-  PROTECTED :
+  PROTECTED:
   /**
   Performs the `static` validation of the `cfg` raft/bridge configuration,
   associates it with its necessary `dynamic` validators and appends it
@@ -468,7 +468,7 @@ class State : public rc::sol::IState {
     return oss.str();
   }
 
-  PROTECTED :
+  PROTECTED:
   rc::ent::BankEntities _leftBank;
   rc::ent::BankEntities _rightBank;
 
@@ -544,7 +544,7 @@ class Move : public rc::sol::IMove {
     return oss.str();
   }
 
-  PROTECTED :
+  PROTECTED:
   /// The moved entities
   rc::ent::MovingEntities movedEnts;
 
@@ -575,7 +575,7 @@ class ChainedMove : public Move {
     return prev;
   }
 
-  PROTECTED :
+  PROTECTED:
   /// The link to the previous move or NULL if first move
   std::shared_ptr<const ChainedMove> prev;
 };
@@ -702,7 +702,7 @@ class Attempt : public rc::sol::IAttempt {
     return oss.str();
   }
 
-  PROTECTED :
+  PROTECTED:
   /// Initial fake empty move setting the initial state
   std::unique_ptr<const Move> initFakeMove;
 
@@ -786,7 +786,7 @@ class Solver {
       results->attempt = make_shared<const Attempt>();
   }
 
-  PROTECTED :
+  PROTECTED:
   /**
   This should be a newer / better state than the examined ones.
   However, previous states that are inferior to this one should be removed.
@@ -934,7 +934,7 @@ class Solver {
     void commitStep() noexcept { committed = true; }  ///< marks the move as ok
     [[nodiscard]] bool committedStep() const noexcept { return committed; }
 
-    PROTECTED :
+    PROTECTED:
     /// Parent outer class
     gsl::not_null<Solver*> solver;
 

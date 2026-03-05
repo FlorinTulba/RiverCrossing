@@ -101,7 +101,7 @@ class Scenario {
   [[nodiscard]] std::string toString()
       const;  ///< data apart from the description
 
-  PROTECTED :
+  PROTECTED:
   /// Prepares visualizing the solution
   void outputResults(const Results& res, bool interactiveSol = false) const;
 

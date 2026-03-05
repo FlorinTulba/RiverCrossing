@@ -35,7 +35,7 @@ class ConfigurationsTransferDurationInitType {
 
   [[nodiscard]] unsigned duration() const noexcept;
 
-  PROTECTED :
+  PROTECTED:
   /// Unchecked vector of configuration of same duration
   ConstraintsVec _constraints;
   unsigned _duration{};  ///< duration of the provided configurations

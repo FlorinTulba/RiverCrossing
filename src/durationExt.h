@@ -40,7 +40,7 @@ class TimeStateExt : public AbsStateExt {
 
   [[nodiscard]] unsigned time() const noexcept;
 
-  PROTECTED :
+  PROTECTED:
   [[nodiscard]] std::unique_ptr<const IStateExt> _clone(
       const std::shared_ptr<const IStateExt>& nextExt_) const noexcept override;
 

@@ -101,7 +101,7 @@ class AllEntities : public IEntities {
 
   [[nodiscard]] std::string toString() const override;
 
-  PROTECTED :
+  PROTECTED:
   AllEntities& operator+=(const std::shared_ptr<const IEntity>& e);
 
   /// The entire entities set
@@ -180,7 +180,7 @@ class IsolatedEntities : public IEntities {
 
   [[nodiscard]] std::string toString() const override;
 
-  PROTECTED :
+  PROTECTED:
   template <class IdsCont = std::vector<unsigned>>
   explicit IsolatedEntities(const std::shared_ptr<const AllEntities>& all_,
                             const IdsCont& ids_ = {})
@@ -334,7 +334,7 @@ class AbsMovingEntitiesExt
   [[nodiscard]] std::string toString(
       bool suffixesInsteadOfPrefixes /* = true*/) const noexcept final;
 
-  PROTECTED :
+  PROTECTED:
   AbsMovingEntitiesExt(const std::shared_ptr<const AllEntities>& all_,
                        std::unique_ptr<IMovingEntitiesExt> nextExt_) noexcept;
 
@@ -435,7 +435,7 @@ class MovingEntities : public IsolatedEntities {
 
   [[nodiscard]] std::string toString() const override;
 
-  PROTECTED :
+  PROTECTED:
   std::unique_ptr<IMovingEntitiesExt> extension;
 };
 

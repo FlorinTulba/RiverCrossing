@@ -46,7 +46,7 @@ class TotalLoadExt : public AbsMovingEntitiesExt {
 
   [[nodiscard]] double totalLoad() const noexcept { return load; }
 
-  PROTECTED :
+  PROTECTED:
   /// Selecting a new group of entities for moving to the other bank
   void _newGroup(const std::set<unsigned>& ids) override;
 
@@ -107,7 +107,7 @@ class MaxLoadValidatorExt : public AbsConfigConstraintValidatorExt {
 
   [[nodiscard]] double maxLoad() const noexcept;
 
-  PROTECTED :
+  PROTECTED:
   /// @throw logic_error if the types configuration does not respect current
   /// extension
   void checkTypesCfg(const TypesConstraint& cfg,
@@ -140,7 +140,7 @@ class MaxLoadTransferConstraintsExt : public AbsTransferConstraintsExt {
 
   [[nodiscard]] double maxLoad() const noexcept;
 
-  PROTECTED :
+  PROTECTED:
   /// @return validator extensions of a configuration
   [[nodiscard]] std::unique_ptr<const IConfigConstraintValidatorExt>
   _configValidatorExt(std::unique_ptr<const IConfigConstraintValidatorExt>
@@ -187,7 +187,7 @@ class InitiallyNoPrevRaftLoadExcHandler : public IValidatorExceptionHandler {
       const ent::MovingEntities&,
       const SymbolsTable& st) const noexcept override;
 
-  PROTECTED :
+  PROTECTED:
   /// The allowed loads
   gsl::not_null<std::shared_ptr<const IValues<double>>> _allowedLoads;
   bool dependsOnPreviousRaftLoad;
@@ -209,7 +209,7 @@ class AllowedLoadsValidator : public AbsContextValidator {
   AllowedLoadsValidator& operator=(const AllowedLoadsValidator&) = delete;
   AllowedLoadsValidator& operator=(AllowedLoadsValidator&&) noexcept = delete;
 
-  PROTECTED :
+  PROTECTED:
   /// @return true if `ents` is a valid raft/bridge configuration within
   /// `st` context
   /// @throw logic_error if ents misses some extension(s)
@@ -247,7 +247,7 @@ class PrevLoadStateExt : public AbsStateExt {
   [[nodiscard]] double prevRaftLoad() const noexcept;
   [[nodiscard]] unsigned crossingIdx() const noexcept;
 
-  PROTECTED :
+  PROTECTED:
   /// Clones the State extension
   [[nodiscard]] std::unique_ptr<const IStateExt> _clone(
       const std::shared_ptr<const IStateExt>& nextExt_) const noexcept override;
