@@ -188,10 +188,11 @@ BOOST_AUTO_TEST_CASE(modulus_usecases) {
     const Modulus m{c1, one};
     BOOST_CHECK(!m.dependsOnVariable(var1));
     BOOST_CHECK(!m.dependsOnVariable(var2));
-    BOOST_CHECK(b = m.constValue().has_value());
+    const auto optVal{m.constValue()};
+    BOOST_CHECK(b = optVal.has_value());
     if (b)
-      BOOST_TEST(!*m.constValue());
-    BOOST_CHECK_NO_THROW(BOOST_TEST(!m.eval(emptySt)));
+      BOOST_TEST(0. == *optVal);
+    BOOST_CHECK_NO_THROW(BOOST_TEST(0. == m.eval(emptySt)));
   } catch (...) {
     BOOST_CHECK(false);  // Unexpected exception
   }
@@ -200,10 +201,11 @@ BOOST_AUTO_TEST_CASE(modulus_usecases) {
     const Modulus m{v1, minusOne};
     BOOST_CHECK(!m.dependsOnVariable(var1));
     BOOST_CHECK(!m.dependsOnVariable(var2));
-    BOOST_CHECK(b = m.constValue().has_value());
+    const auto optVal{m.constValue()};
+    BOOST_CHECK(b = optVal.has_value());
     if (b)
-      BOOST_TEST(!*m.constValue());
-    BOOST_CHECK_NO_THROW(BOOST_TEST(!m.eval(emptySt)));
+      BOOST_TEST(0. == *optVal);
+    BOOST_CHECK_NO_THROW(BOOST_TEST(0. == m.eval(emptySt)));
   } catch (...) {
     BOOST_CHECK(false);  // Unexpected exception
   }

@@ -485,7 +485,7 @@ BOOST_AUTO_TEST_CASE(movingEntities_usecases) {
     bool b{nullptr != meLoadExt};
     BOOST_CHECK(b);
     if (b)
-      BOOST_TEST(!meLoadExt->totalLoad());
+      BOOST_TEST(0. == meLoadExt->totalLoad());
 
     me += 1U;
     BOOST_CHECK(me == set{1U});
@@ -512,7 +512,7 @@ BOOST_AUTO_TEST_CASE(movingEntities_usecases) {
     b = (nullptr != meLoadExt);
     BOOST_CHECK(b);
     if (b)
-      BOOST_TEST(!meLoadExt->totalLoad());
+      BOOST_TEST(0. == meLoadExt->totalLoad());
 
     me = {1U, 2U};
     set expectedIds{1U, 2U};

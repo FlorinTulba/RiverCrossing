@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(construction_fieldsAsParams) {
     BOOST_CHECK(e.name() == "abc");
     BOOST_CHECK(e.type().empty());
     BOOST_CHECK(!e.startsFromRightBank());
-    BOOST_TEST(!e.weight());
+    BOOST_TEST(0. == e.weight());
 
     // !tribool returns tribool, that's why:
     // (bool)(!e.canRow()) returns false for indeterminate, while
@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
     BOOST_CHECK(e.name() == "Father");
     BOOST_CHECK(e.type().empty());
     BOOST_CHECK(!e.startsFromRightBank());
-    BOOST_TEST(!e.weight());
+    BOOST_TEST(0. == e.weight());
 
     // !tribool returns tribool, that's why:
     // (bool)(!e.canRow()) returns false for indeterminate, while
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE(construction_ptreeAsParam) {
     BOOST_CHECK(e.name() == "abc");
     BOOST_CHECK(e.type().empty());
     BOOST_CHECK(!e.startsFromRightBank());
-    BOOST_TEST(!e.weight());
+    BOOST_TEST(0. == e.weight());
     BOOST_CHECK(static_cast<bool>(e.canRow()));
     BOOST_CHECK_NO_THROW(BOOST_CHECK(e.canRow({})));
   } catch (...) {
