@@ -924,8 +924,12 @@ int main(int argc, zstring* argv) try {
 
   const std::span<zstring> args{argv, static_cast<size_t>(argc)};
 
-  const bool interactive{(size(args) >= 2ULL) &&
-                         (string_view{args.at(1ULL)} == "interactive")};
+  const bool interactive{
+      (size(args) >= 2ULL) &&
+      ("interactive" == string_view{
+                            args[1ULL]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                                        // : Check performed above
+                        })};
 
 #ifndef NDEBUG
   cout << "Interactive:" << boolalpha << interactive << '\n' << flush;
