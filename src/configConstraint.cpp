@@ -326,7 +326,7 @@ string ConfigurationsTransferDuration::toString() const {
 
 unique_ptr<const IConfigConstraint> TypesConstraint::clone() const noexcept {
   return makeNoexcept([this]() -> unique_ptr<const IConfigConstraint> {
-  return make_unique<const TypesConstraint>(*this);
+    return make_unique<const TypesConstraint>(*this);
   });
 }
 
@@ -492,7 +492,7 @@ string TypesConstraint::toString() const {
 
 unique_ptr<const IConfigConstraint> IdsConstraint::clone() const noexcept {
   return makeNoexcept([this]() -> unique_ptr<const IConfigConstraint> {
-  return make_unique<const IdsConstraint>(*this);
+    return make_unique<const IdsConstraint>(*this);
   });
 }
 
@@ -934,7 +934,7 @@ Addition::Addition(const shared_ptr<const NumericExpr>& left_,
     : NumericExpr{[&left_, &right_]() noexcept -> optional<double> {
         if (const auto &lOpt{left_->constValue()}, &rOpt{right_->constValue()};
             lOpt.has_value() && rOpt.has_value())
-          return make_optional(lOpt.value() + rOpt.value());
+          return make_optional(*lOpt + *rOpt);
         return nullopt;
       }()},
       left(left_),
@@ -980,7 +980,7 @@ Modulus::Modulus(const shared_ptr<const NumericExpr>& numerator_,
   // when the denominator is 1 or -1, the result is always 0
   const auto& denomValOpt{denominator->constValue()};
   const bool hasConstDenominator{denomValOpt.has_value()};
-  if (hasConstDenominator && 1L == abs(validLong(denomValOpt.value()))) {
+  if (hasConstDenominator && 1L == abs(validLong(*denomValOpt))) {
     val = 0.;
     return;
   }
@@ -988,11 +988,11 @@ Modulus::Modulus(const shared_ptr<const NumericExpr>& numerator_,
   const auto& numerValOpt{numerator->constValue()};
   const bool hasConstNumerator{numerValOpt.has_value()};
   if (hasConstNumerator) {
-    const long numeratorL{validLong(numerValOpt.value())};
+    const long numeratorL{validLong(*numerValOpt)};
 
     // when both terms are constants, set the result directly
     if (hasConstDenominator) {
-      const long denominatorL{validLong(denomValOpt.value())};
+      const long denominatorL{validLong(*denomValOpt)};
       val = static_cast<double>(validOperation(numeratorL, denominatorL));
       return;
     }

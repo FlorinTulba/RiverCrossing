@@ -796,7 +796,7 @@ class BelongToCondition : public LogicalExpr {
         _valueSet{valueSet_} {
     if (const auto& constValOpt{_e->constValue()};
         constValOpt.has_value() && _valueSet->constSet())
-      val = _valueSet->contains(constValOpt.value());
+      val = _valueSet->contains(*constValOpt);
   }
   ~BelongToCondition() noexcept override = default;
 

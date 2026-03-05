@@ -144,7 +144,7 @@ boost::logic::tribool Entity::canRow() const noexcept {
   if (!constValOpt.has_value())
     return indeterminate;
 
-  return constValOpt.value();
+  return *constValOpt;
 }
 
 const string& Entity::type() const noexcept {
