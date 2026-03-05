@@ -131,6 +131,7 @@ class TransferCapacityManager {
       delete;
 
   /// The scenario specifies the transfer capacity
+  // NOLINTNEXTLINE(readability-make-member-function-const) : Setter method
   void providedCapacity(unsigned capacity_) {
     if (static_cast<size_t>(capacity_) >= entities->count() || capacity_ < 2U)
       throw domain_error{HERE.function_name() +
@@ -141,6 +142,7 @@ class TransferCapacityManager {
 
   /// The scenario specifies the raft / bridge max load, which might help
   /// for deducing the capacity.
+  // NOLINTNEXTLINE(readability-make-member-function-const) : Setter method
   void setMaxLoad(double maxLoad) {
     // Count lightest entities among which 1 might row whose total weight <=
     // maxLoad
@@ -149,7 +151,11 @@ class TransferCapacityManager {
     double totalWeight{};
     for (const auto& idsOfWeight : idsByWeights) {
       for (const unsigned id : idsOfWeight.second)
-        if (static_cast<bool>((*entities)[id]->canRow())) {
+        if (static_cast<bool>(
+                (*entities)
+                    [id]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                          // : Checked [] - uses at()
+                        ->canRow())) {
           lightestEntWhoMightRow = id;
           totalWeight = idsOfWeight.first;
           break;
@@ -197,6 +203,7 @@ class TransferCapacityManager {
 
   /// The scenario specifies several constraints about the (dis)allowed
   /// raft/bridge configurations, which might help for deducing the capacity.
+  // NOLINTNEXTLINE(readability-make-member-function-const) : Setter method
   void setTransferConstraints(const TransferConstraints& transferConstraints) {
     const unsigned cap{transferConstraints.minRequiredCapacity()};
 
@@ -217,10 +224,12 @@ class TransferCapacityManager {
 
   PROTECTED:
   /// All entities of the scenario
-  gsl::not_null<std::shared_ptr<const AllEntities>> entities;
+  gsl::not_null<std::shared_ptr<const AllEntities>>
+      entities;  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
 
   /// Provided / deduced transfer capacity (&ScenarioDetails::capacity)
-  gsl::not_null<unsigned*> capacity;
+  gsl::not_null<unsigned*>
+      capacity;  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
 };
 
 /// Extract scenario description string
@@ -608,8 +617,11 @@ Scenario::Scenario(istream& scenarioStream,
   entities = make_shared<const AllEntities>(entTree);
   assert(entities && entities->count() > 0ULL);
 
+  const auto firstId{*cbegin(entities->ids())};
   const std::shared_ptr<const IEntity> firstEntity{
-      (*entities)[*cbegin(entities->ids())]};
+      (*entities)
+          [firstId]};  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                       // : Checked [] - uses at()
   TransferCapacityManager capManager{entities, capacity};
 
   // Optional trees

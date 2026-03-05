@@ -34,16 +34,28 @@ namespace ent {
 
 void TotalLoadExt::_newGroup(const set<unsigned>& ids) {
   load = accumulate(CBOUNDS(ids), 0., [this](double prevSum, unsigned id) {
-    return prevSum + (*all)[id]->weight();
+    return prevSum +
+           (*all)
+               [id]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                     // : Checked [] - uses at()
+                   ->weight();
   });
 }
 
 void TotalLoadExt::_addEntity(unsigned id) {
-  load += (*all)[id]->weight();
+  load +=
+      (*all)
+          [id]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                // : Checked [] - uses at()
+              ->weight();
 }
 
 void TotalLoadExt::_removeEntity(unsigned id) {
-  load -= (*all)[id]->weight();
+  load -=
+      (*all)
+          [id]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                // : Checked [] - uses at()
+              ->weight();
   assert(load > -Eps);
 }
 
@@ -107,7 +119,11 @@ void MaxLoadValidatorExt::checkTypesCfg(const TypesConstraint& cfg,
     // Add the lightest minLim entities of this type
     multiset<double> weightsOfType;
     for (const unsigned id : matchingIds)
-      weightsOfType.insert(allEnts[id]->weight());
+      weightsOfType.insert(
+          allEnts
+              [id]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                    // : Checked [] - uses at()
+                  ->weight());
     const auto weightsOfTypeBegin = cbegin(weightsOfType);
     minConfigWeight += accumulate(
         weightsOfTypeBegin,
@@ -165,8 +181,8 @@ bool MaxLoadTransferConstraintsExt::_check(
          << *_maxLoad << " ] : "
          << ContView{entsIds, {.before = "", .between = " ", .after = "\n"}}
          << flush;
-#endif  // NDEBUG
-    return false;
+#endif             // NDEBUG
+    return false;  // NOLINT(readability-simplify-boolean-expr)
   }
 
   return true;

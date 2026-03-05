@@ -208,7 +208,8 @@ void IsolatedEntities::clear() noexcept {
 }
 
 IsolatedEntities& IsolatedEntities::operator+=(unsigned id) {
-  shared_ptr<const IEntity> ent{(*all)[id]};
+  shared_ptr<const IEntity> ent{(*all)[id]};  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                                              // : Checked [] - uses at()
   if (!_ids.insert(id).second)
     throw domain_error{HERE.function_name() + " - Duplicate entity id: "s +
                        to_string(id)};
@@ -219,7 +220,11 @@ IsolatedEntities& IsolatedEntities::operator+=(unsigned id) {
 }
 
 IsolatedEntities& IsolatedEntities::operator-=(unsigned id) {
-  const string& entType{(*all)[id]->type()};
+  const string& entType{
+      (*all)
+          [id]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                // : Checked [] - uses at()
+              ->type()};
   if (_ids.erase(id) == 0ULL)
     throw domain_error{HERE.function_name() + " - Missing entity id: "s +
                        to_string(id)};
@@ -250,21 +255,30 @@ const map<string, set<unsigned>>& IsolatedEntities::idsByTypes()
 }
 
 bool IsolatedEntities::anyRowCapableEnts(const SymbolsTable& st) const {
-  return ranges::any_of(
-      _ids, [this, &st](unsigned id) { return (*all)[id]->canRow(st); });
+  return ranges::any_of(_ids, [this, &st](unsigned id) {
+    return (*all)
+        [id]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+              // : Checked [] - uses at()
+            ->canRow(st);
+  });
 }
 
 string IsolatedEntities::toString() const {
   if (_ids.empty())
     return "[]"s;
 
-  return ContView{_ids,
-                  {.before = "[ ", .between = ", ", .after = " ]"},
-                  [this](unsigned id) {
-                    ostringstream oss;
-                    oss << (*all)[id]->name() << '(' << id << ')';
-                    return oss.str();
-                  }}
+  return ContView{
+      _ids,
+      {.before = "[ ", .between = ", ", .after = " ]"},
+      [this](unsigned id) {
+        ostringstream oss;
+        oss << (*all)
+                   [id]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                         // : Checked [] - uses at()
+                       ->name()
+            << '(' << id << ')';
+        return oss.str();
+      }}
       .toString();
 }
 

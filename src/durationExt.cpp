@@ -39,8 +39,8 @@ bool TimeStateExt::_validate() const {
     cout << "violates duration constraint [" << _time << " > "
          << info->maxDuration << "]\n"
          << flush;
-#endif  // NDEBUG
-    return false;
+#endif             // NDEBUG
+    return false;  // NOLINT(readability-simplify-boolean-expr)
   }
   return true;
 }
