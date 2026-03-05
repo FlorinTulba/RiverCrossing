@@ -155,13 +155,14 @@ func processWaitStatus(waitSt syscall.WaitStatus) (out string) {
 		out += fmt.Sprintf("\nSignaled by: %s (%d)", strings.ToUpper(sig.String()), sig)
 		if sig == syscall.SIGABRT {
 			// Darwin & Android - missing shared library (SIGABRT)
-			if OS == "android" {
-				out += fmt.Sprint("\nOne/several required shared libraries might not be found!\n" +
-					"Check each library reported by command: ldd selectedSolver!")
+			switch OS {
+			case "android":
+				out += "\nOne/several required shared libraries might not be found!\n" +
+					"Check each library reported by command: ldd selectedSolver!"
 
-			} else if OS == "darwin" {
-				out += fmt.Sprint("\nOne/several required shared libraries might not be found!\n" +
-					"Check each library reported by command: otool -L selectedSolver!")
+			case "darwin":
+				out += "\nOne/several required shared libraries might not be found!\n" +
+					"Check each library reported by command: otool -L selectedSolver!"
 			}
 		}
 	}
@@ -170,13 +171,13 @@ func processWaitStatus(waitSt syscall.WaitStatus) (out string) {
 		out += fmt.Sprintf("\nStopped by signal: %s (%d)", strings.ToUpper(sig.String()), sig)
 	}
 	if waitSt.Continued() {
-		out += fmt.Sprint("\nContinued")
+		out += "\nContinued"
 	}
 	if waitSt.TrapCause() != -1 {
 		out += fmt.Sprintf("\nTrap cause: %d", waitSt.TrapCause())
 	}
 	if waitSt.CoreDump() {
-		out += fmt.Sprint("\nCore dumped")
+		out += "\nCore dumped"
 	}
 	if waitSt.Exited() {
 		exitStatus := waitSt.ExitStatus()
@@ -185,24 +186,24 @@ func processWaitStatus(waitSt syscall.WaitStatus) (out string) {
 			if exitStatus == 0x1 {
 				// Windows - typical return status after killing the task
 				// from the task manager (0x1)
-				out += fmt.Sprint("\nTask managers typically return 0x1 for an ended task!")
+				out += "\nTask managers typically return 0x1 for an ended task!"
 
 			} else if int64(exitStatus) == 0xC0000135 || int64(exitStatus) == 0xC0000139 {
 				// Windows - STATUS_DLL_NOT_FOUND (0xC0000135)
 				// Windows - STATUS_ENTRYPOINT_NOT_FOUND (0xC0000139)
-				out += fmt.Sprint("\nOne/several required Entrypoint(s) / DLL(s) were not found!\n" +
+				out += "\nOne/several required Entrypoint(s) / DLL(s) were not found!\n" +
 					"The PATH variable within Cygwin and MSYS environments is set to " +
 					"point to specific required DLL-s.\n" +
 					"Make sure programs compiled in MSYS/Cygwin are started " +
-					"from the same environments!")
+					"from the same environments!"
 			}
 
 		} else if (exitStatus == 0x7F && OS == "linux") ||
 			(exitStatus == 0x1 && OS == "freebsd") {
 			// Linux & WSL - missing shared library (0x7F)
 			// FreeBSD - missing shared library (0x1)
-			out += fmt.Sprint("\nOne/several required shared libraries were not found!\n" +
-				"Check each library reported by command: ldd selectedSolver!")
+			out += "\nOne/several required shared libraries were not found!\n" +
+				"Check each library reported by command: ldd selectedSolver!"
 		}
 
 	}
