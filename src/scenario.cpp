@@ -264,7 +264,7 @@ void parseCapacityConstraint(const ptree& crossingConstraintsTree,
                          " - Bad type for the raft capacity! "s + ex.what()};
     }
 
-    if (!bridgeInsteadOfRaft && key[0ULL] == 'B')
+    if (!bridgeInsteadOfRaft && key.at(0ULL) == 'B')
       bridgeInsteadOfRaft = true;
 
     ++uniqueConstraints;
@@ -305,7 +305,7 @@ void parseMaxLoadConstraint(const ptree& crossingConstraintsTree,
 
     capManager.setMaxLoad(maxLoad);
 
-    if (!bridgeInsteadOfRaft && key[0ULL] == 'B')
+    if (!bridgeInsteadOfRaft && key.at(0ULL) == 'B')
       bridgeInsteadOfRaft = true;
 
     ++uniqueConstraints;
@@ -339,7 +339,7 @@ void parseAllowedLoadsConstraint(const ptree& crossingConstraintsTree,
           "when using the `"s +
           key + "` constraint!"s};
 
-    if (!bridgeInsteadOfRaft && key[7ULL] == 'B')
+    if (!bridgeInsteadOfRaft && key.at(7ULL) == 'B')
       bridgeInsteadOfRaft = true;
 
     ++uniqueConstraints;
@@ -368,7 +368,7 @@ void parseRaftCfgsConstraint(const ptree& crossingConstraintsTree,
     // key starts either with 'A' or with 'D':
     // AllowedRaftConfigurations or AllowedBridgeConfigurations
     // DisallowedRaftConfigurations or DisallowedBridgeConfigurations
-    const bool allowed{key[0ULL] == 'A'};
+    const bool allowed{key.at(0ULL) == 'A'};
     // ensure that DisallowedRaftConfigurations contains the empty set
     if (!allowed)
       (*readConstraints).push_back(make_shared<const IdsConstraint>());
@@ -383,8 +383,8 @@ void parseRaftCfgsConstraint(const ptree& crossingConstraintsTree,
 
     capManager.setTransferConstraints(*details.transferConstraints);
 
-    if (!bridgeInsteadOfRaft &&
-        ((allowed && key[7ULL] == 'B') || (!allowed && key[10ULL] == 'B')))
+    if (!bridgeInsteadOfRaft && ((allowed && key.at(7ULL) == 'B') ||
+                                 (!allowed && key.at(10ULL) == 'B')))
       bridgeInsteadOfRaft = true;
 
     ++uniqueConstraints;
@@ -496,7 +496,7 @@ void parseBanksConstraints(const ptree& banksConstraintsTree,
 
   // key starts either with 'A' or with 'D':
   // AllowedBankConfigurations  OR  DisallowedBankConfigurations
-  const bool allowed{key[0ULL] == 'A'};
+  const bool allowed{key.at(0ULL) == 'A'};
 
   // For AllowedBankConfigurations allow also start & final configurations
   if (allowed) {
@@ -913,7 +913,7 @@ int main(int argc, zstring* argv) try {
   const std::span<zstring> args{argv, static_cast<size_t>(argc)};
 
   const bool interactive{(size(args) >= 2ULL) &&
-                         (string_view{args[1ULL]} == "interactive")};
+                         (string_view{args.at(1ULL)} == "interactive")};
 
 #ifndef NDEBUG
   cout << "Interactive:" << boolalpha << interactive << '\n' << flush;
