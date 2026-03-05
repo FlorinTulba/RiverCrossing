@@ -49,8 +49,9 @@ const shared_ptr<const DefStateExt>& DefStateExt::SHARED_INST() noexcept {
   // and not a friend of make_shared
   static const shared_ptr<const DefStateExt> inst{makeNoexcept([] {
     return shared_ptr<const DefStateExt>{
-        // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new)
-        new DefStateExt};
+        new DefStateExt()  // NOLINT(bugprone-unhandled-exception-at-new)
+                           // : Handled by makeNoexcept
+    };
   })};
   UNMUTE_WARNING
 
@@ -62,8 +63,8 @@ unique_ptr<const IStateExt> DefStateExt::clone() const noexcept {
   // and not a friend of make_unique
   return unique_ptr<const IStateExt>{
       makeNoexcept([]() -> gsl::owner<DefStateExt*> {
-        // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new)
-        return new DefStateExt;
+        return new DefStateExt;  // NOLINT(bugprone-unhandled-exception-at-new)
+                                 // : Handled by makeNoexcept
       })};
 }
 UNMUTE_WARNING

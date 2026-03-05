@@ -79,8 +79,9 @@ DefConfigConstraintValidatorExt::NEW_INST() noexcept {
   // and not a friend of make_unique
   return unique_ptr<const DefConfigConstraintValidatorExt>{
       makeNoexcept([]() -> gsl::owner<DefConfigConstraintValidatorExt*> {
-        // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new)
-        return new DefConfigConstraintValidatorExt;
+        return new DefConfigConstraintValidatorExt;  // NOLINT(bugprone-unhandled-exception-at-new)
+                                                     // : Handled by
+                                                     // makeNoexcept
       })};
 }
 
@@ -91,8 +92,9 @@ DefContextValidator::SHARED_INST() noexcept {
   // and not a friend of make_shared
   static const shared_ptr<const DefContextValidator> inst{makeNoexcept([] {
     return shared_ptr<const DefContextValidator>{
-        // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new)
-        new DefContextValidator};
+        new DefContextValidator  // NOLINT(bugprone-unhandled-exception-at-new)
+                                 // : Handled by makeNoexcept
+    };
   })};
   UNMUTE_WARNING
 
@@ -1015,7 +1017,7 @@ string Modulus::toString() const {
 
 namespace std {
 
-// NOLINTNEXTLINE(bugprone-std-namespace-modification)
+// NOLINTNEXTLINE(bugprone-std-namespace-modification) : Classic overloading
 auto& operator<<(auto& os, const rc::cond::ValueSet& vs) {
   os << vs.toString();
   return os;
