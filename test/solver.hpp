@@ -1208,10 +1208,11 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
     moved = {1U, 2U};
 
     BOOST_CHECK_THROW(
-        a1.append(
-            Move(moved, CP(fakeMove.resultedState())->next(moved), 1234U)),
+        a1.append(Move(
+            moved, throwIfNull(fakeMove.resultedState())->next(moved), 1234U)),
         logic_error);  // first move needs index 0, not 1234
-    a1.append(Move(moved, CP(fakeMove.resultedState())->next(moved), 0U));
+    a1.append(
+        Move(moved, throwIfNull(fakeMove.resultedState())->next(moved), 0U));
     BOOST_CHECK(!a1.isSolution());
     BOOST_CHECK(a1.length() == 1ULL);
     BOOST_CHECK(a1.initialState());
@@ -1222,10 +1223,11 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
     moved = {1U};
 
     BOOST_CHECK_THROW(
-        a1.append(
-            Move(moved, CP(firstMove.resultedState())->next(moved), 1234U)),
+        a1.append(Move(
+            moved, throwIfNull(firstMove.resultedState())->next(moved), 1234U)),
         logic_error);  // second move needs index 1, not 1234
-    a1.append(Move(moved, CP(firstMove.resultedState())->next(moved), 1U));
+    a1.append(
+        Move(moved, throwIfNull(firstMove.resultedState())->next(moved), 1U));
     BOOST_CHECK(!a1.isSolution());
     BOOST_CHECK(a1.length() == 2ULL);
     BOOST_CHECK(a1.initialState());
@@ -1236,18 +1238,20 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
     moved = {1U, 3U};
 
     BOOST_CHECK_THROW(
-        a1.append(
-            Move(moved, CP(secondMove.resultedState())->next(moved), 1234U)),
+        a1.append(Move(moved,
+                       throwIfNull(secondMove.resultedState())->next(moved),
+                       1234U)),
         logic_error);  // third move needs index 2, not 1234
 
-    a1.append(Move(moved, CP(secondMove.resultedState())->next(moved), 2U));
+    a1.append(
+        Move(moved, throwIfNull(secondMove.resultedState())->next(moved), 2U));
     BOOST_CHECK(a1.isSolution());
     BOOST_CHECK(a1.length() == 3ULL);
     BOOST_CHECK(a1.initialState());
     BOOST_CHECK(a1.targetLeftBank);
     const IMove& thirdMove{a1.lastMove()};
 
-    BOOST_CHECK(CP(thirdMove.resultedState())->leftBank().empty());
+    BOOST_CHECK(throwIfNull(thirdMove.resultedState())->leftBank().empty());
 
     a1.pop();
     BOOST_CHECK(!a1.isSolution());
@@ -1303,19 +1307,22 @@ BOOST_AUTO_TEST_CASE(currentAttempt_usecases) {
     // First move
     moved = {1U, 2U};
 
-    a2.append(Move(moved, CP(fakeMove.resultedState())->next(moved), 0U));
+    a2.append(
+        Move(moved, throwIfNull(fakeMove.resultedState())->next(moved), 0U));
     const IMove& firstMove{a2.lastMove()};
 
     // Second move
     moved = {1U};
 
-    a2.append(Move(moved, CP(firstMove.resultedState())->next(moved), 1U));
+    a2.append(
+        Move(moved, throwIfNull(firstMove.resultedState())->next(moved), 1U));
     const IMove& secondMove{a2.lastMove()};
 
     // Third move
     moved = {1U, 3U};
 
-    a2.append(Move(moved, CP(secondMove.resultedState())->next(moved), 2U));
+    a2.append(
+        Move(moved, throwIfNull(secondMove.resultedState())->next(moved), 2U));
     ignore = a2.lastMove();
 
     BOOST_CHECK(a2.isSolution());

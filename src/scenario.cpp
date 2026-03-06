@@ -90,8 +90,8 @@ namespace {
     const string& nightModeExpr) {
   std::shared_ptr<const rc::cond::LogicalExpr> semantic{
       rc::grammar::parseNightModeExpr(nightModeExpr)};
-  return CP_EX_MSG(semantic, domain_error,
-                   "NightMode parsing error! See the cause above.");
+  return throwIfNull<domain_error>(
+      semantic, "NightMode parsing error! See the cause above.");
 }
 
 using namespace rc;
@@ -928,9 +928,9 @@ int main(int argc, zstring* argv) try {
       (size(args) >= 2ULL) &&
       ("interactive" ==
        string_view{
-                            args[1ULL]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
-                                        // : Check performed above
-                        })};
+           args[1ULL]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                       // : Check performed above
+       })};
 
 #ifndef NDEBUG
   cout << "Interactive:" << boolalpha << interactive << '\n' << flush;

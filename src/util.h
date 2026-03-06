@@ -36,8 +36,6 @@
 
 #include <gsl/pointers>
 
-using namespace std::literals;
-
 #ifdef UNIT_TESTING
 
 #define PROTECTED public
@@ -54,7 +52,6 @@ using namespace std::literals;
 #define CBOUNDS(cont) std::cbegin(cont), std::cend(cont)
 #define BOUNDS(cont) std::begin(cont), std::end(cont)
 
-
 // Access to source location information(file, line, col, function)
 #ifdef __cpp_lib_source_location
 #define LOC_INFO std::source_location
@@ -65,19 +62,29 @@ using namespace std::literals;
 #define HERE BOOST_CURRENT_LOCATION
 #endif  // defined(__cpp_lib_source_location)
 
+/// Concept for pointer-like types: raw pointers, smart pointers, and nullptr_t
+template <typename T>
+concept PointerLike =
+    std::same_as<T, std::nullptr_t> || std::is_pointer_v<T> || requires(T ptr) {
+      { ptr == nullptr };
+      { *ptr };
+      { ptr.operator->() };
+    };
+
 /// Forwarding a checked (smart) pointer. Throwing provided exception with given
 /// message if NULL
-#define CP_EX_MSG(ptr, exc, msg) \
-  ((ptr) ? (ptr) : (throw exc{HERE.function_name() + " - "s + (msg)}))
-/// Forwarding a checked (smart) pointer. Throwing provided exception if NULL
-#define CP_EX(ptr, exc) CP_EX_MSG((ptr), exc, "NULL value!"s)
+template <class Exc = std::invalid_argument>
+  requires std::derived_from<Exc, std::exception>
+inline constexpr decltype(auto) throwIfNull(
+    PointerLike auto&& ptr,
+    const std::string& msg = "NULL value!",
+    const LOC_INFO& where = HERE) {
+  if (ptr)
+    return std::forward<decltype(ptr)>(ptr);
 
-/// Forwarding a checked (smart) pointer. Throwing invalid_argument with given
-/// message if NULL
-#define CP_MSG(ptr, msg) CP_EX_MSG((ptr), std::invalid_argument, (msg))
-
-/// Forwarding a checked (smart) pointer. Throwing invalid_argument if NULL
-#define CP(ptr) CP_EX((ptr), std::invalid_argument)
+  using namespace std::literals;
+  throw Exc{where.function_name() + " - "s + msg};
+}
 
 namespace rc {
 
