@@ -523,10 +523,13 @@ class IdsConstraint : public IConfigConstraint {
 
     std::unordered_set<unsigned> newMentionedIds{mentionedIds};
     newMentionedIds.insert(CBOUNDS(group));
-    if (std::size(mentionedIds) + std::size(group) > std::size(newMentionedIds))
+    if (std::size(mentionedIds) + std::size(group) >
+        std::size(newMentionedIds)) {
+      using namespace std::literals;
       throw std::domain_error{
           HERE.function_name() +
           " - Found id(s) mentioned earlier in the same Ids constraint!"s};
+    }
     mentionedIds = newMentionedIds;
 
     mandatoryGroups.emplace_back(CBOUNDS(group));
@@ -547,10 +550,13 @@ class IdsConstraint : public IConfigConstraint {
 
     std::unordered_set<unsigned> newMentionedIds{mentionedIds};
     newMentionedIds.insert(CBOUNDS(group));
-    if (std::size(mentionedIds) + std::size(group) > std::size(newMentionedIds))
+    if (std::size(mentionedIds) + std::size(group) >
+        std::size(newMentionedIds)) {
+      using namespace std::literals;
       throw std::domain_error{
           HERE.function_name() +
           " - Found id(s) mentioned earlier in the same Ids constraint!"s};
+    }
     mentionedIds = newMentionedIds;
 
     optionalGroups.emplace_back(CBOUNDS(group));

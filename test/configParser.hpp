@@ -33,8 +33,6 @@ MUTE_GLOBAL_CTOR_WARN
 
 namespace bdata = boost::unit_test::data;
 
-using namespace std::literals;
-
 BOOST_AUTO_TEST_SUITE(configGrammar, *boost::unit_test::tolerance(rc::Eps))
 
 // IdsGroup ::= \(<<unsigned>> (\s* \| \s* <<unsigned>>)+\)

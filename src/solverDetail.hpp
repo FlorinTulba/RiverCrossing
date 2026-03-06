@@ -337,10 +337,12 @@ class State : public rc::sol::IState {
         _rightBank{rightBank},
         extension{extension_},
         _nextMoveFromLeft{nextMoveFromLeft} {
-    if (_leftBank != ~_rightBank)
+    if (_leftBank != ~_rightBank) {
+      using namespace std::literals;
       throw std::invalid_argument{
           HERE.function_name() +
           " - needs complementary bank configurations!"s};
+    }
   }
   State(const State&) = default;
 
@@ -676,6 +678,7 @@ class Attempt : public rc::sol::IAttempt {
     if (initFakeMove)
       return *initFakeMove;
 
+    using namespace std::literals;
     throw std::out_of_range{HERE.function_name() +
                             " - Called when there are no moves yet and not "
                             "even the initial state!"s};
