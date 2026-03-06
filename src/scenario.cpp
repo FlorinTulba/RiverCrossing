@@ -926,7 +926,8 @@ int main(int argc, zstring* argv) try {
 
   const bool interactive{
       (size(args) >= 2ULL) &&
-      ("interactive" == string_view{
+      ("interactive" ==
+       string_view{
                             args[1ULL]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
                                         // : Check performed above
                         })};

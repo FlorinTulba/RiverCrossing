@@ -208,8 +208,10 @@ void IsolatedEntities::clear() noexcept {
 }
 
 IsolatedEntities& IsolatedEntities::operator+=(unsigned id) {
-  shared_ptr<const IEntity> ent{(*all)[id]};  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
-                                              // : Checked [] - uses at()
+  shared_ptr<const IEntity> ent{
+      (*all)
+          [id]};  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                  // : Checked [] - uses at()
   if (!_ids.insert(id).second)
     throw domain_error{HERE.function_name() + " - Duplicate entity id: "s +
                        to_string(id)};
