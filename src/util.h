@@ -52,9 +52,8 @@ using namespace std::literals;
 
 /// Less typing when specifying container ranges
 #define CBOUNDS(cont) std::cbegin(cont), std::cend(cont)
-#define CRBOUNDS(cont) std::crbegin(cont), std::crend(cont)
 #define BOUNDS(cont) std::begin(cont), std::end(cont)
-#define RBOUNDS(cont) std::rbegin(cont), std::rend(cont)
+
 
 // Access to source location information(file, line, col, function)
 #ifdef __cpp_lib_source_location
