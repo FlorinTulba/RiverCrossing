@@ -1066,7 +1066,7 @@ BOOST_AUTO_TEST_CASE(raftConfigurationsValidation) {
           }
         }
       )"}};
-    bool b{nullptr != s.details.transferConstraints};
+    const bool b{nullptr != s.details.transferConstraints};
     BOOST_CHECK(b);
     if (b) {
       rc::ent::MovingEntities me{s.details.entities};

@@ -576,7 +576,7 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
       BOOST_CHECK(configsForABank == expectedConfigs);
       const shared_ptr<const IContextValidator> validator{
           sd.createTransferValidator()};  // allows anything now
-      bool b{nullptr != validator};
+      const bool b{nullptr != validator};
       BOOST_CHECK(b);
       if (b) {
         // allows even an unexpected config, where no entity can row
@@ -727,7 +727,7 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
       BOOST_CHECK(configsForABank == expectedConfigs);
       const shared_ptr<const IContextValidator> validator{
           sd.createTransferValidator()};  // allows anything weighing 12
-      bool b{nullptr != validator};
+      const bool b{nullptr != validator};
       BOOST_CHECK(b);
       if (b) {
         // allows even an unexpected config weighing 12, where no entity can row
@@ -850,7 +850,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
     try {
       shared_ptr<const TimeStateExt> timeExt{
           AbsStateExt::selectExt<TimeStateExt>(s.getExtension())};
-      bool b{nullptr != timeExt};
+      const bool b{nullptr != timeExt};
       BOOST_CHECK(b);
       if (b)
         BOOST_CHECK(t == timeExt->time());
@@ -897,7 +897,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
         try {
           shared_ptr<const TimeStateExt> timeExtCloneNextS{
               AbsStateExt::selectExt<TimeStateExt>(cloneNextS->getExtension())};
-          bool b1{nullptr != timeExtCloneNextS};
+          const bool b1{nullptr != timeExtCloneNextS};
           BOOST_CHECK(b1);
           if (b1)
             BOOST_CHECK(5555U == timeExtCloneNextS->time());
@@ -1033,7 +1033,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
       unique_ptr<const IState> initS{
           d.createInitialState(InitialSymbolsTable())};
 
-      bool b{nullptr != initS};
+      const bool b{nullptr != initS};
       BOOST_CHECK(b);
       if (b) {
         BOOST_CHECK(
@@ -1054,7 +1054,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
       unique_ptr<const IState> initS{
           d.createInitialState(InitialSymbolsTable())};
 
-      bool b{nullptr != initS};
+      const bool b{nullptr != initS};
       BOOST_CHECK(b);
       if (b) {
         BOOST_CHECK(
@@ -1075,7 +1075,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
       unique_ptr<const IState> initS{
           d.createInitialState(InitialSymbolsTable())};
 
-      bool b{nullptr != initS};
+      const bool b{nullptr != initS};
       BOOST_CHECK(b);
       if (b) {
         BOOST_CHECK(
@@ -1095,7 +1095,7 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
       unique_ptr<const IState> initS{
           d.createInitialState(InitialSymbolsTable())};
 
-      bool b{nullptr != initS};
+      const bool b{nullptr != initS};
       BOOST_CHECK(b);
       if (b) {
         BOOST_CHECK(
