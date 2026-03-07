@@ -16,6 +16,7 @@
 #include "configParser.h"
 #include "util.h"
 
+#include <concepts>
 #include <iterator>
 #include <unordered_set>
 #include <variant>
@@ -504,6 +505,15 @@ class TypesConstraint : public IConfigConstraint {
   unsigned _longestMatchLength{};  ///< length of the longest possible match
 };
 
+namespace detail {
+
+/// Concept for containers containing unsigned values (used for IdsConstraint)
+template <typename Cont>
+concept UnsignedCont = requires { typename Cont::value_type; } &&
+                       std::same_as<unsigned, typename Cont::value_type>;
+
+}  // namespace detail
+
 /// The provided constraint uses entity ids
 class IdsConstraint : public IConfigConstraint {
  public:
@@ -520,10 +530,8 @@ class IdsConstraint : public IConfigConstraint {
   IdsConstraint& addMandatoryId(unsigned id);
 
   /// Creates a new mandatory group with the ids from the provided container
-  template <class Cont>
+  template <detail::UnsignedCont Cont>
   IdsConstraint& addMandatoryGroup(const Cont& group) {
-    static_assert(std::is_same<unsigned, typename Cont::value_type>::value);
-
     std::unordered_set<unsigned> newMentionedIds{mentionedIds};
     newMentionedIds.insert(CBOUNDS(group));
     if (std::size(mentionedIds) + std::size(group) >
@@ -547,10 +555,8 @@ class IdsConstraint : public IConfigConstraint {
   IdsConstraint& addOptionalId(unsigned id);
 
   /// Creates a new optional group with the ids from the provided container
-  template <class Cont>
+  template <detail::UnsignedCont Cont>
   IdsConstraint& addOptionalGroup(const Cont& group) {
-    static_assert(std::is_same<unsigned, typename Cont::value_type>::value);
-
     std::unordered_set<unsigned> newMentionedIds{mentionedIds};
     newMentionedIds.insert(CBOUNDS(group));
     if (std::size(mentionedIds) + std::size(group) >
