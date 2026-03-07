@@ -49,8 +49,8 @@ const shared_ptr<const DefStateExt>& DefStateExt::SHARED_INST() noexcept {
   // and not a friend of make_shared
   static const shared_ptr<const DefStateExt> inst{makeNoexcept([] {
     return shared_ptr<const DefStateExt>{
-        new DefStateExt()  // NOLINT(bugprone-unhandled-exception-at-new)
-                           // : Handled by makeNoexcept
+        new DefStateExt  // NOLINT(bugprone-unhandled-exception-at-new)
+                         // : Handled by makeNoexcept
     };
   })};
   UNMUTE_WARNING

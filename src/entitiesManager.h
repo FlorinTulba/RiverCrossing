@@ -64,7 +64,7 @@ class IEntities {
 /// Manager of all the entities from the scenario
 class AllEntities : public IEntities {
  public:
-#ifdef UNIT_TESTING  // Unit tests finds useful a default ctor
+#ifdef UNIT_TESTING  // Unit tests find useful a default ctor
   AllEntities() noexcept = default;
 #endif  // UNIT_TESTING
 
