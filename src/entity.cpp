@@ -34,6 +34,8 @@ value.
 #include <sstream>
 #include <string>
 
+#include <gsl/util>
+
 using namespace std;
 using namespace boost::property_tree;
 

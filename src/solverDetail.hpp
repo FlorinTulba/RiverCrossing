@@ -25,6 +25,8 @@
 #include <tuple>
 #include <utility>
 
+#include <gsl/util>
+
 using std::ignore;
 
 namespace {

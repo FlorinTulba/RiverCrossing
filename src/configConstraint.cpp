@@ -37,6 +37,8 @@ value.
 #include <iomanip>
 #include <ranges>
 
+#include <gsl/util>
+
 using namespace std;
 
 namespace rc::cond {

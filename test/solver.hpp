@@ -37,6 +37,7 @@ and the define by `#ifdef UNIT_TESTING`!"
 #include <type_traits>
 
 #include <gsl/pointers>
+#include <gsl/util>
 
 #include <boost/test/unit_test.hpp>
 

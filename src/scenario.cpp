@@ -38,6 +38,8 @@ value.
 #include <string_view>
 #include <tuple>
 
+#include <gsl/util>
+
 #include <boost/property_tree/json_parser.hpp>
 
 using namespace std;
