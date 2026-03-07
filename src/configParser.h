@@ -27,15 +27,16 @@ class ConfigurationsTransferDurationInitType {
   /// Move the constraints in
   ConfigurationsTransferDurationInitType& setConstraints(
       ConstraintsVec&& constraints_) noexcept;
-
-  [[nodiscard]] ConstraintsVec&&
-  moveConstraints() noexcept;  ///< move the constraints out
+  [[nodiscard]] const ConstraintsVec& constraints() const& noexcept;
+  /// Moves the constraints out
+  [[nodiscard]] ConstraintsVec&& constraints() && noexcept;
 
   ConfigurationsTransferDurationInitType& setDuration(unsigned d);
+  [[nodiscard]] unsigned duration() const& noexcept;
+  /// Moves the duration out
+  [[nodiscard]] unsigned duration() && noexcept;
 
-  [[nodiscard]] unsigned duration() const noexcept;
-
-  PROTECTED:
+ protected:
   /// Unchecked vector of configuration of same duration
   ConstraintsVec _constraints;
   unsigned _duration{};  ///< duration of the provided configurations

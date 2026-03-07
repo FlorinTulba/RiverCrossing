@@ -45,8 +45,13 @@ ConfigurationsTransferDurationInitType::setConstraints(
   return *this;
 }
 
+const ConstraintsVec& ConfigurationsTransferDurationInitType::constraints()
+    const& noexcept {
+  return _constraints;
+}
+
 ConstraintsVec&&
-ConfigurationsTransferDurationInitType::moveConstraints() noexcept {
+ConfigurationsTransferDurationInitType::constraints() && noexcept {
   return std::move(_constraints);
 }
 
@@ -61,8 +66,12 @@ ConfigurationsTransferDurationInitType::setDuration(unsigned d) {
   return *this;
 }
 
-unsigned ConfigurationsTransferDurationInitType::duration() const noexcept {
+unsigned ConfigurationsTransferDurationInitType::duration() const& noexcept {
   return _duration;
+}
+
+unsigned ConfigurationsTransferDurationInitType::duration() && noexcept {
+  return std::exchange(_duration, {});
 }
 
 std::shared_ptr<const LogicalExpr> parseNightModeExpr(const std::string& s) {

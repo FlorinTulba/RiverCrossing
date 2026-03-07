@@ -292,13 +292,9 @@ ConfigurationsTransferDuration::ConfigurationsTransferDuration(
     const unsigned& capacity,
     const ITransferConstraintsExt& extension_
     /* = DefTransferConstraintsExt::INST*/)
-    : constraints{std::move(initType.moveConstraints()), allEnts_, capacity,
-                  true, extension_},
-      _duration{initType.duration()} {
-  // Silence 'rvalue never moved' warning for initType, since the move is
-  // already done in the member initializer list
-  const auto dummy{std::move(initType)};
-}
+    : constraints{std::move(initType).constraints(), allEnts_, capacity, true,
+                  extension_},
+      _duration{std::move(initType).duration()} {}
 
 const TransferConstraints& ConfigurationsTransferDuration::configConstraints()
     const noexcept {

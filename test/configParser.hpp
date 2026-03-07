@@ -537,7 +537,7 @@ BOOST_AUTO_TEST_CASE(crossingDurationForConfigurationsRule_correctInput) {
           "2  :  employee ; 0", crossingDurationForConfigurations, ctd));
   if (b) {
     BOOST_CHECK(ctd.duration() == 2U);
-    BOOST_CHECK(size(ctd._constraints) == 2ULL);
+    BOOST_CHECK(size(ctd.constraints()) == 2ULL);
   }
 }
 
