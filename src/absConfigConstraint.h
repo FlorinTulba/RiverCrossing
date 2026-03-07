@@ -57,7 +57,7 @@ class DefConfigConstraintValidatorExt final
       DefConfigConstraintValidatorExt&&) noexcept = delete;
 
   /// Allows sharing the default instance
-  static const DefConfigConstraintValidatorExt& INST() noexcept;
+  static constinit const DefConfigConstraintValidatorExt INST;
 
   /// Creates a new instance
   [[nodiscard]] static std::unique_ptr<const DefConfigConstraintValidatorExt>
@@ -69,6 +69,9 @@ class DefConfigConstraintValidatorExt final
   PRIVATE :
   DefConfigConstraintValidatorExt() noexcept = default;
 };
+
+inline constinit const DefConfigConstraintValidatorExt
+    DefConfigConstraintValidatorExt::INST{};
 
 /// Expresses a configuration for the raft(/bridge) / banks
 class IConfigConstraint {
@@ -87,7 +90,7 @@ class IConfigConstraint {
   virtual void validate(const ent::AllEntities& allEnts,
                         unsigned capacity = UINT_MAX,
                         const IConfigConstraintValidatorExt& valExt =
-                            DefConfigConstraintValidatorExt::INST()) const = 0;
+                            DefConfigConstraintValidatorExt::INST) const = 0;
 
   /// @return a copy of this on heap
   [[nodiscard]] virtual std::unique_ptr<const IConfigConstraint> clone()

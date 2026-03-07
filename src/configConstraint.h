@@ -289,7 +289,7 @@ class DefTransferConstraintsExt final : public ITransferConstraintsExt {
       delete;
 
   /// Allows sharing the default instance
-  static const DefTransferConstraintsExt& INST() noexcept;
+  static constinit const DefTransferConstraintsExt INST;
 
   /// Getting a new instance
   [[nodiscard]] static std::unique_ptr<const DefTransferConstraintsExt>
@@ -307,6 +307,9 @@ class DefTransferConstraintsExt final : public ITransferConstraintsExt {
   PRIVATE :
   DefTransferConstraintsExt() noexcept = default;
 };
+
+inline constinit const DefTransferConstraintsExt
+    DefTransferConstraintsExt::INST{};
 
 /**
 Base class for handling transfer constraints extensions.
@@ -369,7 +372,7 @@ class TransferConstraints : public ConfigConstraints {
                       const unsigned& capacity_,
                       bool allowed_ = true,
                       const ITransferConstraintsExt& extension_ =
-                          DefTransferConstraintsExt::INST());
+                          DefTransferConstraintsExt::INST);
   TransferConstraints(const TransferConstraints&) = default;
   TransferConstraints(TransferConstraints&&) noexcept = default;
   ~TransferConstraints() noexcept override = default;
@@ -410,7 +413,7 @@ class ConfigurationsTransferDuration {
       const ent::AllEntities& allEnts_,
       const unsigned& capacity,
       const ITransferConstraintsExt& extension_ =
-          DefTransferConstraintsExt::INST());
+          DefTransferConstraintsExt::INST);
   ConfigurationsTransferDuration(const ConfigurationsTransferDuration&) =
       default;
   ConfigurationsTransferDuration(ConfigurationsTransferDuration&&) noexcept =
@@ -469,7 +472,7 @@ class TypesConstraint : public IConfigConstraint {
   void validate(const ent::AllEntities& allEnts,
                 unsigned capacity = UINT_MAX,
                 const IConfigConstraintValidatorExt& valExt =
-                    DefConfigConstraintValidatorExt::INST()) const override;
+                    DefConfigConstraintValidatorExt::INST) const override;
 
   /// Is there a match between the provided collection and the constraint's
   /// data?
@@ -588,7 +591,7 @@ class IdsConstraint : public IConfigConstraint {
   void validate(const ent::AllEntities& allEnts,
                 unsigned capacity = UINT_MAX,
                 const IConfigConstraintValidatorExt& valExt =
-                    DefConfigConstraintValidatorExt::INST()) const override;
+                    DefConfigConstraintValidatorExt::INST) const override;
 
   /// Is there a match between the provided collection and the constraint's
   /// data?

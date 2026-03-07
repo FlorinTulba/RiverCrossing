@@ -66,12 +66,6 @@ void AbsConfigConstraintValidatorExt::check(
   }
 }
 
-const DefConfigConstraintValidatorExt&
-DefConfigConstraintValidatorExt::INST() noexcept {
-  static const DefConfigConstraintValidatorExt inst;
-  return inst;
-}
-
 MUTE_EXPLICIT_NEW_DELETE_WARN
 unique_ptr<const DefConfigConstraintValidatorExt>
 DefConfigConstraintValidatorExt::NEW_INST() noexcept {
@@ -137,11 +131,6 @@ bool AbsContextValidator::validate(const ent::MovingEntities& ents,
     return false;
 
   return nextValidator->validate(ents, st);
-}
-
-const DefTransferConstraintsExt& DefTransferConstraintsExt::INST() noexcept {
-  static const DefTransferConstraintsExt inst;
-  return inst;
 }
 
 unique_ptr<const DefTransferConstraintsExt>
@@ -243,7 +232,7 @@ TransferConstraints::TransferConstraints(
     const unsigned& capacity_,
     bool allowed_ /* = true*/,
     const ITransferConstraintsExt& extension_
-    /* = DefTransferConstraintsExt::INST()*/)
+    /* = DefTransferConstraintsExt::INST*/)
     : ConfigConstraints{std::move(constraints_), allEnts_, allowed_, true},
       extension{&extension_},
       capacity{&capacity_} {
@@ -300,7 +289,7 @@ ConfigurationsTransferDuration::ConfigurationsTransferDuration(
     const ent::AllEntities& allEnts_,
     const unsigned& capacity,
     const ITransferConstraintsExt& extension_
-    /* = DefTransferConstraintsExt::INST()*/)
+    /* = DefTransferConstraintsExt::INST*/)
     : constraints{std::move(initType.moveConstraints()), allEnts_, capacity,
                   true, extension_},
       _duration{initType.duration()} {
@@ -334,7 +323,7 @@ void TypesConstraint::validate(
     const ent::AllEntities& allEnts,
     unsigned capacity /* = UINT_MAX*/,
     const IConfigConstraintValidatorExt& valExt
-    /* = DefConfigConstraintValidatorExt::INST()*/) const {
+    /* = DefConfigConstraintValidatorExt::INST*/) const {
   const map<string, set<unsigned>>& idsByTypes{allEnts.idsByTypes()};
 
   for (const string& t : mentionedTypes)
@@ -500,7 +489,7 @@ void IdsConstraint::validate(
     const ent::AllEntities& allEnts,
     unsigned capacity /* = UINT_MAX*/,
     const IConfigConstraintValidatorExt& valExt
-    /* = DefConfigConstraintValidatorExt::INST()*/) const {
+    /* = DefConfigConstraintValidatorExt::INST*/) const {
   const size_t requiredIdsCount{size(mandatoryGroups) +
                                 static_cast<size_t>(expectedExtraIds)};
   const size_t available{allEnts.count()};
