@@ -76,8 +76,8 @@ concept PointerLike =
 template <class Exc = std::invalid_argument>
   requires std::derived_from<Exc, std::exception>
 inline decltype(auto) throwIfNull(PointerLike auto&& ptr,
-    const std::string& msg = "NULL value!",
-    const LOC_INFO& where = HERE) {
+                                  const std::string& msg = "NULL value!",
+                                  const LOC_INFO& where = HERE) {
   if (ptr)
     return std::forward<decltype(ptr)>(ptr);
 
@@ -97,7 +97,7 @@ noexcept 'f'. Additionally, makeNoexcept logs a thrown exception.
 */
 template <typename Func>
   requires(!noexcept(std::invoke(std::declval<Func>())))
-decltype(auto) makeNoexcept(Func&& f, const LOC_INFO where = HERE) noexcept {
+decltype(auto) makeNoexcept(Func&& f, const LOC_INFO& where = HERE) noexcept {
   // Default error message for the exception thrown by 'f', if any
   const char* errMsg{"unknown exception"};
 
@@ -138,7 +138,7 @@ terminates.
 */
 template <typename T>
 decltype(auto) makeCopyNoexcept(const T& val,
-                                const LOC_INFO where = HERE) noexcept {
+                                const LOC_INFO& where = HERE) noexcept {
   if constexpr (std::is_nothrow_copy_constructible_v<T>)
     return val;
   else
@@ -160,7 +160,8 @@ since the move operation is expected to succeed.
 terminates.
 */
 template <typename T>
-decltype(auto) makeMoveNoexcept(T&& val, const LOC_INFO where = HERE) noexcept {
+decltype(auto) makeMoveNoexcept(T&& val,
+                                const LOC_INFO& where = HERE) noexcept {
   if constexpr (std::is_nothrow_move_constructible_v<T>)
     return std::forward<T>(val);
   else
