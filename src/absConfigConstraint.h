@@ -128,7 +128,9 @@ class AbsExpr {
   AbsExpr& operator=(AbsExpr&&) noexcept = delete;
 
   /// Provide the cached result of the expression when this is a constant
-  const std::optional<Type>& constValue() const noexcept { return val; }
+  constexpr const std::optional<Type>& constValue() const noexcept {
+    return val;
+  }
 
   /// Checks if there is a dependency on `varName`
   virtual bool dependsOnVariable(
@@ -146,7 +148,8 @@ class AbsExpr {
   virtual std::string toString() const = 0;
 
  protected:
-  AbsExpr(const std::optional<Type>& val_ = {}) noexcept : val{val_} {}
+  constexpr AbsExpr(const std::optional<Type>& val_ = {}) noexcept
+      : val{val_} {}
 
   /// Cached result of the expression if possible
   std::optional<Type> val;
@@ -163,7 +166,7 @@ class NumericExpr : public AbsExpr<double> {
   NumericExpr& operator=(NumericExpr&&) noexcept = delete;
 
  protected:
-  NumericExpr(const std::optional<double>& val_ = {}) noexcept
+  constexpr NumericExpr(const std::optional<double>& val_ = {}) noexcept
       : AbsExpr{val_} {}
 };
 
@@ -178,7 +181,8 @@ class LogicalExpr : public AbsExpr<bool> {
   LogicalExpr& operator=(LogicalExpr&&) noexcept = delete;
 
  protected:
-  LogicalExpr(const std::optional<bool>& val_ = {}) noexcept : AbsExpr{val_} {}
+  constexpr LogicalExpr(const std::optional<bool>& val_ = {}) noexcept
+      : AbsExpr{val_} {}
 };
 
 /// A set of values (expressions that can be evaluated using a symbols table)

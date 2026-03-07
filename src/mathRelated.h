@@ -17,7 +17,7 @@
 
 namespace rc {
 
-constexpr double Eps{1e-6};
+inline constexpr double Eps{1e-6};
 
 }  // namespace rc
 

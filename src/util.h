@@ -75,8 +75,7 @@ concept PointerLike =
 /// message if NULL
 template <class Exc = std::invalid_argument>
   requires std::derived_from<Exc, std::exception>
-inline constexpr decltype(auto) throwIfNull(
-    PointerLike auto&& ptr,
+inline decltype(auto) throwIfNull(PointerLike auto&& ptr,
     const std::string& msg = "NULL value!",
     const LOC_INFO& where = HERE) {
   if (ptr)
@@ -188,7 +187,7 @@ template <class FwCont, class Proj = std::identity>
   requires std::ranges::forward_range<FwCont>
 class ContView {
  public:
-  explicit ContView(
+  explicit constexpr ContView(
       const FwCont& cont,
       const ContViewDelims& delims_ = {},
       const Proj& proj_ =
