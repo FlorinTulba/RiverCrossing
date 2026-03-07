@@ -46,9 +46,8 @@ using std::ignore;
 /// factorial function
 template <std::integral T>
 constexpr T factorial(T n) noexcept {
-  return (n <= gsl::narrow_cast<T>(1))
-             ? gsl::narrow_cast<T>(1)
-             : n * factorial(n - gsl::narrow_cast<T>(1));
+  static constexpr T ONE{gsl::narrow_cast<T>(1LL)};
+  return (n <= ONE) ? ONE : n * factorial(n - ONE);
 }
 
 /// Count of k-combinations of n elements
