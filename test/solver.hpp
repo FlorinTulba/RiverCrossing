@@ -269,9 +269,9 @@ BOOST_AUTO_TEST_CASE(contextValidation_usecases) {
   */
   class MissingVarExcHandler : public IValidatorExceptionHandler {
    public:
-    MissingVarExcHandler(const string& luckyVarName_, bool outcome_)
-        : luckyVarName(luckyVarName_),
-          outcome(outcome_) {}
+    MissingVarExcHandler(string luckyVarName_, bool outcome_) noexcept
+        : luckyVarName{std::move(luckyVarName_)},
+          outcome{outcome_} {}
     ~MissingVarExcHandler() noexcept override = default;
 
     MissingVarExcHandler(const MissingVarExcHandler&) = delete;
