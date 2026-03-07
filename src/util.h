@@ -274,7 +274,7 @@ class ToStringManager {
   ToStringManager& operator=(const ToStringManager&) = delete;
   ToStringManager& operator=(ToStringManager&&) noexcept = delete;
 
-  PROTECTED:
+ protected:
   gsl::not_null<const ExtendedInfo*> ext;
   gsl::not_null<std::ostringstream*> oss;
 };

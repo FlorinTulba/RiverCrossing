@@ -224,7 +224,7 @@ class TransferCapacityManager {
     return *capacity;
   }  ///< provided / deduced capacity
 
-  PROTECTED:
+ protected:
   /// All entities of the scenario
   gsl::not_null<std::shared_ptr<const AllEntities>>
       entities;  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)

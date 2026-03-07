@@ -70,7 +70,7 @@ class Entity : public IEntity {
 
   [[nodiscard]] std::string toString() const override;
 
-  PROTECTED:
+ protected:
   /// Name of the entity - mandatory
   std::string _name;
   std::string _type;  ///< type of the entity - optional

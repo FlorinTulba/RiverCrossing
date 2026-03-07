@@ -66,7 +66,7 @@ class DefConfigConstraintValidatorExt final
   void check(const IConfigConstraint& /*cfg*/,
              const ent::AllEntities& /*allEnts*/) const noexcept final {}
 
-  PRIVATE :
+  PRIVATE:
   DefConfigConstraintValidatorExt() noexcept = default;
 };
 
@@ -148,7 +148,6 @@ class AbsExpr {
  protected:
   AbsExpr(const std::optional<Type>& val_ = {}) noexcept : val{val_} {}
 
-  PROTECTED:
   /// Cached result of the expression if possible
   std::optional<Type> val;
 };

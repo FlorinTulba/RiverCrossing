@@ -113,7 +113,7 @@ class DefStateExt final : public IStateExt {
     return {};
   }
 
-  PRIVATE :
+  PRIVATE:
   DefStateExt() noexcept = default;
 };
 
@@ -200,7 +200,6 @@ class AbsStateExt : public IStateExt,
     return {};
   }
 
-  PROTECTED:
   gsl::not_null<const rc::ScenarioDetails*> info;
   gsl::not_null<std::shared_ptr<const IStateExt>> nextExt;
 };

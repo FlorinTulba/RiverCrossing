@@ -41,7 +41,7 @@ class CanRowValidator : public AbsContextValidator {
   CanRowValidator& operator=(const CanRowValidator&) = delete;
   CanRowValidator& operator=(CanRowValidator&&) noexcept = delete;
 
-  PROTECTED:
+ protected:
   /// @return true if `ents` is a valid raft/bridge configuration within
   /// `st` context
   /// @throw logic_error if ents misses some extension(s)
