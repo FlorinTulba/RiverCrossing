@@ -924,8 +924,8 @@ Addition::Addition(const shared_ptr<const NumericExpr>& left_,
           return make_optional(*lOpt + *rOpt);
         return nullopt;
       }()},
-      left(left_),
-      right(right_) {}
+      left{left_},
+      right{right_} {}
 
 bool Addition::dependsOnVariable(const string& varName) const noexcept {
   return !val.has_value() && (left->dependsOnVariable(varName) ||
@@ -962,8 +962,8 @@ long Modulus::validOperation(long numeratorL, long denominatorL) {
 
 Modulus::Modulus(const shared_ptr<const NumericExpr>& numerator_,
                  const shared_ptr<const NumericExpr>& denominator_)
-    : numerator(numerator_),
-      denominator(denominator_) {
+    : numerator{numerator_},
+      denominator{denominator_} {
   // when the denominator is 1 or -1, the result is always 0
   const auto& denomValOpt{denominator->constValue()};
   const bool hasConstDenominator{denomValOpt.has_value()};
