@@ -31,6 +31,7 @@ value.
 #include "util.h"
 #include "warnings.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <exception>
@@ -191,24 +192,28 @@ bool ConfigConstraints::empty() const noexcept {
 
 bool ConfigConstraints::check(const ent::IsolatedEntities& ents) const {
   bool found{};
-  for (const auto& c : constraints)
-    if (c->matches(ents)) {
-      found = true;
+  if (const auto it{ranges::find_if(
+          constraints,
+          [&ents](const auto& c) noexcept { return c->matches(ents); })};
+      it != cend(constraints)) {
+    found = true;
+
 #ifndef NDEBUG
-      if (!_allowed)
-        cout << "violates NOT{" << *c << "} : "
-             << ContView{ents.ids(),
-                         {.before = "", .between = " ", .after = "\n"}}
-             << flush;
+    if (!_allowed)
+      cout << "violates NOT{" << **it << "} : "
+           << ContView{ents.ids(),
+                       {.before = "", .between = " ", .after = "\n"}}
+           << flush;
 #endif  // NDEBUG
-      break;
-    }
+  }
+
 #ifndef NDEBUG
   if (_allowed != found)
     cout << "violates " << *this << " : "
          << ContView{ents.ids(), {.before = "", .between = " ", .after = "\n"}}
          << flush;
 #endif  // NDEBUG
+
   return found == _allowed;
 }
 
@@ -268,19 +273,16 @@ bool TransferConstraints::check(const ent::IsolatedEntities& ents) const {
 }
 
 unsigned TransferConstraints::minRequiredCapacity() const noexcept {
-  unsigned cap{};
-  if (_allowed) {
-    cap = 0U;
-    for (const auto& c : constraints) {
-      const unsigned longestMatchLength{c->longestMatchLength()};
-      cap = std::max(cap, longestMatchLength);
-    }
-  } else {  // disallowed
-    cap = UINT_MAX;
-    for (const auto& c : constraints) {
-      const unsigned longestMismatchLength{c->longestMismatchLength()};
-      cap = std::min(cap, longestMismatchLength);
-    }
+  unsigned cap{_allowed ? 0U : UINT_MAX};
+  if (!constraints.empty()) {
+    if (_allowed)
+      cap = ranges::max(constraints, {}, [](const auto& c) noexcept {
+              return c->longestMatchLength();
+            })->longestMatchLength();
+    else  // disallowed
+      cap = ranges::min(constraints, {}, [](const auto& c) noexcept {
+              return c->longestMismatchLength();
+            })->longestMismatchLength();
   }
 
   return min(cap, (static_cast<unsigned>(allEnts->count()) - 1U));
@@ -325,10 +327,12 @@ void TypesConstraint::validate(
     /* = DefConfigConstraintValidatorExt::INST*/) const {
   const map<string, set<unsigned>>& idsByTypes{allEnts.idsByTypes()};
 
-  for (const string& t : mentionedTypes)
-    if (!idsByTypes.contains(t))
-      throw logic_error{HERE.function_name() + " - Unknown type name `"s + t +
-                        "` in constraint `"s + toString() + "`!"s};
+  if (const auto it{ranges::find_if_not(
+          mentionedTypes,
+          [&idsByTypes](const auto& t) { return idsByTypes.contains(t); })};
+      it != cend(mentionedTypes))
+    throw logic_error{HERE.function_name() + " - Unknown type name `"s + *it +
+                      "` in constraint `"s + toString() + "`!"s};
 
   size_t minRequiredCount{};
   for (const auto& typeAndLimits : mandatoryTypes) {
@@ -506,11 +510,12 @@ void IdsConstraint::validate(
                       to_string(available) + ")!"s};
 
   const set<unsigned>& ids{allEnts.ids()};
-  for (const unsigned id : mentionedIds)
-    if (!ids.contains(id))
-      throw logic_error{HERE.function_name() + " - Unknown entity id `"s +
-                        to_string(id) + "` in constraint `"s + toString() +
-                        "`!"s};
+  if (const auto it{ranges::find_if_not(
+          mentionedIds, [&ids](const auto id) { return ids.contains(id); })};
+      it != cend(mentionedIds))
+    throw logic_error{HERE.function_name() + " - Unknown entity id `"s +
+                      to_string(*it) + "` in constraint `"s + toString() +
+                      "`!"s};
 
   valExt.check(*this, allEnts);
 }
@@ -572,16 +577,19 @@ IdsConstraint& IdsConstraint::setUnbounded() noexcept {
 bool IdsConstraint::satisfiedGroups(set<unsigned>& ids,
                                     bool forMandatory) const noexcept {
   const auto& groups{forMandatory ? mandatoryGroups : optionalGroups};
+  const auto is_id_in_ids{[&ids](const auto id) { return ids.contains(id); }};
 
   for (const auto& group : groups) {
-    bool found{};
-    for (const unsigned id : group)
-      if (ids.erase(id) != 0ULL) {
-        if (found)       // detected a 2nd entity from this group
-          return false;  // only 1 entity from a group can appear
+    bool found{};  // look for a single entity from this group in ids
+    if (const auto it{ranges::find_if(group, is_id_in_ids)};
+        it != cend(group)) {
+      found = true;  // detected an entity from this group in ids
 
-        found = true;  // detected 1st entity from this group
-      }
+      // There must be no other entities from this group in ids
+      ids.erase(*it);
+      if (ranges::any_of(group, is_id_in_ids))
+        return false;
+    }
 
     if (!found && forMandatory)
       return false;  // mandatory group not covered
@@ -604,9 +612,9 @@ bool IdsConstraint::canSatisfyMandatoryGroups(
 bool IdsConstraint::matches(const ent::IsolatedEntities& ents) const noexcept {
   set<unsigned> ids{makeCopyNoexcept(ents.ids())};
 
-  for (const unsigned id : avoidedIds)
-    if (ids.erase(id) != 0ULL)
-      return false;  // found unwanted entity id
+  if (ranges::any_of(avoidedIds,
+                     [&ids](const auto id) { return ids.contains(id); }))
+    return false;  // found unwanted entity id
 
   if (!canSatisfyMandatoryGroups(ids))
     return false;

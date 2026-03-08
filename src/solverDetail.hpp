@@ -19,9 +19,11 @@
 
 #include <cstddef>
 
+#include <algorithm>
 #include <concepts>
 #include <iterator>
 #include <queue>
+#include <ranges>
 #include <tuple>
 #include <utility>
 
@@ -111,17 +113,22 @@ class MovingConfigOption {
                               const rc::SymbolsTable& SymTb) const {
     using namespace std;
 
-    const set<unsigned>&raftIds{cfg.ids()}, &bankIds{bank.ids()};
-    for (const unsigned id : raftIds)
-      if (!bankIds.contains(id)) {
+    const set<unsigned>& raftIds{cfg.ids()};
+    const set<unsigned>& bankIds{bank.ids()};
+
+    if (const auto it{ranges::find_if_not(
+            raftIds,
+            [&bankIds](const auto id) { return bankIds.contains(id); })};
+        it != cend(raftIds)) {
 #ifndef NDEBUG
-        cout << "Invalid id [" << id << "] : "
-             << rc::ContView{raftIds,
-                             {.before = "", .between = " ", .after = "\n"}}
-             << flush;
-#endif                 // NDEBUG
-        return false;  // cfg should not contain id-s outside bank
-      }
+      cout << "Invalid id [" << *it << "] : "
+           << rc::ContView{raftIds,
+                           {.before = "", .between = " ", .after = "\n"}}
+           << flush;
+#endif               // NDEBUG
+      return false;  // cfg should not contain id-s outside bank
+    }
+
     return validator->validate(cfg, SymTb);
   }
 
@@ -212,7 +219,8 @@ class MovingConfigsManager {
     // Storing allConfigs in increasing order of their capacity
     for (unsigned cap{1U}; cap <= capacity; ++cap) {
       const unsigned restCap{cap - 1U};
-      vector<vector<unsigned>> alwaysCanCrossConfigs, sometimesCanCrossConfigs;
+      vector<vector<unsigned>> alwaysCanCrossConfigs;
+      vector<vector<unsigned>> sometimesCanCrossConfigs;
 
       // using here `unordered_set` instead of `set`
       // raises sometimes a signal in `generateCombinations`
@@ -271,18 +279,20 @@ class MovingConfigsManager {
     cout << "\nInvalid raft configs:\n" << flush;
 #endif  // NDEBUG
     result.clear();
-    if (largerConfigsFirst) {
-      const auto itEnd = crend(allConfigs);
-      for (auto it = crbegin(allConfigs); it != itEnd; ++it) {
-        const MovingConfigOption& cfgOption{*it};
-        if (cfgOption.validFor(bank, *SymTb))
-          result.push_back(&cfgOption.get());
-      }
-    } else {
-      for (const MovingConfigOption& cfgOption : allConfigs)
-        if (cfgOption.validFor(bank, *SymTb))
-          result.push_back(&cfgOption.get());
-    }
+
+    auto isValidForBank = [this, &bank](const auto& cfgOption) {
+      return cfgOption.validFor(bank, *SymTb);
+    };
+    auto collectValidCfgs = [&result, &isValidForBank](auto&& rangeConfigs) {
+      for (const auto& cfgOption : rangeConfigs | views::filter(isValidForBank))
+        result.push_back(&cfgOption.get());
+    };
+
+    if (largerConfigsFirst)
+      collectValidCfgs(views::reverse(allConfigs));
+    else
+      collectValidCfgs(allConfigs);
+
 #ifndef NDEBUG
     cout << "\nValid raft configs:\n" << flush;
     for (const rc::ent::MovingEntities* me : result)
@@ -392,15 +402,16 @@ class State : public rc::sol::IState {
   [[nodiscard]] bool handledBy(
       const std::vector<std::unique_ptr<const rc::sol::IState>>& examinedStates)
       const override {
-    for (const auto& prevSt : examinedStates)
-      if (handledBy(*prevSt)) {
-#ifndef NDEBUG
-        std::cout << "previously considered state\n" << std::flush;
-#endif  // NDEBUG
-        return true;
-      }
+    const bool isCoveredByPrevStates{std::ranges::any_of(
+        examinedStates,
+        [this](const auto& prevSt) { return handledBy(*prevSt); })};
 
-    return false;
+#ifndef NDEBUG
+    if (isCoveredByPrevStates)
+      std::cout << "previously considered state\n" << std::flush;
+#endif  // NDEBUG
+
+    return isCoveredByPrevStates;
   }
 
   /// @return true if the `other` state is the same or a better version of this
@@ -496,14 +507,15 @@ class Move : public rc::sol::IMove {
     const rc::ent::BankEntities& receiverBank{(resultedSt->nextMoveFromLeft())
                                                   ? resultedSt->leftBank()
                                                   : resultedSt->rightBank()};
-    const set<unsigned>&movedIds{movedEnts.ids()},
-        &receiverBankIds{receiverBank.ids()};
+    const set<unsigned>& movedIds{movedEnts.ids()};
+    const set<unsigned>& receiverBankIds{receiverBank.ids()};
 
-    for (const unsigned movedId : movedIds)
-      if (!receiverBankIds.contains(movedId))
-        throw logic_error{
-            HERE.function_name() +
-            " - Not all moved entities were found on the receiver bank!"s};
+    if (!ranges::all_of(movedIds, [&receiverBankIds](const auto movedId) {
+          return receiverBankIds.contains(movedId);
+        }))
+      throw logic_error{
+          HERE.function_name() +
+          " - Not all moved entities were found on the receiver bank!"s};
   }
 
   Move(const rc::sol::IMove& other)
