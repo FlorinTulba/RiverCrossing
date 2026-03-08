@@ -38,6 +38,7 @@ value.
 #include <string_view>
 #include <tuple>
 
+#include <gsl/span>
 #include <gsl/util>
 
 #include <boost/property_tree/json_parser.hpp>
@@ -920,7 +921,7 @@ class Config {
 int main(int argc, zstring* argv) try {
   Expects(argv && argc >= 1);
 
-  const std::span<zstring> args{argv, static_cast<size_t>(argc)};
+  const gsl::span<zstring> args{argv, static_cast<size_t>(argc)};
 
   const bool interactive{
       (size(args) >= 2ULL) &&
