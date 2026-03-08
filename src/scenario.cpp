@@ -908,10 +908,6 @@ class Config {
     }
   }
 
-  [[nodiscard]] const vector<fs::path>& scenarios() const noexcept {
-    return _scenarios;
-  }
-
  private:
   fs::path projDir;
   fs::path scenariosDir;
