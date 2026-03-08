@@ -663,7 +663,7 @@ class IdsConstraint : public IConfigConstraint {
 /// bool constants: true or false
 class BoolConst : public LogicalExpr {
  public:
-  explicit BoolConst(bool b) noexcept;
+  explicit constexpr BoolConst(bool b) noexcept : LogicalExpr{b} {}
   ~BoolConst() noexcept override = default;
 
   BoolConst(const BoolConst&) = delete;
@@ -852,7 +852,7 @@ class BelongToCondition : public LogicalExpr {
 /// A number
 class NumericConst : public NumericExpr {
  public:
-  explicit NumericConst(double d) noexcept;
+  explicit constexpr NumericConst(double d) noexcept : NumericExpr{d} {}
   ~NumericConst() noexcept override = default;
 
   NumericConst(const NumericConst&) = delete;

@@ -692,8 +692,6 @@ string IdsConstraint::toString() const {
   return oss.str();
 }
 
-BoolConst::BoolConst(bool b) noexcept : LogicalExpr{b} {}
-
 bool BoolConst::eval(const SymbolsTable&) const noexcept {
   assert(val.has_value());
   return val.value_or(false);
@@ -887,8 +885,6 @@ string ValueSet::toString() const {
   return ContView{vors, {.before = "{", .between = ", ", .after = "}"}}
       .toString();
 }
-
-NumericConst::NumericConst(double d) noexcept : NumericExpr{d} {}
 
 double NumericConst::eval(const SymbolsTable&) const noexcept {
   assert(val.has_value());
