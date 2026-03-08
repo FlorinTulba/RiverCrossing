@@ -29,7 +29,7 @@ class ConfigurationsTransferDurationInitType {
       ConstraintsVec&& constraints_) noexcept;
   [[nodiscard]] const ConstraintsVec& constraints() const& noexcept;
   /// Moves the constraints out
-  [[nodiscard]] ConstraintsVec&& constraints() && noexcept;
+  [[nodiscard]] ConstraintsVec constraints() && noexcept;
 
   ConfigurationsTransferDurationInitType& setDuration(unsigned d);
   [[nodiscard]] unsigned duration() const& noexcept;

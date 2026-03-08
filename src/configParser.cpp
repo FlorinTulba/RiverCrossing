@@ -50,7 +50,7 @@ const ConstraintsVec& ConfigurationsTransferDurationInitType::constraints()
   return _constraints;
 }
 
-ConstraintsVec&&
+ConstraintsVec
 ConfigurationsTransferDurationInitType::constraints() && noexcept {
   return std::move(_constraints);
 }

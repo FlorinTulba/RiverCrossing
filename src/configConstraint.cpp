@@ -294,6 +294,7 @@ ConfigurationsTransferDuration::ConfigurationsTransferDuration(
     /* = DefTransferConstraintsExt::INST*/)
     : constraints{std::move(initType).constraints(), allEnts_, capacity, true,
                   extension_},
+      // NOLINTNEXTLINE(bugprone-use-after-move) : Its duration is still valid
       _duration{std::move(initType).duration()} {}
 
 const TransferConstraints& ConfigurationsTransferDuration::configConstraints()
