@@ -746,8 +746,10 @@ endef
 $(foreach bt,$(BUILD_TYPES),$(eval $(call addCompileCppRule,$(bt))))
 
 # A part of the sources for the 'tests' target can be found only in TESTS_DIR
-$(TESTS_OUT_DIR)/%.o: $(TESTS_DIR)%.cpp $(PCH_TESTS) |\
-  $(TESTS_OUT_DIR) $(TESTS_DEPDIR) $(TESTS_DEPDIR)/%.d
+# g++ on FreeBSD won't use a precompiled header!
+$(TESTS_OUT_DIR)/%.o: $(TESTS_DIR)%.cpp\
+    $(if $(filter-out FreeBSD_g++,$(CURRENT_OS)_$(CC_TYPE)),$(PCH_TESTS)) |\
+    $(TESTS_OUT_DIR) $(TESTS_DEPDIR) $(TESTS_DEPDIR)/%.d
 	$(compileCpp)
 
 __ALL_OBJ_FILES :=\
