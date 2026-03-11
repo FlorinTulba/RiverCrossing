@@ -10,16 +10,6 @@
  (c) 2018-2026 Florin Tulba (florintulba@yahoo.com)
  *****************************************************************************/
 
-/*
- Part of the RiverCrossing project,
- which allows to describe and solve River Crossing puzzles:
-  https://en.wikipedia.org/wiki/River_crossing_puzzle
-
- Requires Boost installation (www.boost.org).
-
- @2018 Florin Tulba (florintulba@yahoo.com)
-*/
-
 #ifndef H_ROW_ABILITY_EXT
 #define H_ROW_ABILITY_EXT
 
