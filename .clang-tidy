@@ -1,5 +1,4 @@
 ---
-# Activate the base rules, those for modernization and for performance
 Checks: >
   -*,
   bugprone-*,
@@ -7,6 +6,7 @@ Checks: >
   modernize-*,
   performance-*,
   readability-*,
+  misc-include-cleaner,
   -bugprone-easily-swappable-parameters,
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
   -cppcoreguidelines-pro-bounds-constant-array-index,
@@ -26,13 +26,12 @@ Checks: >
   -clang-diagnostic-disabled-macro-expansion
 
 WarningsAsErrors: ''
-HeaderFilterRegex: '^(?!.*(boost|gsl)).*'
+HeaderFilterRegex: '^(src|test)/[^/]+[.]h(pp)?$'
+ExcludeHeaderFilterRegex: 'boost|gsl'
 SystemHeaders: false
 
 CheckOptions:
-  - key:             bugprone-reserved-identifier.AllowedIdentifiers
-    value:           '__boost_.*'
-
-  - key:             modernize-use-nullptr.NullMacros
-    value:           'NULL'
+  misc-include-cleaner.IgnoreHeaders: "precompiled[.]h"
+  bugprone-reserved-identifier.AllowedIdentifiers: '__boost_.*'
+  modernize-use-nullptr.NullMacros: 'NULL'
 ---
