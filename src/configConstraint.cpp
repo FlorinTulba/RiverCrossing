@@ -19,9 +19,8 @@ This include allows recompiling only the Unit tests project when updating the
 tests. It also keeps the count of total code units to recompile to a minimum
 value.
 */
-#define CPP_CONFIG_CONSTRAINT
-#include "configConstraint.hpp"
-#undef CPP_CONFIG_CONSTRAINT
+// NOLINTNEXTLINE(misc-include-cleaner) : Contains tests
+#include "configConstraint.hpp"  // IWYU pragma: keep
 
 #endif  // UNIT_TESTING defined
 

@@ -10,14 +10,13 @@
  (c) 2018-2026 Florin Tulba (florintulba@yahoo.com)
  *****************************************************************************/
 
-#if !defined CPP_SOLVER || !defined UNIT_TESTING
+// IWYU pragma: private, include "solver.cpp"
+// Contains the tests for "solver.cpp". Should be included only from it.
 
-#error \
-    "Please include this file only within `solver.cpp` \
-after a `#define CPP_SOLVER` and surrounding the include \
-and the define by `#ifdef UNIT_TESTING`!"
+#ifndef HPP_SOLVER
+#define HPP_SOLVER
 
-#else  // for CPP_SOLVER and UNIT_TESTING
+#ifdef UNIT_TESTING
 
 #include "durationExt.h"
 #include "entity.h"
@@ -1473,4 +1472,5 @@ BOOST_AUTO_TEST_SUITE_END()
 
 UNMUTE_WARNING
 
-#endif  // for CPP_SOLVER and UNIT_TESTING
+#endif  // UNIT_TESTING
+#endif  // !HPP_SOLVER

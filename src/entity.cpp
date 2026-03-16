@@ -19,9 +19,8 @@ This include allows recompiling only the Unit tests project when updating the
 tests. It also keeps the count of total code units to recompile to a minimum
 value.
 */
-#define CPP_ENTITY
-#include "entity.hpp"
-#undef CPP_ENTITY
+// NOLINTNEXTLINE(misc-include-cleaner) : Contains tests
+#include "entity.hpp"  // IWYU pragma: keep
 
 #endif  // UNIT_TESTING defined
 

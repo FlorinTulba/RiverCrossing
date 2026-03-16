@@ -10,14 +10,13 @@
  (c) 2018-2026 Florin Tulba (florintulba@yahoo.com)
  *****************************************************************************/
 
-#if !defined CPP_CONFIG_CONSTRAINT || !defined UNIT_TESTING
+// IWYU pragma: private, include "configConstraint.cpp"
+// Contains the tests for "configConstraint.cpp". Should be included only by it.
 
-#error \
-    "Please include this file only within `configConstraint.cpp` \
-after a `#define CPP_CONFIG_CONSTRAINT` and surrounding the include \
-and the define by `#ifdef UNIT_TESTING`!"
+#ifndef HPP_CONFIG_CONSTRAINT
+#define HPP_CONFIG_CONSTRAINT
 
-#else  // for CPP_CONFIG_CONSTRAINT and UNIT_TESTING
+#ifdef UNIT_TESTING
 
 #include "entity.h"
 #include "mathRelated.h"
@@ -1657,4 +1656,5 @@ BOOST_AUTO_TEST_SUITE_END()
 
 UNMUTE_WARNING
 
-#endif  // for CPP_CONFIG_CONSTRAINT and UNIT_TESTING
+#endif  // UNIT_TESTING
+#endif  // !HPP_CONFIG_CONSTRAINT

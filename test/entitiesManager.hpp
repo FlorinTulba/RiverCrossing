@@ -10,14 +10,13 @@
  (c) 2018-2026 Florin Tulba (florintulba@yahoo.com)
  *****************************************************************************/
 
-#if !defined CPP_ENTITIES_MANAGER || !defined UNIT_TESTING
+// IWYU pragma: private, include "entitiesManager.cpp"
+// Contains the tests for "entitiesManager.cpp". Should be included only by it.
 
-#error \
-    "Please include this file only within `entitiesManager.cpp` \
-after a `#define CPP_ENTITIES_MANAGER` and surrounding the include \
-and the define by `#ifdef UNIT_TESTING`!"
+#ifndef HPP_ENTITIES_MANAGER
+#define HPP_ENTITIES_MANAGER
 
-#else  // for CPP_ENTITIES_MANAGER and UNIT_TESTING
+#ifdef UNIT_TESTING
 
 #include "entity.h"
 #include "mathRelated.h"
@@ -652,4 +651,5 @@ BOOST_AUTO_TEST_SUITE_END()
 
 UNMUTE_WARNING
 
-#endif  // for CPP_ENTITIES_MANAGER and UNIT_TESTING
+#endif  // UNIT_TESTING
+#endif  // !HPP_ENTITIES_MANAGER

@@ -21,9 +21,8 @@ Therefore, the testing is performed from within the cpp file.
 Including 'test/configParser.hpp' here avoids recompiling the project
 when only the tests need to be updated
 */
-#define CPP_CONFIG_PARSER
-#include "configParser.hpp"
-#undef CPP_CONFIG_PARSER
+// NOLINTNEXTLINE(misc-include-cleaner) : Contains tests
+#include "configParser.hpp"  // IWYU pragma: keep
 
 #endif  // UNIT_TESTING defined
 

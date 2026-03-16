@@ -10,14 +10,13 @@
  (c) 2018-2026 Florin Tulba (florintulba@yahoo.com)
  *****************************************************************************/
 
-#if !defined CPP_SCENARIO || !defined UNIT_TESTING
+// IWYU pragma: private, include "scenario.cpp"
+// Contains the tests for "scenario.cpp". Should be included only from it.
 
-#error \
-    "Please include this file only within `scenario.cpp` \
-after a `#define CPP_SCENARIO` and surrounding the include \
-and the define by `#ifdef UNIT_TESTING`!"
+#ifndef HPP_SCENARIO
+#define HPP_SCENARIO
 
-#else  // for CPP_SCENARIO and UNIT_TESTING
+#ifdef UNIT_TESTING
 
 #include "mathRelated.h"
 #include "scenario.h"
@@ -1616,4 +1615,5 @@ BOOST_AUTO_TEST_SUITE_END()
 
 UNMUTE_WARNING
 
-#endif  // for CPP_SCENARIO and UNIT_TESTING
+#endif  // UNIT_TESTING
+#endif  // !HPP_SCENARIO

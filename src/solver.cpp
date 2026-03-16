@@ -19,9 +19,8 @@ This include allows recompiling only the Unit tests project when updating the
 tests. It also keeps the count of total code units to recompile to a minimum
 value.
 */
-#define CPP_SOLVER
-#include "solver.hpp"
-#undef CPP_SOLVER
+// NOLINTNEXTLINE(misc-include-cleaner) : Contains tests
+#include "solver.hpp"  // IWYU pragma: keep
 
 #endif  // UNIT_TESTING
 

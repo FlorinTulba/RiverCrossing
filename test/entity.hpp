@@ -10,14 +10,13 @@
  (c) 2018-2026 Florin Tulba (florintulba@yahoo.com)
  *****************************************************************************/
 
-#if !defined CPP_ENTITY || !defined UNIT_TESTING
+// IWYU pragma: private, include "entity.cpp"
+// Contains the tests for "entity.cpp". Should be included only from it.
 
-#error \
-    "Please include this file only within `entity.cpp` \
-after a `#define CPP_ENTITY` and surrounding the include \
-and the define by `#ifdef UNIT_TESTING`!"
+#ifndef HPP_ENTITY
+#define HPP_ENTITY
 
-#else  // for CPP_ENTITY and UNIT_TESTING
+#ifdef UNIT_TESTING
 
 #include "entity.h"
 #include "mathRelated.h"
@@ -248,4 +247,5 @@ BOOST_AUTO_TEST_SUITE_END()
 
 UNMUTE_WARNING
 
-#endif  // for CPP_ENTITY and UNIT_TESTING
+#endif  // UNIT_TESTING
+#endif  // !HPP_ENTITY
