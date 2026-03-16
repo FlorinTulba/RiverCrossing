@@ -40,6 +40,9 @@
 # CXX=.. and CPP_STANDARD=.. can be specified after $(MAKE) to use a different
 # C++ compiler or an older C++ standard
 #
+# To display the diagnostic messages in color, set the env variable USE_COLOR to a non-zero value:
+#   USE_COLOR=1 $(MAKE) ...    or    $(MAKE) USE_COLOR=1 ...
+#
 # This Makefile uses the technique described in the following article:
 #   http://make.mad-scientist.net/papers/advanced-auto-dependency-generation/
 # The auxilliary dependency files it creates/uses are in conflict with several
@@ -340,6 +343,16 @@ else ifeq (GNU/Linux,$(UNAME_O))
 else
   UNAME_A := $(shell uname -a)
   $(error OS not handled! The answer to 'uname -a' is: $(UNAME_A))
+endif
+
+# If the env variable USE_COLOR exists and is not 0,
+# then use -fdiagnostics-color=always
+# Otherwise use -fdiagnostics-color=never
+USE_COLOR ?= 0
+ifeq ($(USE_COLOR),0)
+  COMMON_CXXFLAGS += -fdiagnostics-color=never
+else
+  COMMON_CXXFLAGS += -fdiagnostics-color=always
 endif
 
 # Flags for stripping the release executable ('-s').
