@@ -292,6 +292,22 @@ else ifeq (Cygwin,$(UNAME_O))
 
   ifeq (clang++,$(CC_TYPE))
     COMMON_CXXFLAGS += -stdlib=libc++ -fexperimental-library
+
+  else # GCC
+    # GCC-16 test packages from Cygwin need to unlock non-standard GNU extensions,
+    # like offering an unlocked 'fwrite' ('fwrite_unlocked') in <print> header.
+    # Defining _GNU_SOURCE unlocks such extensions.
+    GCC_MAJOR_VER := $(shell $(CC) -dumpversion | cut -d. -f1)
+    IS_VER_GE_16 := $(shell [ $$(echo $(GCC_MAJOR_VER)) -ge 16 ] && echo 1 ||\
+      echo 0)
+    ifeq ($(IS_VER_GE_16),1)
+      ARE_GNU_EXTENSIONS_LOCKED := $(shell $(CC) -dM -E -x c++ /dev/null |\
+        grep -q "_GNU_SOURCE" && echo 0 ||\
+        echo 1)
+      ifeq ($(ARE_GNU_EXTENSIONS_LOCKED),1)
+        COMMON_CXXFLAGS += -D_GNU_SOURCE
+      endif
+    endif
   endif
 
 else ifeq (WSL,$(findstring WSL,$(UNAME_R)))
@@ -381,7 +397,7 @@ ALL_REQUIRED_BOOST_LIBS :=\
 
 # Other necessary libraries.None for now.
 # Example exception: MSYS2 MinGW/UCRT with g++15 requires 'stdc++exp'
-EXTRA_LIBS := $(Empty)
+EXTRA_LIBS := $(if $(filter MSYS2_g++,$(CURRENT_OS)_$(CC_TYPE)),stdc++exp)
 
 # The included file below must define 2 paths: INCLUDE_DIR_BOOST and LIB_DIR_BOOST.
 # It also has to define 'boost_libs_available' (.PHONY) target which ensures that
