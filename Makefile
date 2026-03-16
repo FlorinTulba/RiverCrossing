@@ -172,12 +172,12 @@ endif
 # G++ offers the information while launched with "-v --help" parameters.
 ifeq (clang++,$(CC_TYPE))
   CPP_STANDARD := $(shell echo "" |\
-    clang++ -c -std=c++latest -x c++ - 2>&1 |\
+    $(CC) -c -std=c++latest -x c++ - 2>&1 |\
     grep -oEe "c\+\+2[0-9a-z]" |\
     sort -r |\
     head -n1)
 else
-  CPP_STANDARD := $(shell g++ -v --help 2>/dev/null |\
+  CPP_STANDARD := $(shell $(CC) -v --help 2>/dev/null |\
     grep -e "-std=c++2" |\
     grep -oEe "c\+\+2[0-9a-z]" |\
     sort -r |\
