@@ -22,7 +22,6 @@ AllowAllConstructorInitializersOnNextLine: true
 Cpp11BracedListStyle: true
 AccessModifierOffset: -1
 Macros:
-- PROTECTED=protected
 - PRIVATE=private
 SortIncludes: CaseSensitive
 ---

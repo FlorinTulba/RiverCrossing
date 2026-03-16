@@ -14,12 +14,32 @@
 #define H_ABS_SOLUTION
 
 #include "configConstraint.h"
+#include "util.h"
+
+#include <cstddef>
+
+#include <concepts>
+#include <format>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include <gsl/pointers>
+
+#include <boost/core/demangle.hpp>
 
 namespace rc {
 
 // Forward declaration of a type used only as pointer within this header
 // Avoids circular include dependency, by not including 'scenarioDetails.h'
 class ScenarioDetails;
+
+namespace ent {
+// Forward declarations
+class MovingEntities;
+class BankEntities;
+}  // namespace ent
 
 namespace sol {
 
@@ -61,13 +81,11 @@ class IStateExt {
   */
   [[nodiscard]] virtual std::string detailsForDemo() const { return {}; }
 
-  /**
-  Display either only suffix (most of them), or only prefix extensions.
-  It needs to be called before (with param false) and after (with param true)
-  the state information
-  */
-  [[nodiscard]] virtual std::string toString(
-      bool suffixesInsteadOfPrefixes = true) const = 0;
+  // Display prefix extensions
+  virtual void formatPrefixTo(FmtCtxIt&) const = 0;
+
+  // Display suffix extensions
+  virtual void formatSuffixTo(FmtCtxIt&) const = 0;
 
  protected:
   IStateExt() noexcept = default;
@@ -108,10 +126,9 @@ class DefStateExt final : public IStateExt {
   [[nodiscard]] std::shared_ptr<const IStateExt> extensionForNextState(
       const ent::MovingEntities&) const noexcept final;
 
-  [[nodiscard]] std::string toString(
-      bool /*suffixesInsteadOfPrefixes = true*/) const noexcept final {
-    return {};
-  }
+  void formatPrefixTo(FmtCtxIt&) const noexcept final {}
+
+  void formatSuffixTo(FmtCtxIt&) const noexcept final {}
 
   PRIVATE:
   DefStateExt() noexcept = default;
@@ -158,8 +175,9 @@ class AbsStateExt : public IStateExt,
   */
   [[nodiscard]] std::string detailsForDemo() const final;
 
-  [[nodiscard]] std::string toString(
-      bool suffixesInsteadOfPrefixes /* = true*/) const final;
+  void formatPrefixTo(FmtCtxIt&) const final;
+
+  void formatSuffixTo(FmtCtxIt&) const final;
 
  protected:
   AbsStateExt(const rc::ScenarioDetails& info_,
@@ -195,13 +213,15 @@ class AbsStateExt : public IStateExt,
   */
   [[nodiscard]] virtual std::string _detailsForDemo() const { return {}; }
 
-  [[nodiscard]] virtual std::string _toString(
-      bool /*suffixesInsteadOfPrefixes*/ = true) const {
-    return {};
-  }
+  virtual void _formatPrefixTo(FmtCtxIt&) const {}
 
+  virtual void _formatSuffixTo(FmtCtxIt&) const {}
+
+  // NOLINTBEGIN(cppcoreguidelines-non-private-member-variables-in-classes) :
+  // Easier to use in subclasses when protected
   gsl::not_null<const rc::ScenarioDetails*> info;
   gsl::not_null<std::shared_ptr<const IStateExt>> nextExt;
+  // NOLINTEND(cppcoreguidelines-non-private-member-variables-in-classes)
 };
 
 /// A state during solving the scenario
@@ -245,8 +265,9 @@ class IState {
   [[nodiscard]] virtual std::unique_ptr<const IState> clone()
       const noexcept = 0;
 
-  [[nodiscard]] virtual std::string toString(
-      bool showNextMoveDir = true) const = 0;
+  /// Formats the state. If the bool param is true, it shows the direction of
+  /// the next move
+  virtual void formatTo(FmtCtxIt&, bool) const = 0;
 
  protected:
   IState() noexcept = default;
@@ -271,8 +292,8 @@ class IMove {
   */
   [[nodiscard]] virtual unsigned index() const noexcept = 0;
 
-  [[nodiscard]] virtual std::string toString(
-      bool showNextMoveDir = true) const = 0;
+  /// Formats the move. When the bool is true, it shows next move's direction
+  virtual void formatTo(FmtCtxIt&, bool) const = 0;
 
  protected:
   IMove() noexcept = default;
@@ -329,7 +350,7 @@ class IAttempt {
   /// @return true for a solution path
   [[nodiscard]] virtual bool isSolution() const noexcept = 0;
 
-  [[nodiscard]] virtual std::string toString() const = 0;
+  virtual void formatTo(FmtCtxIt&) const = 0;
 
  protected:
   IAttempt() noexcept = default;
@@ -340,21 +361,48 @@ class IAttempt {
 
 namespace std {
 
-inline auto& operator<<(auto& os, const rc::sol::IState& st) {
-  os << st.toString();
-  return os;
-}
+// Formatter for classes derived from IState / IMove
+template <class T>
+  requires derived_from<T, rc::sol::IState> || derived_from<T, rc::sol::IMove>
+class formatter<T> {  // NOLINT(bugprone-std-namespace-modification) : Required
+                      // this way
+ public:
+  /// Parses the format specifier for the class. It can contain only the
+  /// option "showNextMoveDir" for showing the direction of the next move.
+  constexpr auto parse(auto& ctx) {
+    constexpr string_view directionOption{"showNextMoveDir"};
 
-inline auto& operator<<(auto& os, const rc::sol::IMove& m) {
-  os << m.toString();
-  return os;
-}
+    auto it{ctx.begin()};
+    const auto itEnd{ctx.end()};
+    string_view s(it, itEnd);
+    if (s.starts_with(directionOption)) {
+      showNextMoveDir = true;
+      it += size(directionOption);
+    } else {
+      showNextMoveDir = {};
+    }
 
-inline auto& operator<<(auto& os, const rc::sol::IAttempt& attempt) {
-  os << attempt.toString();
-  return os;
-}
+    if (it != itEnd && *it != '}') {
+      throw format_error{
+          std::format("Invalid format option for class `{}`: `{}`!",
+                      boost::core::demangle(typeid(T).name()), s)};
+    }
+
+    return it;
+  }
+
+  /// Formats the class according to the provided format specifier. If the
+  /// option "showNextMoveDir" is provided, it shows next move's direction.
+  auto format(const T& obj, auto& ctx) const {
+    auto outIt{ctx.out()};
+    obj.formatTo(outIt, showNextMoveDir);  // changes outIt
+    return outIt;
+  }
+
+ private:
+  bool showNextMoveDir{};
+};
 
 }  // namespace std
 
-#endif  // H_ABS_SOLUTION not defined
+#endif  // !H_ABS_SOLUTION

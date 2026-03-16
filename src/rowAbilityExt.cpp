@@ -13,8 +13,20 @@
 #include "precompiled.h"
 // This keeps precompiled.h first; Otherwise header sorting might move it
 
+#include "configConstraint.h"
 #include "entitiesManager.h"
 #include "rowAbilityExt.h"
+#include "symbolsTable.h"
+
+#ifndef NDEBUG
+#include "util.h"
+
+#include <cstdio>
+
+#include <print>
+#endif  // NDEBUG not defined
+
+#include <memory>
 
 using namespace std;
 
@@ -24,10 +36,10 @@ bool CanRowValidator::doValidate(const ent::MovingEntities& ents,
                                  const SymbolsTable& st) const {
   const bool valid{ents.anyRowCapableEnts(st)};
 #ifndef NDEBUG
-  if (!valid)
-    cout << "Nobody rows now : "
-         << ContView{ents.ids(), {.before = "", .between = " ", .after = "\n"}}
-         << flush;
+  if (!valid) {
+    println("Nobody rows now : {}", ContView{ents.ids(), " "});
+    fflush(stdout);
+  }
 #endif  // NDEBUG
   return valid;
 }

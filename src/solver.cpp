@@ -24,16 +24,25 @@ value.
 
 #endif  // UNIT_TESTING
 
-#include "solverDetail.hpp"
-
+#include "absSolution.h"
 #include "durationExt.h"
+#include "entitiesManager.h"
 #include "scenario.h"
+#include "solverDetail.hpp"
+#include "symbolsTable.h"
 #include "transferredLoadExt.h"
+#include "util.h"
 #include "warnings.h"
 
+#include <climits>
+#include <cstdio>
+
 #include <exception>
-#include <iomanip>
-#include <queue>
+#include <memory>
+#include <print>
+#include <string>
+
+#include <gsl/pointers>
 
 using namespace std;
 
@@ -102,12 +111,14 @@ string AbsStateExt::detailsForDemo() const {
   return _detailsForDemo() + nextExt->detailsForDemo();
 }
 
-string AbsStateExt::toString(bool suffixesInsteadOfPrefixes /* = true*/) const {
-  // Only the matching extension categories will return non-empty strings
-  // given suffixesInsteadOfPrefixes
-  // (some display only as prefixes, the rest only as suffixes)
-  return _toString(suffixesInsteadOfPrefixes) +
-         nextExt->toString(suffixesInsteadOfPrefixes);
+void AbsStateExt::formatPrefixTo(FmtCtxIt& outIt) const {
+  _formatPrefixTo(outIt);
+  nextExt->formatPrefixTo(outIt);
+}
+
+void AbsStateExt::formatSuffixTo(FmtCtxIt& outIt) const {
+  _formatSuffixTo(outIt);
+  nextExt->formatSuffixTo(outIt);
 }
 
 }  // namespace sol
@@ -171,7 +182,8 @@ const Scenario::Results& Scenario::solution(bool usingBFS /* = true*/,
     const gsl::not_null<const Results*> safeResults{results};
     outputResults(*safeResults, interactiveSol);
   } catch (const exception&) {
-    cerr << "Unable to prepare the solution animation!\n" << flush;
+    println(stderr, "Unable to prepare the solution animation!");
+    fflush(stderr);
   }
 
   return *results;

@@ -13,23 +13,46 @@
 #ifndef HPP_SOLVER_DETAIL
 #define HPP_SOLVER_DETAIL
 
+#include "absSolution.h"
+#include "configConstraint.h"
+#include "entitiesManager.h"
 #include "rowAbilityExt.h"
 #include "scenario.h"
+#include "symbolsTable.h"
 #include "util.h"
 
+#include <cassert>
+#include <climits>
 #include <cstddef>
+#include <cstdint>
+#include <cstdio>
 
 #include <algorithm>
 #include <concepts>
+#include <exception>
+#include <format>
+#include <functional>
 #include <iterator>
+#include <memory>
+#include <print>
 #include <queue>
 #include <ranges>
+#include <set>
+#include <string>
+#include <string_view>
 #include <tuple>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
+#include <gsl/pointers>
 #include <gsl/util>
 
 using std::ignore;
+
+namespace rc::ent {
+class IEntity;  // forward declaration
+}  // namespace rc::ent
 
 namespace {
 
@@ -56,8 +79,8 @@ template <std::bidirectional_iterator BidirIt, typename CombVec>
     { v.push_back(std::declval<typename CombVec::value_type>()) };
     { v.pop_back() };
   }
-void generateCombinations(const BidirIt first,
-                          const BidirIt end,
+void generateCombinations(const BidirIt& first,
+                          const BidirIt& end,
                           ptrdiff_t k,
                           std::vector<CombVec>& results,
                           const CombVec& prefixComb = {}) {
@@ -66,8 +89,8 @@ void generateCombinations(const BidirIt first,
   const ptrdiff_t n{distance(first, end)};
   if (n < k || k < 0LL)
     throw logic_error{
-        HERE.function_name() +
-        " - Provided k must be non-negative and at most end-first!"s};
+        format("{} - Provided k must be non-negative and at most end-first!",
+               HERE.function_name())};
 
   if (!k) {
     results.push_back(prefixComb);
@@ -88,12 +111,15 @@ void generateCombinations(const BidirIt first,
 class MovingConfigOption {
  public:
   explicit MovingConfigOption(
-      const rc::ent::MovingEntities& cfg_,
+      rc::ent::MovingEntities cfg_,
       const std::shared_ptr<const rc::cond::IContextValidator>& validator_ =
           rc::cond::DefContextValidator::SHARED_INST()) noexcept
-      : cfg{cfg_},
-        validator{validator_} {}
-  MovingConfigOption(const MovingConfigOption&) noexcept = default;
+      : cfg{std::move(cfg_)},
+        validator(
+            gsl::not_null<std::shared_ptr<const rc::cond::IContextValidator>>{
+                validator_}) {}
+  MovingConfigOption(const MovingConfigOption&) noexcept = delete;
+  MovingConfigOption(MovingConfigOption&&) noexcept = default;
   ~MovingConfigOption() noexcept = default;
 
   MovingConfigOption& operator=(const MovingConfigOption&) = delete;
@@ -121,10 +147,8 @@ class MovingConfigOption {
             [&bankIds](const auto id) { return bankIds.contains(id); })};
         it != cend(raftIds)) {
 #ifndef NDEBUG
-      cout << "Invalid id [" << *it << "] : "
-           << rc::ContView{raftIds,
-                           {.before = "", .between = " ", .after = "\n"}}
-           << flush;
+      println("Invalid id [{}] : {}", *it, rc::ContView{raftIds, " "});
+      std::fflush(stdout);
 #endif               // NDEBUG
       return false;  // cfg should not contain id-s outside bank
     }
@@ -137,12 +161,15 @@ class MovingConfigOption {
     return cfg;
   }
 
- protected:
+ private:
   /// Raft/bridge configuration
-  const rc::ent::MovingEntities cfg;
+  rc::ent::MovingEntities cfg;
 
-  /// The associated validator
-  gsl::not_null<std::shared_ptr<const rc::cond::IContextValidator>> validator;
+  /// The associated validator; Since objects of  this class will be stored in
+  /// STL containers, the class needs move ctor & assign op, so this field
+  /// cannot be declared as gsl::not_null<...>. Class ctor ensures the field is
+  /// not NULL.
+  std::shared_ptr<const rc::cond::IContextValidator> validator;
 };
 
 /**
@@ -168,10 +195,10 @@ class MovingConfigsManager {
     using namespace rc::cond;
 
     if (!scenarioDetails->transferConstraints) [[unlikely]]
-      throw logic_error{
-          HERE.function_name() +
-          " - At this point ScenarioDetails::transferConstraints should be "
-          "not NULL!"s};
+      throw logic_error{format(
+          "{} - At this point ScenarioDetails::transferConstraints should be "
+          "not NULL!",
+          HERE.function_name())};
 
     const shared_ptr<const AllEntities>& entities{scenarioDetails->entities};
     const size_t entsCount{entities->count()};
@@ -181,7 +208,11 @@ class MovingConfigsManager {
     unordered_set<unsigned> alwaysRowIds, rowSometimesIds;
     size_t neverRowIdsCount{};
     for (const unsigned id : allIds) {
-      const shared_ptr<const IEntity> ent{(*entities)[id]};
+      const shared_ptr<const IEntity> ent{
+          (*entities)
+              [id]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                    // : AllEntities::operator[] calls checked at()
+      };
 
       if (const auto rowAbility{ent->canRow()}; static_cast<bool>(rowAbility))
         alwaysRowIds.insert(id);
@@ -197,15 +228,16 @@ class MovingConfigsManager {
     }
 
     if (neverRowIdsCount == entsCount)
-      throw domain_error{HERE.function_name() +
-                         " - There are no entities that can or might row!"s};
+      throw domain_error{
+          format("{} - There are no entities that can or might row!",
+                 HERE.function_name())};
 
     const unsigned capacity{scenarioDetails->capacity};
     if (static_cast<size_t>(capacity) >= entsCount)
       throw logic_error{
-          HERE.function_name() +
-          " - expecting scenario details with a raft/bridge capacity "
-          "less than the number of mentioned entities!"s};
+          format("{} - expecting scenario details with a raft/bridge capacity "
+                 "less than the number of mentioned entities!",
+                 HERE.function_name())};
 
     shared_ptr<const IContextValidator> validatorWithoutCanRow{
         scenarioDetails_.createTransferValidator()},
@@ -213,7 +245,8 @@ class MovingConfigsManager {
             make_shared<const CanRowValidator>(validatorWithoutCanRow)};
 
 #ifndef NDEBUG
-    cout << "All possible raft configs:\n" << flush;
+    println("All possible raft configs:");
+    std::fflush(stdout);
 #endif  // NDEBUG
 
     // Storing allConfigs in increasing order of their capacity
@@ -246,10 +279,12 @@ class MovingConfigsManager {
     }
 
 #ifndef NDEBUG
-    cout << '\n' << flush;
+    println("");
+    std::fflush(stdout);
 #endif  // NDEBUG
   }
   MovingConfigsManager(const MovingConfigsManager&) noexcept = default;
+  MovingConfigsManager(MovingConfigsManager&&) noexcept = delete;
   ~MovingConfigsManager() noexcept = default;
 
   MovingConfigsManager& operator=(const MovingConfigsManager&) = delete;
@@ -276,7 +311,8 @@ class MovingConfigsManager {
     using namespace std;
 
 #ifndef NDEBUG
-    cout << "\nInvalid raft configs:\n" << flush;
+    println("\nInvalid raft configs:");
+    std::fflush(stdout);
 #endif  // NDEBUG
     result.clear();
 
@@ -294,14 +330,18 @@ class MovingConfigsManager {
       collectValidCfgs(allConfigs);
 
 #ifndef NDEBUG
-    cout << "\nValid raft configs:\n" << flush;
-    for (const rc::ent::MovingEntities* me : result)
-      cout << *me << '\n' << flush;
-    cout << '\n' << flush;
+    println("\nValid raft configs:");
+    std::fflush(stdout);
+    for (const gsl::not_null<const rc::ent::MovingEntities*> me : result) {
+      println("{}", *me);
+      std::fflush(stdout);
+    }
+    println("");
+    std::fflush(stdout);
 #endif  // NDEBUG
   }
 
-  PROTECTED:
+  PRIVATE:
   /**
   Performs the `static` validation of the `cfg` raft/bridge configuration,
   associates it with its necessary `dynamic` validators and appends it
@@ -321,8 +361,8 @@ class MovingConfigsManager {
     if (scenarioDetails->transferConstraints->check(me)) {
       allConfigs.emplace_back(me, validator);
 #ifndef NDEBUG
-      cout << rc::ContView{cfg, {.before = "", .between = " ", .after = "\n"}}
-           << flush;
+      println("{}", rc::ContView{cfg, " "});
+      std::fflush(stdout);
 #endif  // NDEBUG
     }
   }
@@ -340,21 +380,19 @@ class MovingConfigsManager {
 /// A state during solving the scenario
 class State : public rc::sol::IState {
  public:
-  State(const rc::ent::BankEntities& leftBank,
-        const rc::ent::BankEntities& rightBank,
+  State(rc::ent::BankEntities leftBank,
+        rc::ent::BankEntities rightBank,
         bool nextMoveFromLeft,
         const std::shared_ptr<const rc::sol::IStateExt>& extension_ =
             rc::sol::DefStateExt::SHARED_INST())
-      : _leftBank{leftBank},
-        _rightBank{rightBank},
+      : _leftBank{std::move(leftBank)},
+        _rightBank{std::move(rightBank)},
         extension{extension_},
         _nextMoveFromLeft{nextMoveFromLeft} {
-    if (_leftBank != ~_rightBank) {
-      using namespace std::literals;
+    if (_leftBank != ~_rightBank)
       throw std::invalid_argument{
-          HERE.function_name() +
-          " - needs complementary bank configurations!"s};
-    }
+          std::format("{} - needs complementary bank configurations!",
+                      HERE.function_name())};
   }
   State(const State&) = default;
 
@@ -375,20 +413,20 @@ class State : public rc::sol::IState {
     if (!extension->validate())
       return false;
 
-    if (banksConstraints) {
+    if (nullptr != banksConstraints) {
       if (!banksConstraints->check(_leftBank)) {
 #ifndef NDEBUG
-        std::cout << "violates bank constraint [" << *banksConstraints
-                  << "] : " << _leftBank << '\n'
-                  << std::flush;
+        std::println("violates bank constraint [{}] : {}", *banksConstraints,
+                     _leftBank);
+        std::fflush(stdout);
 #endif  // NDEBUG
         return false;
       }
       if (!banksConstraints->check(_rightBank)) {
 #ifndef NDEBUG
-        std::cout << "violates bank constraint [" << *banksConstraints
-                  << "] : " << _rightBank << '\n'
-                  << std::flush;
+        std::println("violates bank constraint [{}] : {}", *banksConstraints,
+                     _rightBank);
+        std::fflush(stdout);
 #endif  // NDEBUG
         return false;
       }
@@ -407,8 +445,10 @@ class State : public rc::sol::IState {
         [this](const auto& prevSt) { return handledBy(*prevSt); })};
 
 #ifndef NDEBUG
-    if (isCoveredByPrevStates)
-      std::cout << "previously considered state\n" << std::flush;
+    if (isCoveredByPrevStates) {
+      std::println("previously considered state");
+      std::fflush(stdout);
+    }
 #endif  // NDEBUG
 
     return isCoveredByPrevStates;
@@ -457,33 +497,29 @@ class State : public rc::sol::IState {
   }
 
   /// Clones this state
-  std::unique_ptr<const rc::sol::IState> clone() const noexcept override {
-    return std::make_unique<const State>(_leftBank, _rightBank,
-                                         _nextMoveFromLeft, extension->clone());
+  [[nodiscard]] std::unique_ptr<const rc::sol::IState> clone()
+      const noexcept override {
+    return rc::makeNoexcept([this]() -> std::unique_ptr<const rc::sol::IState> {
+      return std::make_unique<const State>(
+          _leftBank, _rightBank, _nextMoveFromLeft, extension->clone());
+    });
   }
 
-  std::string toString(bool showNextMoveDir /* = true*/) const override {
+  /// Formats the state. If the bool param is true, it shows the direction of
+  /// the next move
+  void formatTo(FmtCtxIt& outIt, bool showNextMoveDir) const override {
     using namespace std;
+    rc::InfoWrapper iw{*extension, outIt};
 
-    ostringstream oss;
-    {
-      // extension wrapper
-      rc::ToStringManager<rc::sol::IStateExt> tsm{*extension, oss};
-
-      oss << "Left bank: " << _leftBank << " ; "
-          << "Right bank: " << _rightBank;
-      if (showNextMoveDir) {
-        oss << " ; Next move direction: ";
-        if (_nextMoveFromLeft)
-          oss << " --> ";
-        else
-          oss << " <-- ";
-      }
-    }  // ensures tsm's destructor flushes to oss before the return
-    return oss.str();
+    outIt = format_to(outIt, "Left bank: {} ; Right bank: {}", _leftBank,
+                      _rightBank);
+    if (showNextMoveDir)
+      outIt = format_to(outIt, " ; Next move direction: {}",
+                        (_nextMoveFromLeft ? " --> " : " <-- "));
+    // iw's dtor uses & updates outIt
   }
 
-  PROTECTED:
+  PRIVATE:
   rc::ent::BankEntities _leftBank;
   rc::ent::BankEntities _rightBank;
 
@@ -496,10 +532,10 @@ class State : public rc::sol::IState {
 /// The moved entities and the resulted state
 class Move : public rc::sol::IMove {
  public:
-  Move(const rc::ent::MovingEntities& movedEnts_,
+  Move(rc::ent::MovingEntities movedEnts_,
        std::unique_ptr<const rc::sol::IState> resultedSt_,
        unsigned idx_)
-      : movedEnts{movedEnts_},
+      : movedEnts{std::move(movedEnts_)},
         resultedSt{std::move(resultedSt_)},
         idx{idx_} {
     using namespace std;
@@ -514,8 +550,8 @@ class Move : public rc::sol::IMove {
           return receiverBankIds.contains(movedId);
         }))
       throw logic_error{
-          HERE.function_name() +
-          " - Not all moved entities were found on the receiver bank!"s};
+          format("{} - Not all moved entities were found on the receiver bank!",
+                 HERE.function_name())};
   }
 
   Move(const rc::sol::IMove& other)
@@ -544,23 +580,25 @@ class Move : public rc::sol::IMove {
 
   [[nodiscard]] unsigned index() const noexcept override { return idx; }
 
-  [[nodiscard]] std::string toString(
-      bool showNextMoveDir /* = true*/) const override {
+  /// Formats the move. When the bool is true, it shows next move's direction
+  void formatTo(FmtCtxIt& outIt, bool showNextMoveDir) const override {
     using namespace std;
 
-    ostringstream oss;
     if (!movedEnts.empty()) {
       assert(idx != UINT_MAX);
-      const char dirSign{(resultedSt->nextMoveFromLeft() ? '<' : '>')};
-      const string dirStr(4ULL, dirSign);
-      oss << "\n\n\t\ttransfer " << setw(3) << (1U + idx) << ":\t" << dirStr
-          << ' ' << movedEnts << ' ' << dirStr << "\n\n";
+
+      outIt = format_to(outIt, "\n\n\t\ttransfer {0:3}:\t{2} {1} {2}\n\n",
+                        (1U + idx), movedEnts,
+                        (resultedSt->nextMoveFromLeft() ? "<<<<" : ">>>>"));
     }
-    oss << resultedSt->toString(showNextMoveDir);
-    return oss.str();
+
+    if (showNextMoveDir)
+      outIt = format_to(outIt, "{:showNextMoveDir}", *resultedSt);
+    else
+      outIt = format_to(outIt, "{}", *resultedSt);
   }
 
- protected:
+ private:
   /// The moved entities
   rc::ent::MovingEntities movedEnts;
 
@@ -591,7 +629,7 @@ class ChainedMove : public Move {
     return prev;
   }
 
- protected:
+ private:
   /// The link to the previous move or NULL if first move
   std::shared_ptr<const ChainedMove> prev;
 };
@@ -637,20 +675,19 @@ class Attempt : public rc::sol::IAttempt {
     if (!initFakeMove) {
       if (!move.movedEntities().empty())
         throw logic_error{
-            HERE.function_name() +
-            " should be called the first time with a `move` parameter "
-            "using an empty `movedEntities`!"s};
+            format("{} should be called the first time with a `move` parameter "
+                   "using an empty `movedEntities`!",
+                   HERE.function_name())};
       initFakeMove = make_unique<const Move>(move);
       targetLeftBank = make_unique<const rc::ent::BankEntities>(
           initFakeMove->resultedState()->rightBank());
       return;
     }
     if (static_cast<size_t>(move.index()) != size(moves))
-      throw logic_error{HERE.function_name() + " - Expecting move index "s +
-                        to_string(size(moves)) +
-                        ", but the provided move has index "s +
-                        to_string(move.index())};
-    moves.push_back(move);
+      throw logic_error{format(
+          "{} - Expecting move index {}, but the provided move has index {}!",
+          HERE.function_name(), size(moves), move.index())};
+    moves.emplace_back(move);
   }
 
   /// Removes last move, if any left
@@ -692,10 +729,10 @@ class Attempt : public rc::sol::IAttempt {
     if (initFakeMove)
       return *initFakeMove;
 
-    using namespace std::literals;
-    throw std::out_of_range{HERE.function_name() +
-                            " - Called when there are no moves yet and not "
-                            "even the initial state!"s};
+    throw std::out_of_range{
+        std::format("{} - Called when there are no moves yet and not "
+                    "even the initial state!",
+                    HERE.function_name())};
   }
 
   /// @return true for a solution path
@@ -707,19 +744,23 @@ class Attempt : public rc::sol::IAttempt {
            (*targetLeftBank == moves.back().resultedState()->leftBank());
   }
 
-  [[nodiscard]] std::string toString() const override {
+  void formatTo(FmtCtxIt& outIt) const override {
     if (!initFakeMove)
-      return {};
-    std::ostringstream oss;
-    oss << initFakeMove->resultedState()->toString(false);
-    if (isSolution()) {
-      for (const Move& m : moves)
-        oss << m.toString(false);
-    }
-    return oss.str();
+      return;
+
+    using namespace std;
+
+    // Might use {:showNextMoveDir} to show the direction of the first move
+    outIt = format_to(outIt, "{}", *initFakeMove->resultedState());
+
+    if (isSolution())
+      for (const Move& m : moves) {
+        // Might use {:showNextMoveDir} to show the direction of the next move
+        outIt = format_to(outIt, "{}", m);
+      }
   }
 
-  PROTECTED:
+  PRIVATE:
   /// Initial fake empty move setting the initial state
   std::unique_ptr<const Move> initFakeMove;
 
@@ -750,7 +791,8 @@ class Solver {
     using namespace std;
 
 #ifndef NDEBUG
-    cout << "Exploring:\n" << flush;
+    println("Exploring:");
+    std::fflush(stdout);
 #endif  // NDEBUG
 
     try {
@@ -764,14 +806,15 @@ class Solver {
       else
         ignore = dfsExplore(std::move(initSt));
     } catch (const exception& e) {
-      cerr << "Couldn't solve the scenario due to: " << e.what() << '\n'
-           << flush;
+      println(stderr, "Couldn't solve the scenario due to: {}", e.what());
+      std::fflush(stderr);
       if (steps)
         steps->clear();
     }
 
 #ifndef NDEBUG
-    cout << "Finished exploring.\n\n" << flush;
+    println("Finished exploring.\n");
+    std::fflush(stdout);
 
     /*
     Testing duplicate/redundancy among the examined states.
@@ -782,15 +825,16 @@ class Solver {
     assert(results->investigatedStates > 0ULL);
     const auto lim{size(examinedStates) - 1ULL};
     for (auto i{0ULL}; i < lim; ++i) {
-      const auto& oneState = examinedStates[i];
+      const auto& oneState = examinedStates.at(i);
       for (auto j{i + 1ULL}; j <= lim; ++j) {
-        const auto& otherState = examinedStates[j];
+        const auto& otherState = examinedStates.at(j);
         if (otherState->handledBy(*oneState) ||
             oneState->handledBy(*otherState)) {
-          cout << "Found duplicate/redundancy among the examined states:\n"
-               << *oneState << '\n'
-               << *otherState << '\n'
-               << flush;
+          println(stderr,
+                  "Found duplicate/redundancy among the examined "
+                  "states:\n{:showNextMoveDir}\n{:showNextMoveDir}",
+                  *oneState, *otherState);
+          std::fflush(stderr);
           assert(false);
         }
       }
@@ -803,7 +847,7 @@ class Solver {
       results->attempt = make_shared<const Attempt>();
   }
 
- protected:
+ private:
   /**
   This should be a newer / better state than the examined ones.
   However, previous states that are inferior to this one should be removed.
@@ -881,7 +925,7 @@ class Solver {
 #ifndef NDEBUG
       using namespace std;
 
-      cout << "\n\n";
+      println("\n");
 
       const unsigned moveIdx{move.index()};
       if (UINT_MAX != moveIdx) {  // a normal move
@@ -889,16 +933,21 @@ class Solver {
         assert(solver->steps->length() == static_cast<size_t>(moveIdx));
         assert(solver->steps->initialState());
 
-        cout << *solver->steps->lastMove().resultedState() << "\n  DO move "
-             << (moveIdx + 1U) << " : " << move << '\n'
-             << flush;
+        // First and third {} might be {:showNextMoveDir} to show the direction
+        // of the current and next move
+        println("{}\n  DO move {} : {}",
+                *solver->steps->lastMove().resultedState(), (moveIdx + 1U),
+                move);
+        std::fflush(stdout);
 
       } else {  // about to set the initial state through a fake empty move
         assert(move.movedEntities().empty());
         assert(!solver->steps->length());
         assert(!solver->steps->initialState());
 
-        cout << "  DO initial fake empty move : " << move << '\n' << flush;
+        // Might use {:showNextMoveDir} to show the direction of the first move
+        println("  DO initial fake empty move : {}", move);
+        std::fflush(stdout);
       }
 #endif  // NDEBUG
 
@@ -936,9 +985,10 @@ class Solver {
         using namespace std;
 
         // _move.index() might return UINT_MAX, while CrossingIndex is reliable
-        cout << "\n\nUNDO move " << solver->SymTb["CrossingIndex"] << " : "
-             << _move << '\n'
-             << flush;
+        // Second {} can be {:showNextMoveDir} to show the direction of the move
+        // to undo
+        println("\n\nUNDO move {} : {}", solver->SymTb["CrossingIndex"], _move);
+        std::fflush(stdout);
       });
 #endif  // NDEBUG
     }
@@ -951,7 +1001,7 @@ class Solver {
     void commitStep() noexcept { committed = true; }  ///< marks the move as ok
     [[nodiscard]] bool committedStep() const noexcept { return committed; }
 
-   protected:
+   private:
     /// Parent outer class
     gsl::not_null<Solver*> solver;
 
@@ -985,12 +1035,14 @@ class Solver {
 
     assert(!initialState);  // moved to movesToExplore[0]
 
-    do {
+    do {  // NOLINT(cppcoreguidelines-avoid-do-while) : Simpler algorithm form
       const shared_ptr<const ChainedMove> move{movesToExplore.front()};
       movesToExplore.pop();
 
 #ifndef NDEBUG
-      cout << "\nDiscovering successors of move:\n" << *move << '\n' << flush;
+      // {:showNextMoveDir} can be used to show the direction of the next move
+      println("\nDiscovering successors of move:\n{}", *move);
+      std::fflush(stdout);
 #endif  // NDEBUG
 
       commonTasksAddMove(*move);
@@ -1004,8 +1056,9 @@ class Solver {
         unique_ptr<const IState> nextState{crtState->next(*movingCfg)};
 
 #ifndef NDEBUG
-        cout << "\nProbing move " << *movingCfg << " => " << *nextState << '\n'
-             << flush;
+        // Second {} can be {:showNextMoveDir} to show next move's direction
+        println("\nProbing move {} => {}", *movingCfg, *nextState);
+        std::fflush(stdout);
 #endif  // NDEBUG
 
         if (!nextState->valid(scenarioDetails->banksConstraints.get()) ||
@@ -1059,8 +1112,9 @@ class Solver {
       unique_ptr<const IState> nextState{crtState->next(*movingCfg)};
 
 #ifndef NDEBUG
-      cout << "\nSimulating move " << *movingCfg << " => " << *nextState << '\n'
-           << flush;
+      // Second {} can be {:showNextMoveDir} to show the direction of next move
+      println("\nSimulating move {} => {}", *movingCfg, *nextState);
+      std::fflush(stdout);
 #endif  // NDEBUG
 
       if (!nextState->valid(scenarioDetails->banksConstraints.get()) ||

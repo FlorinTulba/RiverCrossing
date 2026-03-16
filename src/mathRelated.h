@@ -13,12 +13,10 @@
 #ifndef H_MATH_RELATED
 #define H_MATH_RELATED
 
-#include "nanConcerns.h"
-
 namespace rc {
 
 inline constexpr double Eps{1e-6};
 
 }  // namespace rc
 
-#endif  // H_MATH_RELATED not defined
+#endif  // !H_MATH_RELATED

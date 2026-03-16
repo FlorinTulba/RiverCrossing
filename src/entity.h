@@ -14,8 +14,15 @@
 #define H_ENTITY
 
 #include "absConfigConstraint.h"
+#include "absEntity.h"
+#include "symbolsTable.h"
+#include "util.h"
 
-#include <boost/property_tree/ptree.hpp>
+#include <memory>
+#include <string>
+
+#include <boost/logic/tribool.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 namespace rc::ent {
 
@@ -68,9 +75,9 @@ class Entity : public IEntity {
   /// Weight of entity; 0 if unspecified
   [[nodiscard]] double weight() const noexcept override;
 
-  [[nodiscard]] std::string toString() const override;
+  void formatTo(FmtCtxIt&) const override;
 
- protected:
+ private:
   /// Name of the entity - mandatory
   std::string _name;
   std::string _type;  ///< type of the entity - optional
@@ -88,4 +95,4 @@ class Entity : public IEntity {
 
 }  // namespace rc::ent
 
-#endif  // H_ENTITY not defined
+#endif  // !H_ENTITY

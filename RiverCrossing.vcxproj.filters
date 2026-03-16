@@ -96,7 +96,7 @@
     <ClInclude Include="src\precompiled.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\nanConcerns.h">
+    <ClInclude Include="src\nan.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

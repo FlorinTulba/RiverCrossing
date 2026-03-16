@@ -15,6 +15,8 @@
 #ifdef UNIT_TESTING
 
 #define BOOST_TEST_MODULE RiverCrossing_tests
+
+// NOLINTNEXTLINE(misc-include-cleaner) : This is as required by Boost Test
 #include <boost/test/unit_test.hpp>
 
 #endif  // UNIT_TESTING

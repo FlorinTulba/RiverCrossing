@@ -13,7 +13,12 @@
 #ifndef H_DURATION_EXT
 #define H_DURATION_EXT
 
+#include "absSolution.h"
 #include "scenarioDetails.h"
+#include "util.h"
+
+#include <memory>
+#include <string>
 
 namespace rc::sol {
 
@@ -25,6 +30,9 @@ class TimeStateExt : public AbsStateExt {
                const std::shared_ptr<const IStateExt>& nextExt_ =
                    DefStateExt::SHARED_INST()) noexcept;
   TimeStateExt(const TimeStateExt&) = delete;
+  TimeStateExt(TimeStateExt&&) = delete;
+  ~TimeStateExt() noexcept override = default;
+
   TimeStateExt& operator=(const TimeStateExt&) = delete;
   TimeStateExt& operator=(TimeStateExt&&) noexcept = delete;
 
@@ -58,12 +66,13 @@ class TimeStateExt : public AbsStateExt {
   */
   [[nodiscard]] std::string _detailsForDemo() const override;
 
-  [[nodiscard]] std::string _toString(
-      bool suffixesInsteadOfPrefixes /* = true*/) const override;
+  /// Display prefix extensions
+  void _formatPrefixTo(FmtCtxIt&) const override;
 
+ private:
   unsigned _time;  ///< the moment this state is reached
 };
 
 }  // namespace rc::sol
 
-#endif  // H_DURATION_EXT not defined
+#endif  // !H_DURATION_EXT

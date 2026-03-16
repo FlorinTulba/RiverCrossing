@@ -14,15 +14,22 @@
 #define H_ENTITIES_MANAGER
 
 #include "absEntity.h"
+#include "symbolsTable.h"
 #include "util.h"
 
-#include <concepts>
+#include <cstddef>
+
+#include <initializer_list>
 #include <map>
+#include <memory>
 #include <set>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
-#include <boost/property_tree/ptree.hpp>
+#include <gsl/pointers>
+
+#include <boost/property_tree/ptree_fwd.hpp>
 
 namespace rc::ent {
 
@@ -50,7 +57,7 @@ class IEntities {
   /// Compares this subset against another
   [[nodiscard]] bool operator==(const IEntities& other) const noexcept;
 
-  [[nodiscard]] virtual std::string toString() const = 0;
+  virtual void formatTo(FmtCtxIt&) const = 0;
 
  protected:
   IEntities() noexcept = default;
@@ -99,12 +106,12 @@ class AllEntities : public IEntities {
   [[nodiscard]] const std::vector<unsigned>& idsStartingFromRightBank()
       const noexcept;
 
-  [[nodiscard]] std::string toString() const override;
+  void formatTo(FmtCtxIt&) const override;
 
-  PROTECTED:
+  PRIVATE:
   AllEntities& operator+=(const std::shared_ptr<const IEntity>& e);
 
- protected:
+ private:
   /// The entire entities set
   std::vector<std::shared_ptr<const IEntity>> entities;
 
@@ -179,7 +186,7 @@ class IsolatedEntities : public IEntities {
   /// Are there any entities capable to row within the context specified by st?
   [[nodiscard]] bool anyRowCapableEnts(const SymbolsTable& st) const;
 
-  [[nodiscard]] std::string toString() const override;
+  void formatTo(FmtCtxIt&) const override;
 
  protected:
   template <class IdsCont = std::vector<unsigned>>
@@ -193,13 +200,19 @@ class IsolatedEntities : public IEntities {
   /// Determines whether this and other refer to the same scenario.
   /// @param other an other IsolatedEntities object to compare against
   /// @return true if both objects refer to the same underlying scenario
-  bool refersToSameScenario(const IsolatedEntities& other) const noexcept;
+  [[nodiscard]] bool refersToSameScenario(
+      const IsolatedEntities& other) const noexcept;
+
+  // NOLINTBEGIN(cppcoreguidelines-non-private-member-variables-in-classes) :
+  // Easier to use in subclasses when protected
 
   /// All entities from the scenario
   gsl::not_null<std::shared_ptr<const AllEntities>> all;
 
   std::set<unsigned> _ids;  ///< the ids of a subset of all entities
+  // NOLINTEND(cppcoreguidelines-non-private-member-variables-in-classes)
 
+ private:
   /// the subset of entities ids grouped by type
   std::map<std::string, std::set<unsigned>> byType;
 };
@@ -242,12 +255,11 @@ class IMovingEntitiesExt {
   [[nodiscard]] virtual std::unique_ptr<IMovingEntitiesExt> clone()
       const noexcept = 0;
 
-  /**
-  Display either only suffix (most of them), or only prefix extensions.
-  It needs to be called before (with param false) and after (with param true)
-  the information of the moving entities
-  */
-  [[nodiscard]] virtual std::string toString(bool = true) const noexcept = 0;
+  /// Display prefix extensions
+  virtual void formatPrefixTo(FmtCtxIt&) const = 0;
+
+  /// Display suffix extensions
+  virtual void formatSuffixTo(FmtCtxIt&) const = 0;
 
  protected:
   IMovingEntitiesExt() noexcept = default;
@@ -271,14 +283,11 @@ class DefMovingEntitiesExt final : public IMovingEntitiesExt {
   [[nodiscard]] std::unique_ptr<IMovingEntitiesExt> clone()
       const noexcept final;
 
-  /**
-  Display either only suffix (most of them), or only prefix extensions.
-  It needs to be called before (with param false) and after (with param true)
-  the information of the moving entities
-  */
-  [[nodiscard]] std::string toString(bool = true) const noexcept final {
-    return {};
-  }
+  /// Display prefix extensions
+  void formatPrefixTo(FmtCtxIt&) const final {}
+
+  /// Display suffix extensions
+  void formatSuffixTo(FmtCtxIt&) const final {}
 };
 
 /**
@@ -297,6 +306,8 @@ class AbsMovingEntitiesExt
  public:
   AbsMovingEntitiesExt(const AbsMovingEntitiesExt&) = delete;
   AbsMovingEntitiesExt(AbsMovingEntitiesExt&&) = delete;
+  ~AbsMovingEntitiesExt() noexcept override = default;
+
   AbsMovingEntitiesExt& operator=(const AbsMovingEntitiesExt&) = delete;
   AbsMovingEntitiesExt& operator=(AbsMovingEntitiesExt&&) noexcept = delete;
 
@@ -327,13 +338,11 @@ class AbsMovingEntitiesExt
   [[nodiscard]] std::unique_ptr<IMovingEntitiesExt> clone()
       const noexcept final;
 
-  /**
-  Display either only suffix (most of them), or only prefix extensions.
-  It needs to be called before (with param false) and after (with param true)
-  the information of the moving entities
-  */
-  [[nodiscard]] std::string toString(
-      bool suffixesInsteadOfPrefixes /* = true*/) const noexcept final;
+  /// Display prefix extensions
+  void formatPrefixTo(FmtCtxIt&) const final;
+
+  /// Display suffix extensions
+  void formatSuffixTo(FmtCtxIt&) const final;
 
  protected:
   AbsMovingEntitiesExt(const std::shared_ptr<const AllEntities>& all_,
@@ -366,14 +375,17 @@ class AbsMovingEntitiesExt
   [[nodiscard]] virtual std::unique_ptr<IMovingEntitiesExt> _clone(
       std::unique_ptr<IMovingEntitiesExt> cloneOfNextExt) const noexcept = 0;
 
-  /**
-  Display either only suffix (most of them), or only prefix extensions.
-  It needs to be called before (with param false) and after (with param true)
-  the information of the moving entities
-  */
-  [[nodiscard]] virtual std::string _toString(bool = true) const { return {}; }
+  // Display prefix extensions
+  virtual void _formatPrefixTo(FmtCtxIt&) const {}
 
-  std::shared_ptr<const AllEntities> all;
+  // Display suffix extensions
+  virtual void _formatSuffixTo(FmtCtxIt&) const {}
+
+  std::shared_ptr<const AllEntities>
+      all;  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
+            // : Easier to use in subclasses when protected
+
+ private:
   std::unique_ptr<IMovingEntitiesExt> nextExt;
 };
 
@@ -416,12 +428,15 @@ class MovingEntities : public IsolatedEntities {
   }
 
   /// @return a new subset with the provided ids_ from the original pool
+  // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method) : return type
   MovingEntities& operator=(const std::initializer_list<unsigned>& ids_);
 
   /// Appends to the subset the entity with the given id
+  // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method) : return type
   MovingEntities& operator+=(unsigned id);
 
   /// Removes from the subset the entity with the given id
+  // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method) : return type
   MovingEntities& operator-=(unsigned id);
 
   ~MovingEntities() noexcept override = default;
@@ -434,9 +449,9 @@ class MovingEntities : public IsolatedEntities {
     return extension.get();
   }
 
-  [[nodiscard]] std::string toString() const override;
+  void formatTo(FmtCtxIt&) const override;
 
- protected:
+ private:
   std::unique_ptr<IMovingEntitiesExt> extension;
 };
 
@@ -469,6 +484,7 @@ class BankEntities : public IsolatedEntities {
   }
 
   /// @return a new subset with the provided ids_ from the original pool
+  // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method) : return type
   BankEntities& operator=(const std::initializer_list<unsigned>& ids_);
 
   /// @return the updated subset which contains now also arrivedEnts
@@ -487,13 +503,4 @@ class BankEntities : public IsolatedEntities {
 
 }  // namespace rc::ent
 
-namespace std {
-
-inline auto& operator<<(auto& os, const rc::ent::IEntities& ents) {
-  os << ents.toString();
-  return os;
-}
-
-}  // namespace std
-
-#endif  // H_ENTITIES_MANAGER not defined
+#endif  // !H_ENTITIES_MANAGER

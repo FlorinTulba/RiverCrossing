@@ -24,23 +24,50 @@ value.
 
 #endif  // UNIT_TESTING defined
 
-#include "durationExt.h"
+#include "absConfigConstraint.h"
+#include "absEntity.h"
+#include "absSolution.h"
+#include "configConstraint.h"
+#include "configParser.h"
+#include "entitiesManager.h"
 #include "scenario.h"
+#include "symbolsTable.h"
 #include "transferredLoadExt.h"
 #include "util.h"
 
-#include <array>
+#include <cassert>
+#include <cfloat>
 #include <climits>
 #include <cmath>
+#include <cstddef>
+#include <cstdio>
+
+#include <algorithm>
+#include <array>
+#include <format>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <optional>
+#include <print>
 #include <ranges>
-#include <span>
+#include <set>
+#include <stdexcept>
+#include <string>
 #include <string_view>
 #include <tuple>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
+#include <gsl/pointers>
 #include <gsl/span>
 #include <gsl/util>
 
+#include <boost/property_tree/exceptions.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -50,11 +77,9 @@ using namespace boost::property_tree;
 namespace {
 
 /// @throw domain_error mentioning the set of keys to choose only one from
-[[noreturn]] void duplicateKeyExc(std::span<const string_view> keys) {
-  ostringstream oss;
-  oss << "There must appear only one from the keys: ";
-  oss << rc::ContView{keys, {.before = "", .between = ", ", .after = ""}};
-  throw domain_error{oss.str()};
+[[noreturn]] void duplicateKeyExc(gsl::span<const string_view> keys) {
+  throw domain_error{format("There must appear only one from the keys: {}",
+                            rc::ContView{keys, ", "})};
 }
 
 /**
@@ -65,7 +90,7 @@ namespace {
 @throw domain_error when the tree node contains more keys from the set
 */
 [[nodiscard]] bool onlyOneExpected(const ptree& pt,
-                                   std::span<const string_view> keyNames,
+                                   gsl::span<const string_view> keyNames,
                                    string& firstFoundKeyName) {
   firstFoundKeyName = "";
   size_t keysCount{};
@@ -117,8 +142,8 @@ class TransferCapacityManager {
         entities{entities_},
         capacity{&capacity_} {
     if (entities->count() < 3ULL)
-      throw domain_error{HERE.function_name() +
-                         " - there have to be at least 3 entities!"s};
+      throw domain_error{format("{} - there have to be at least 3 entities!",
+                                HERE.function_name())};
 
     // Not all entities are allowed to cross the river simultaneously
     // (just to keep the problem interesting)
@@ -136,9 +161,10 @@ class TransferCapacityManager {
   // NOLINTNEXTLINE(readability-make-member-function-const) : Setter method
   void providedCapacity(unsigned capacity_) {
     if (static_cast<size_t>(capacity_) >= entities->count() || capacity_ < 2U)
-      throw domain_error{HERE.function_name() +
-                         " - RaftCapacity / BridgeCapacity should be "
-                         "at least 2 and less than the number of entities!"s};
+      throw domain_error{
+          format("{} - RaftCapacity / BridgeCapacity should be "
+                 "at least 2 and less than the number of entities!",
+                 HERE.function_name())};
     *capacity = std::min(*capacity, capacity_);
   }
 
@@ -186,19 +212,20 @@ class TransferCapacityManager {
     }
 
     if (cap < 2U)
-      throw domain_error{HERE.function_name() +
-                         " - Based on the entities' weights and the "
-                         "RaftMaxLoad/BridgeMaxLoad, "
-                         "the raft can hold at most one of them at a time! "
-                         "Please ensure the raft holds at least 2 entities!"s};
+      throw domain_error{
+          format("{} - Based on the entities' weights and the "
+                 "RaftMaxLoad/BridgeMaxLoad, "
+                 "the raft can hold at most one of them at a time! "
+                 "Please ensure the raft holds at least 2 entities!",
+                 HERE.function_name())};
 
     if (static_cast<size_t>(cap) >= entities->count())
-      throw domain_error{
-          HERE.function_name() +
-          " - Based on the entities' weights and the "
+      throw domain_error{format(
+          "{} - Based on the entities' weights and the "
           "RaftMaxLoad/BridgeMaxLoad, "
           "the raft can hold all of them at a time! "
-          "This constraint cannot be counted as a valid scenario condition!"s};
+          "This constraint cannot be counted as a valid scenario condition!",
+          HERE.function_name())};
 
     *capacity = std::min(*capacity, cap);
   }
@@ -210,12 +237,12 @@ class TransferCapacityManager {
     const unsigned cap{transferConstraints.minRequiredCapacity()};
 
     if (cap < 2U)
-      throw domain_error{
-          HERE.function_name() +
-          " - Based on the "
+      throw domain_error{format(
+          "{} - Based on the "
           "[Dis]AllowedRaftConfigurations / [Dis]AllowedBridgeConfigurations, "
           "the raft can hold at most one entity at a time! "
-          "Please ensure the raft holds at least 2 entities!"s};
+          "Please ensure the raft holds at least 2 entities!",
+          HERE.function_name())};
 
     *capacity = std::min(*capacity, cap);
   }
@@ -225,31 +252,40 @@ class TransferCapacityManager {
   }  ///< provided / deduced capacity
 
  protected:
+  // NOLINTBEGIN(cppcoreguidelines-non-private-member-variables-in-classes) :
+  // Easier to use in derived classes when protected
+
   /// All entities of the scenario
-  gsl::not_null<std::shared_ptr<const AllEntities>>
-      entities;  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
+  gsl::not_null<std::shared_ptr<const AllEntities>> entities;
 
   /// Provided / deduced transfer capacity (&ScenarioDetails::capacity)
-  gsl::not_null<unsigned*>
-      capacity;  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
+  gsl::not_null<unsigned*> capacity;
+  // NOLINTEND(cppcoreguidelines-non-private-member-variables-in-classes)
 };
 
 /// Extract scenario description string
 string parseScenarioDescription(const ptree& descrTree) {
   if (descrTree.count("") == 0ULL)
     throw domain_error{
-        HERE.function_name() +
-        " - The scenario description should be an array of 1 or more strings!"s};
+        format("{} - The scenario description should be an array of 1 or more "
+               "strings!",
+               HERE.function_name())};
 
-  ostringstream oss;
-  for (const auto& descrLine : descrTree)
+  string out;
+  out.reserve(512ULL);
+
+  for (auto outIt{back_inserter(out)}; const auto& descrLine : descrTree) {
     if (descrLine.first.empty())
-      oss << descrLine.second.data() << '\n';
+      outIt = format_to(outIt, "{}\n", descrLine.second.data());
+
     else
-      throw domain_error{HERE.function_name() +
-                         " - The scenario description should be an array of 1 "
-                         "or more strings!"s};
-  return oss.str();
+      throw domain_error{
+          format("{} - The scenario description should be an array of 1 "
+                 "or more strings!",
+                 HERE.function_name())};
+  }
+
+  return out;
 }
 
 /// Parse crossing-related constraint: Capacity
@@ -266,13 +302,13 @@ void parseCapacityConstraint(const ptree& crossingConstraintsTree,
       const int readCapacity{crossingConstraintsTree.get<int>(key)};
       if (readCapacity < 0)
         throw domain_error{
-            HERE.function_name() +
-            " - RaftCapacity / BridgeCapacity should be non-negative!"s};
+            format("{} - RaftCapacity / BridgeCapacity should be non-negative!",
+                   HERE.function_name())};
 
       capManager.providedCapacity(gsl::narrow_cast<unsigned>(readCapacity));
     } catch (const ptree_bad_data& ex) {
-      throw domain_error{HERE.function_name() +
-                         " - Bad type for the raft capacity! "s + ex.what()};
+      throw domain_error{format("{} - Bad type for the raft capacity! {}",
+                                HERE.function_name(), ex.what())};
     }
 
     if (!bridgeInsteadOfRaft && key.at(0ULL) == 'B')
@@ -297,22 +333,22 @@ void parseMaxLoadConstraint(const ptree& crossingConstraintsTree,
     try {
       maxLoad = crossingConstraintsTree.get<double>(key);
     } catch (const ptree_bad_data& ex) {
-      throw domain_error{HERE.function_name() +
-                         " - Bad type for the raft max load! "s + ex.what()};
+      throw domain_error{format("{} - Bad type for the raft max load! {}",
+                                HERE.function_name(), ex.what())};
     }
 
     if (maxLoad <= 0.)
-      throw domain_error{HERE.function_name() +
-                         " - The raft max load cannot be negative or zero! "s};
+      throw domain_error{
+          format("{} - The raft max load cannot be negative or zero! ",
+                 HERE.function_name())};
 
     // If 1st entity has no specified weight, then none have.
     // However max load requires those properties
     if (firstEntity.weight() <= 0.)
-      throw domain_error{
-          HERE.function_name() +
-          " - Please specify strictly positive weights for all entities "
-          "when using the `"s +
-          key + "` constraint!"s};
+      throw domain_error{format(
+          "{} - Please specify strictly positive weights for all entities "
+          "when using the `{}` constraint!",
+          HERE.function_name(), key)};
 
     capManager.setMaxLoad(maxLoad);
 
@@ -338,17 +374,16 @@ void parseAllowedLoadsConstraint(const ptree& crossingConstraintsTree,
         crossingConstraintsTree.get<string>(key));
     if (!allowedLoads)
       throw domain_error{
-          HERE.function_name() +
-          " - AllowedRaftLoads parsing error! See the cause above."s};
+          format("{} - AllowedRaftLoads parsing error! See the cause above.",
+                 HERE.function_name())};
 
     // If 1st entity has no specified weight, then none have.
     // However max load requires these properties
     if (firstEntity.weight() <= 0.)
-      throw domain_error{
-          HERE.function_name() +
-          " - Please specify strictly positive weights for all entities "
-          "when using the `"s +
-          key + "` constraint!"s};
+      throw domain_error{format(
+          "{} - Please specify strictly positive weights for all entities "
+          "when using the `{}` constraint!",
+          HERE.function_name(), key)};
 
     if (!bridgeInsteadOfRaft && key.at(7ULL) == 'B')
       bridgeInsteadOfRaft = true;
@@ -373,8 +408,9 @@ void parseRaftCfgsConstraint(const ptree& crossingConstraintsTree,
         grammar::parseConfigurationsExpr(
             crossingConstraintsTree.get<string>(key));
     if (!readConstraints)
-      throw domain_error{HERE.function_name() +
-                         " - Constraints parsing error! See the cause above."s};
+      throw domain_error{
+          format("{} - Constraints parsing error! See the cause above.",
+                 HERE.function_name())};
 
     // key starts either with 'A' or with 'D':
     // AllowedRaftConfigurations or AllowedBridgeConfigurations
@@ -422,35 +458,37 @@ void parseCrossTimesConstraint(const ptree& crossingConstraintsTree,
         crossingConstraintsTree.get_child("CrossingDurationsOfConfigurations")};
     if (cdcTree.count("") == 0ULL)
       throw domain_error{
-          HERE.function_name() +
-          " - The CrossingDurationsOfConfigurations section should be an array "
-          "of 1 or more such items!"s};
+          format("{} - The CrossingDurationsOfConfigurations section should be "
+                 "an array "
+                 "of 1 or more such items!",
+                 HERE.function_name())};
 
     unordered_set<unsigned> durations;
     for (const auto& cdcPair : cdcTree) {
       if (!cdcPair.first.empty())
-        throw domain_error{HERE.function_name() +
-                           " - The CrossingDurationsOfConfigurations section "
-                           "should be an array "
-                           "of 1 or more such items!"s};
+        throw domain_error{
+            format("{} - The CrossingDurationsOfConfigurations section "
+                   "should be an array "
+                   "of 1 or more such items!",
+                   HERE.function_name())};
       const string cdcStr{cdcPair.second.data()};
       std::optional<grammar::ConfigurationsTransferDurationInitType> readCdc{
           grammar::parseCrossingDurationForConfigurationsExpr(cdcStr)};
       if (!readCdc)
         throw domain_error{
-            HERE.function_name() +
-            " - CrossingDurationsOfConfigurations parsing error! "
-            "See the cause above."s};
+            format("{} - CrossingDurationsOfConfigurations parsing error! "
+                   "See the cause above.",
+                   HERE.function_name())};
       ctdItems.emplace_back(std::move(*readCdc), entities,
                             capManager.getCapacity(),
                             *details.transferConstraintsExt);
       const ConfigurationsTransferDuration& ctd{ctdItems.back()};
       if (!durations.insert(ctd.duration()).second)
         throw domain_error{
-            HERE.function_name() + " - Before configuration `"s +
-            ctd.toString() +
-            "` there was another one with the same transfer time. "
-            "Please group them together instead!"s};
+            format("{} - Before configuration `{}` there was another one with "
+                   "the same transfer time. "
+                   "Please group them together instead!",
+                   HERE.function_name(), ctd)};
     }
 
     ++uniqueConstraints;
@@ -502,8 +540,9 @@ void parseBanksConstraints(const ptree& banksConstraintsTree,
   std::optional<grammar::ConstraintsVec> readConstraints{
       grammar::parseConfigurationsExpr(banksConstraintsTree.get<string>(key))};
   if (!readConstraints)
-    throw domain_error{HERE.function_name() +
-                       " - Constraints parsing error! See the cause above."s};
+    throw domain_error{
+        format("{} - Constraints parsing error! See the cause above.",
+               HERE.function_name())};
 
   // key starts either with 'A' or with 'D':
   // AllowedBankConfigurations  OR  DisallowedBankConfigurations
@@ -558,21 +597,21 @@ string parseOtherConstraints(const ptree& otherConstraintsTree,
       // get<unsigned> fails to signal negative values
       const int readMaxDuration{otherConstraintsTree.get<int>(key)};
       if (readMaxDuration <= 0)
-        throw domain_error{HERE.function_name() +
-                           " - TimeLimit should be > 0!"s};
+        throw domain_error{
+            format("{} - TimeLimit should be > 0!", HERE.function_name())};
 
       details.maxDuration = gsl::narrow_cast<unsigned>(readMaxDuration);
     } catch (const ptree_bad_data& ex) {
-      throw domain_error{HERE.function_name() +
-                         " - Bad type for the time limit! "s + ex.what()};
+      throw domain_error{format("{} - Bad type for the time limit! {}",
+                                HERE.function_name(), ex.what())};
     }
 
     // TimeLimit requires CrossingDurationsOfConfigurations constraints
     if (details.ctdItems.empty())
-      throw domain_error{
-          HERE.function_name() +
-          " - Please specify a CrossingDurationsOfConfigurations section "
-          "when using the `TimeLimit` constraint!"s};
+      throw domain_error{format(
+          "{} - Please specify a CrossingDurationsOfConfigurations section "
+          "when using the `TimeLimit` constraint!",
+          HERE.function_name())};
   }
 
   static constexpr array<string_view, 1> nightModeSpecifiers{{"NightMode"}};
@@ -595,9 +634,9 @@ Scenario::Scenario(istream& scenarioStream,
     read_json(scenarioStream, pt);
   } catch (const json_parser_error& ex) {
     throw domain_error{
-        HERE.function_name() +
-        " - Couldn't parse puzzle data (json format expected)!\nReason:\n"s +
-        ex.what()};
+        format("{} - Couldn't parse puzzle data (json format "
+               "expected)!\nReason:\n{}",
+               HERE.function_name(), ex.what())};
   }
 
   // Extract mandatory sections
@@ -606,8 +645,8 @@ Scenario::Scenario(istream& scenarioStream,
     entTree = pt.get_child("Entities");
     crossingConstraintsTree = pt.get_child("CrossingConstraints");
   } catch (const ptree_bad_path& ex) {
-    throw domain_error{HERE.function_name() +
-                       " - Missing mandatory section! "s + ex.what()};
+    throw domain_error{format("{} - Missing mandatory section! ",
+                              HERE.function_name(), ex.what())};
   }
 
   // Store ScenarioDescription (extracted into helper)
@@ -651,21 +690,22 @@ Scenario::Scenario(istream& scenarioStream,
   // Post-conditions / validations
   if (firstEntity->weight() > 0.  // all entities have then specified weights
       && isgreaterequal(details.maxLoad, DBL_MAX) && !details.allowedLoads)
-    throw domain_error{
-        HERE.function_name() +
-        " - Unnecessary weights of entities when not using none of the "
+    throw domain_error{format(
+        "{} - Unnecessary weights of entities when not using none of the "
         "following constraints: "
-        "{RaftMaxLoad/BridgeMaxLoad or AllowedRaftLoads/AllowedBridgeLoads}!"s};
+        "{{RaftMaxLoad/BridgeMaxLoad or AllowedRaftLoads/AllowedBridgeLoads}}!",
+        HERE.function_name())};
 
   if (!details.ctdItems.empty() && details.maxDuration == UINT_MAX)
-    throw domain_error{HERE.function_name() +
-                       " - Unnecessary CrossingDurationsOfConfigurations "
-                       "when not using the TimeLimit constraint!"s};
+    throw domain_error{
+        format("{} - Unnecessary CrossingDurationsOfConfigurations "
+               "when not using the TimeLimit constraint!",
+               HERE.function_name())};
 
   if (0U == uniqueConstraints)
     throw domain_error{
-        HERE.function_name() +
-        " - There must be at least one valid crossing constraint!"s};
+        format("{} - There must be at least one valid crossing constraint!",
+               HERE.function_name())};
 
   if (solveNow)
     ignore = solution(true, interactiveSol);
@@ -674,14 +714,14 @@ Scenario::Scenario(istream& scenarioStream,
 void Scenario::outputResults(const Results& res,
                              bool interactiveSol /* = false*/) const {
   if (!res.attempt)
-    throw logic_error{
-        HERE.function_name() +
-        " - cannot be called when the scenario wasn't / couldn't be solved "
-        "based on the requested algorithm!"s};
+    throw logic_error{format(
+        "{} - cannot be called when the scenario wasn't / couldn't be solved "
+        "based on the requested algorithm!",
+        HERE.function_name())};
 
   if (!interactiveSol || !res.attempt->isSolution()) {
-    cout << "Considered scenario:\n" << *this << "\n\n";
-    cout << res << flush;
+    print("Considered scenario:\n{}\n\n{}", *this, res);
+    fflush(stdout);
     return;
   }
 
@@ -796,78 +836,95 @@ void Scenario::Results::update(size_t attemptLen,
   }
 }
 
+void Scenario::Results::formatTo(FmtCtxIt& outIt) const {
+  if (attempt->isSolution()) {
+    outIt = format_to(outIt, "Found solution using {} steps:\n\n{}",
+                      attempt->length(), *attempt);
+
+  } else {
+    outIt =
+        format_to(outIt,
+                  "Found no solution. Longest investigated path: {}. "
+                  "Investigated states: {}. Nearest states to the solution:\n",
+                  longestInvestigatedPath, investigatedStates);
+
+    for (const rc::ent::BankEntities& leftBank : closestToTargetLeftBank)
+      outIt = format_to(outIt, "{} - {}\n", leftBank, ~leftBank);
+  }
+}
+
 const string& Scenario::description() const noexcept {
   return descr;
 }
 
-string Scenario::toString() const {
-  ostringstream oss;
-  oss << details.toString();
-  return oss.str();
+void Scenario::formatTo(FmtCtxIt& outIt) const {
+  details.formatTo(outIt);
 }
 
-string ScenarioDetails::toString() const {
-  ostringstream oss;
+void ScenarioDetails::formatTo(FmtCtxIt& outIt) const {
   if (entities)
-    oss << *entities << '\n';
+    outIt = format_to(outIt, "{}\n", *entities);
 
-  oss << "CrossingConstraints: { ";
-  if (capacity != UINT_MAX)
-    oss << "Capacity = " << capacity << "; ";
-  if (isless(maxLoad, DBL_MAX))
-    oss << "MaxLoad = " << maxLoad << "; ";
-  if (transferConstraints && !transferConstraints->empty())
-    oss << "TransferConstraints = " << *transferConstraints << "; ";
-  if (allowedLoads)
-    oss << "AllowedLoads = `" << *allowedLoads << "`; ";
-  if (!ctdItems.empty())
-    oss << ContView{
-        ctdItems,
-        {.before = "CrossingDurations: { ", .between = " ; ", .after = " }; "}};
+  outIt = format_to(outIt, "CrossingConstraints: {{ ");
 
-  // Replace last '; ' with ' }'
-  oss.seekp(-2, ios_base::cur);
-  oss << " }";
+  // The first constraint is shown as is, the next ones are separated by "; "
+  // for better readability
+  bool hasPrevConstraint{};
 
-  if (banksConstraints && !banksConstraints->empty())
-    oss << "\nBanksConstraints = " << *banksConstraints;
+  // Helper for separating constraints in the output string
+  const auto appendCategSeparator{[&hasPrevConstraint, &outIt] {
+    if (hasPrevConstraint)
+      outIt = format_to(outIt, "; ");
+    else
+      hasPrevConstraint = true;
+  }};
 
-  if (maxDuration != UINT_MAX) {
-    oss << "\nOtherConstraints: { ";
-    oss << "TimeLimit = " << maxDuration << " time units }";
+  if (capacity != UINT_MAX) {
+    outIt = format_to(outIt, "Capacity = {}", capacity);
+    hasPrevConstraint = true;
   }
 
-  return oss.str();
+  if (isless(maxLoad, DBL_MAX)) {
+    appendCategSeparator();
+    outIt = format_to(outIt, "MaxLoad = {}", maxLoad);
+  }
+
+  if (transferConstraints && !transferConstraints->empty()) {
+    appendCategSeparator();
+    outIt = format_to(outIt, "TransferConstraints = {}", *transferConstraints);
+  }
+
+  if (allowedLoads) {
+    appendCategSeparator();
+    outIt = format_to(outIt, "AllowedLoads = `{}`", *allowedLoads);
+  }
+
+  if (!ctdItems.empty()) {
+    appendCategSeparator();
+    outIt = format_to(outIt, "CrossingDurations: {{ {} }}",
+                      ContView{ctdItems, " ; "});
+  }
+
+  assert(hasPrevConstraint);
+  outIt = format_to(outIt, " }}");
+
+  if (banksConstraints && !banksConstraints->empty())
+    outIt = format_to(outIt, "\nBanksConstraints = {}", *banksConstraints);
+
+  if (maxDuration != UINT_MAX)
+    outIt =
+        format_to(outIt, "\nOtherConstraints: {{ TimeLimit = {} time units }}",
+                  maxDuration);
 }
 
 }  // namespace rc
 
-namespace std {
-
-// NOLINTNEXTLINE(bugprone-std-namespace-modification) : Classic overloading
-ostream& operator<<(ostream& os, const rc::Scenario::Results& o) {
-  const gsl::not_null<std::shared_ptr<const rc::sol::IAttempt>> attempt{
-      o.attempt};
-  if (attempt->isSolution()) {
-    os << "Found solution using " << attempt->length() << " steps:\n\n"
-       << *attempt;
-  } else {
-    os << "Found no solution. "
-          "Longest investigated path: "
-       << o.longestInvestigatedPath
-       << ". Investigated states: " << o.investigatedStates
-       << ". Nearest states to the solution:\n";
-    for (const rc::ent::BankEntities& leftBank : o.closestToTargetLeftBank)
-      os << leftBank << " - " << ~leftBank << '\n';
-  }
-  return os;
-}
-
-}  // namespace std
-
 #ifndef UNIT_TESTING
 
-#include <fstream>
+#include <exception>
+#include <filesystem>
+
+#include <gsl/assert>
 
 // GSL before 4.1.0 doesn't have <gsl/zstring>
 #if __has_include(<gsl/zstring>)
@@ -888,15 +945,16 @@ class Config {
  public:
   Config() : projDir{rc::projectFolder()}, scenariosDir{projDir / "Scenarios"} {
     if (projDir.empty())
-      throw runtime_error{HERE.function_name() +
-                          "Couldn't locate the base folder of the project or "
-                          "the Scenarios folder! "
-                          "Please launch the program within (a subfolder of) "
-                          "RiverCrossing directory!"s};
+      throw runtime_error{
+          format("{} - Couldn't locate the base folder of the project or "
+                 "the Scenarios folder! "
+                 "Please launch the program within (a subfolder of) "
+                 "RiverCrossing directory!",
+                 HERE.function_name())};
 
     if (!exists(scenariosDir))
-      throw runtime_error{HERE.function_name() +
-                          "Couldn't locate the Scenarios folder!"s};
+      throw runtime_error{format("{} - Couldn't locate the Scenarios folder!",
+                                 HERE.function_name())};
 
     const directory_iterator itEnd;
     for (directory_iterator it{scenariosDir}; it != itEnd; ++it) {
@@ -917,6 +975,7 @@ class Config {
 
 }  // anonymous namespace
 
+// NOLINTNEXTLINE(bugprone-exception-escape) : Any exception is caught
 int main(int argc, zstring* argv) try {
   Expects(argv && argc >= 1);
 
@@ -931,7 +990,8 @@ int main(int argc, zstring* argv) try {
        })};
 
 #ifndef NDEBUG
-  cout << "Interactive:" << boolalpha << interactive << '\n' << flush;
+  println("Interactive:{}", interactive);
+  fflush(stdout);
 #endif  // NDEBUG
 
   Config cfg;
@@ -944,7 +1004,13 @@ int main(int argc, zstring* argv) try {
   return 0;
 
 } catch (const exception& e) {
-  cerr << e.what() << '\n' << flush;
+  println(stderr, "{}", e.what());
+  fflush(stderr);
+  return -1;
+
+} catch (...) {
+  println(stderr, "An unknown error occurred!");
+  fflush(stderr);
   return -1;
 }
 

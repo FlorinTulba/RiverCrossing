@@ -15,6 +15,11 @@
 
 #include "absConfigConstraint.h"
 
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
 namespace rc::grammar {
 
 /// Unchecked vector of constraints - right after parsing
@@ -36,7 +41,7 @@ class ConfigurationsTransferDurationInitType {
   /// Moves the duration out
   [[nodiscard]] unsigned duration() && noexcept;
 
- protected:
+ private:
   /// Unchecked vector of configuration of same duration
   ConstraintsVec _constraints;
   unsigned _duration{};  ///< duration of the provided configurations
@@ -85,4 +90,4 @@ parseCrossingDurationForConfigurationsExpr(const std::string& s);
 
 }  // namespace rc::grammar
 
-#endif  // H_CONFIG_PARSER not defined
+#endif  // !H_CONFIG_PARSER

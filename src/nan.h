@@ -10,10 +10,15 @@
  (c) 2018-2026 Florin Tulba (florintulba@yahoo.com)
  *****************************************************************************/
 
-#ifndef H_NAN_CONCERNS
-#define H_NAN_CONCERNS
+#ifndef H_NAN
+#define H_NAN
 
 /*
+ValueOrRange::validateDouble(double d) must throw for NaN values.
+This means std::optional<double> for flagging invalid values is not an option.
+
+But there are problems with NaN:
+
 isnan(NaN) might evaluate to false due to compilation flags.
 Substituting isnan() by the code below might be a solution:
 
@@ -63,6 +68,27 @@ or add '-fno-finite-math-only' (or '-fhonor-nans' in Clang)! \
 For MSVC either change '/fp:fast' into '/fp:precise' \
 or insert '#pragma float_control(precise, on)' where NaNs are used!"
 
-#endif  // __FAST_MATH__ or _M_FP_FAST defined
+#else  // Safe to use NaN
 
-#endif  // H_NAN_CONCERNS
+#include <cmath>
+
+#include <limits>
+#include <type_traits>
+
+namespace rc {
+
+template <typename T>
+  requires std::is_floating_point_v<T>
+inline constexpr auto NaN{std::numeric_limits<T>::quiet_NaN()};
+
+template <typename T>
+  requires std::is_floating_point_v<T>
+constexpr bool isNaN(T val) {
+  return std::isnan(val);
+}
+
+}  // namespace rc
+
+#endif  // __FAST_MATH__ & _M_FP_FAST condition
+
+#endif  // !H_NAN

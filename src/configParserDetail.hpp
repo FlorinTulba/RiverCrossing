@@ -15,13 +15,49 @@
 
 #include "configConstraint.h"
 #include "configParser.h"
+#include "warnings.h"
 
-#include <boost/fusion/include/at.hpp>
-#include <boost/spirit/home/x3.hpp>
+#include <climits>
+#include <cstdio>
+
+#include <exception>
+#include <format>
+#include <iostream>
+#include <iterator>
+#include <memory>
+#include <print>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <vector>
+
+#include <boost/core/demangle.hpp>
+#include <boost/fusion/sequence/intrinsic/at.hpp>
+#include <boost/spirit/home/x3.hpp>  // IWYU pragma: keep
+#include <boost/spirit/home/x3/auxiliary/attr.hpp>
+#include <boost/spirit/home/x3/auxiliary/eoi.hpp>
+#include <boost/spirit/home/x3/auxiliary/eps.hpp>
+#include <boost/spirit/home/x3/auxiliary/guard.hpp>
+#include <boost/spirit/home/x3/char/char.hpp>
+#include <boost/spirit/home/x3/char/char_class.hpp>
+#include <boost/spirit/home/x3/directive/omit.hpp>
+#include <boost/spirit/home/x3/nonterminal/rule.hpp>
+#include <boost/spirit/home/x3/numeric/real.hpp>
+#include <boost/spirit/home/x3/numeric/uint.hpp>
+#include <boost/spirit/home/x3/string/literal_string.hpp>
+#include <boost/spirit/home/x3/support/expectation.hpp>
 #include <boost/spirit/home/x3/support/utility/error_reporting.hpp>
 
 namespace bs = boost::spirit;
 namespace bsx = bs::x3;
+
+namespace rc::cond {
+// Forward declarations
+class LogicalExpr;
+class ValueOrRange;
+class NumericExpr;
+}  // namespace rc::cond
 
 /**
 Defines the following grammar:
@@ -72,6 +108,7 @@ class ErrHandler {
  public:
   /// Handle errors by forwarding the exception and displaying its location
   template <typename Iterator, typename Exception, typename Context>
+    requires std::is_nothrow_copy_constructible_v<Exception>
   [[nodiscard]] bsx::error_handler_result on_error(Iterator& first,
                                                    const Iterator& last,
                                                    const Exception& ex,
@@ -99,37 +136,44 @@ class TypeNameTag {};
 class IdsConfigTag {};
 class IdsGroupTag {};
 
+// NOLINTBEGIN(bugprone-throwing-static-initialization) : Startup crash allowed
+
 // Declaring the rules
-inline bsx::rule<LogicalExprTag, std::shared_ptr<const rc::cond::LogicalExpr>>
+inline const bsx::rule<LogicalExprTag,
+                       std::shared_ptr<const rc::cond::LogicalExpr>>
     logicalExpr{"logicalExpr"};
-inline bsx::rule<ConditionTag, std::shared_ptr<const rc::cond::LogicalExpr>>
+inline const bsx::rule<ConditionTag,
+                       std::shared_ptr<const rc::cond::LogicalExpr>>
     condition{"condition"};
-inline bsx::rule<ValueSetTag, rc::cond::ValueSet> valueSet{"valueSet"};
-inline bsx::rule<ValueOrRangeTag, std::shared_ptr<const rc::cond::ValueOrRange>>
+inline const bsx::rule<ValueSetTag, rc::cond::ValueSet> valueSet{"valueSet"};
+inline const bsx::rule<ValueOrRangeTag,
+                       std::shared_ptr<const rc::cond::ValueOrRange>>
     valueOrRange{"valueOrRange"};
-inline bsx::rule<MathExprTag, std::shared_ptr<const rc::cond::NumericExpr>>
+inline const bsx::rule<MathExprTag,
+                       std::shared_ptr<const rc::cond::NumericExpr>>
     mathExpr{"mathExpr"};
-inline bsx::rule<LeftRecursiveMathExprTag,
-                 std::shared_ptr<const rc::cond::NumericExpr>>
+inline const bsx::rule<LeftRecursiveMathExprTag,
+                       std::shared_ptr<const rc::cond::NumericExpr>>
     leftRecursiveMathExpr{"leftRecursiveMathExpr"};
-inline bsx::rule<OperandTag, std::shared_ptr<const rc::cond::NumericExpr>>
+inline const bsx::rule<OperandTag, std::shared_ptr<const rc::cond::NumericExpr>>
     operand{"operand"};
-inline bsx::rule<UnfencedOperandTag,
-                 std::shared_ptr<const rc::cond::NumericExpr>>
+inline const bsx::rule<UnfencedOperandTag,
+                       std::shared_ptr<const rc::cond::NumericExpr>>
     unfencedOperand{"unfencedOperand"};
-inline bsx::rule<ValueTag, std::shared_ptr<const rc::cond::NumericExpr>> value{
-    "value"};
-inline bsx::rule<VariableTag, std::string> variable{"variable"};
-inline bsx::rule<CrossingDurationForConfigurationsTag,
-                 ConfigurationsTransferDurationInitType>
+inline const bsx::rule<ValueTag, std::shared_ptr<const rc::cond::NumericExpr>>
+    value{"value"};
+inline const bsx::rule<VariableTag, std::string> variable{"variable"};
+inline const bsx::rule<CrossingDurationForConfigurationsTag,
+                       ConfigurationsTransferDurationInitType>
     crossingDurationForConfigurations{"crossingDurationForConfigurations"};
-inline bsx::rule<ConfigurationsTag, ConstraintsVec> configurations{
+inline const bsx::rule<ConfigurationsTag, ConstraintsVec> configurations{
     "configurations"};
-inline bsx::rule<TypesConfigTag, rc::cond::TypesConstraint> typesConfig{
+inline const bsx::rule<TypesConfigTag, rc::cond::TypesConstraint> typesConfig{
     "typesConfig"};
-inline bsx::rule<TypeNameTag, std::string> typeName{"typeName"};
-inline bsx::rule<IdsConfigTag, rc::cond::IdsConstraint> idsConfig{"idsConfig"};
-inline bsx::rule<IdsGroupTag, std::vector<unsigned>> idsGroup{"idsGroup"};
+inline const bsx::rule<TypeNameTag, std::string> typeName{"typeName"};
+inline const bsx::rule<IdsConfigTag, rc::cond::IdsConstraint> idsConfig{
+    "idsConfig"};
+inline const bsx::rule<IdsGroupTag, std::vector<unsigned>> idsGroup{"idsGroup"};
 
 // Defining the rules and their semantic actions
 namespace bsa = bsx::ascii;
@@ -157,6 +201,10 @@ inline const auto createWith1Param = [](const auto& ctx) {
   _val(ctx) = std::make_shared<const Type>(_attr(ctx));
 };
 const auto forwardAttr = [](const auto& ctx) { _val(ctx) = _attr(ctx); };
+
+// NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access) :
+// Normal grammar expressions
+// NOLINTBEGIN(bugprone-chained-comparison) : Normal grammar expressions
 const auto logicalExpr_def = omit[-("if" > +blank)] >
                              ((("not" >> omit[*blank]) > ('(' >> omit[*blank]) >
                                (condition >> omit[*blank]) >
@@ -164,14 +212,16 @@ const auto logicalExpr_def = omit[-("if" > +blank)] >
                               condition[forwardAttr]);
 
 // Semantic actions and definition for 'condition'
-const auto setBoolConst = [](const auto& ctx) {
-  using namespace std;
+inline auto setBoolConst() {
+  return [](const auto& ctx) {
+    using namespace std;
 
-  bool b{true};
-  istringstream iss{boost::get<string>(_attr(ctx))};
-  iss >> boolalpha >> b;
-  _val(ctx) = make_shared<const rc::cond::BoolConst>(b);
-};
+    bool b{true};
+    istringstream iss{boost::get<string>(_attr(ctx))};
+    iss >> boolalpha >> b;
+    _val(ctx) = make_shared<const rc::cond::BoolConst>(b);
+  };
+}
 
 const auto belongTo = [](const auto& ctx) {
   using namespace rc::cond;
@@ -187,7 +237,7 @@ const auto belongTo = [](const auto& ctx) {
 };
 
 const auto condition_def =
-    (bsx::string("true") | bsx::string("false"))[setBoolConst] |
+    (bsx::string("true") | bsx::string("false"))[setBoolConst()] |
     ((((mathExpr | (('(' >> omit[*blank]) > (mathExpr >> omit[*blank]) > ')')) >
        omit[+blank]) >>
       -(("not" > omit[+blank]) >> attr(true))) > ("in" >> omit[*blank]) > '{' >
@@ -255,7 +305,7 @@ const auto crossingDurationForConfigurations_def =
     configurations[configsWithSameDuration];
 
 // Semantic actions and definition for 'configurations'
-const auto appendConfig = [](const auto& ctx) noexcept {
+const auto appendConfig = [](const auto& ctx) {
   _val(ctx).emplace_back(std::move(_attr(ctx).clone()));
 };
 const auto configurations_def =
@@ -333,6 +383,9 @@ const auto idsConfig_def =
 const auto idsGroup_def = ('(' >> omit[*blank]) > uint_ >
                           (+((omit[*blank] >> '|' >> omit[*blank]) > uint_) >>
                            omit[*blank]) > ')';
+// NOLINTEND(bugprone-chained-comparison)
+// NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+// NOLINTEND(bugprone-throwing-static-initialization)
 
 // Rules registration
 BOOST_SPIRIT_DEFINE(logicalExpr,
@@ -372,30 +425,31 @@ template <class RuleType>
 
   auto reachedPoint = cbegin(s);
   const auto itEnd = cend(s);
-  ostringstream oss;
+  string err;
+  err.reserve(512ULL);
+  const auto errIt{back_inserter(err)};
+
   try {
     const bool anyMatch{bsx::parse(reachedPoint, itEnd, usedRule, expr)};
     if (anyMatch && reachedPoint == itEnd)
       return true;
 
-    // Separate definition of problem avoids MSVC warning 4866
-    const string problem{reachedPoint, itEnd};
-    oss << "\tThere is a problem with: " << quoted(problem, '`') << '\n';
+    // NOLINTNEXTLINE(bugprone-dangling-handle) : view of 's' won't dangle
+    const string_view problem{reachedPoint, itEnd};
+    format_to(errIt, "\tThere is a problem with: `{:s}`\n", problem);
 
   } catch (const bsx::expectation_failure<string::const_iterator>& e) {
-    oss << "\tExpecting " << boost::core::demangle(e.which().c_str()) << '\n';
-
-    // Separate definition of problem avoids MSVC warning 4866
-    const string got{e.where(), itEnd};
-    oss << "\t      Got " << quoted(got, '`');
+    // NOLINTNEXTLINE(bugprone-dangling-handle) : view of 's' won't dangle
+    const string_view got{e.where(), itEnd};
+    format_to(errIt, "\tExpecting {}\n\t      Got `{:s}`",
+              boost::core::demangle(e.which().c_str()), got);
 
   } catch (const exception& e) {
-    oss << e.what();
+    format_to(errIt, "{}", e.what());
   }
 
-  cerr << "Expression `" << s << "` didn't parse correctly.\n"
-       << oss.str() << '\n'
-       << flush;
+  println(stderr, "Expression `{}` didn't parse correctly.\n{}", s, err);
+  fflush(stderr);
 
   return false;
 }

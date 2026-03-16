@@ -14,11 +14,26 @@
 #define H_SCENARIO_DETAILS
 
 #include "absSolution.h"
+#include "configConstraint.h"
+#include "symbolsTable.h"
+#include "util.h"
 
 #include <cfloat>
 #include <climits>
 
+#include <memory>
+#include <vector>
+
 namespace rc {
+
+namespace cond {
+template <typename T>
+class IValues;  // forward declaration
+}  // namespace cond
+
+namespace ent {
+class IMovingEntitiesExt;  // forward declaration
+}  // namespace ent
 
 /// Allows offering all these scenario information for inspection
 class ScenarioDetails {
@@ -70,7 +85,7 @@ class ScenarioDetails {
   [[nodiscard]] std::unique_ptr<ent::IMovingEntitiesExt>
   createMovingEntitiesExt() const;
 
-  [[nodiscard]] std::string toString() const;  ///< displays the content
+  void formatTo(FmtCtxIt&) const;  ///< formats the content
 
   /// All mentioned entities (at least 3).
   /// shared as several classes keep this information
@@ -135,14 +150,5 @@ class ScenarioDetails {
 };
 
 }  // namespace rc
-
-namespace std {
-
-inline auto& operator<<(auto& os, const rc::ScenarioDetails& sc) {
-  os << sc.toString();
-  return os;
-}
-
-}  // namespace std
 
 #endif  // H_SCENARIO_DETAILS not defined

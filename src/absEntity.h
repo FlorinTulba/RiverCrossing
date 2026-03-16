@@ -14,8 +14,9 @@
 #define H_ABS_ENTITY
 
 #include "symbolsTable.h"
+#include "util.h"
 
-#include <iostream>
+#include <string>
 
 #include <boost/logic/tribool.hpp>
 
@@ -32,17 +33,18 @@ class IEntity {
   IEntity& operator=(IEntity&&) noexcept = delete;
 
   // Mandatory information
-  virtual unsigned id() const noexcept = 0;              ///< unique id
-  virtual const std::string& name() const noexcept = 0;  ///< unique name
+  [[nodiscard]] virtual unsigned id() const noexcept = 0;  ///< unique id
+  [[nodiscard]] virtual const std::string& name()
+      const noexcept = 0;  ///< unique name
 
   /// The default starting bank is the left one
-  virtual bool startsFromRightBank() const noexcept = 0;
+  [[nodiscard]] virtual bool startsFromRightBank() const noexcept = 0;
 
   // Optional, defaulted information.
 
   /// Type of entity; '' if unspecified
-  virtual const std::string& type() const noexcept = 0;
-  virtual double weight()
+  [[nodiscard]] virtual const std::string& type() const noexcept = 0;
+  [[nodiscard]] virtual double weight()
       const noexcept = 0;  ///< weight of entity; 0 if unspecified
 
   /**
@@ -51,15 +53,16 @@ class IEntity {
     @param st the symbols table
     @return true if the entity is able to row in the provided context
   */
-  virtual bool canRow(const SymbolsTable& st) const = 0;
+  [[nodiscard]] virtual bool canRow(const SymbolsTable& st) const = 0;
 
   /**
     @return true when the entity does row; false when it doesn't
       and indeterminate when its ability depends on variables from SymbolsTable
   */
-  virtual boost::logic::tribool canRow() const noexcept = 0;
+  [[nodiscard]] virtual boost::logic::tribool canRow() const noexcept = 0;
 
-  virtual std::string toString() const = 0;
+  /// Writes formatted IEntity directly to the provided iterator
+  virtual void formatTo(FmtCtxIt&) const = 0;
 
  protected:
   IEntity() noexcept = default;
@@ -67,13 +70,4 @@ class IEntity {
 
 }  // namespace rc::ent
 
-namespace std {
-
-inline auto& operator<<(auto& os, const rc::ent::IEntity& e) {
-  os << e.toString();
-  return os;
-}
-
-}  // namespace std
-
-#endif  // H_ABS_ENTITY not defined
+#endif  // !H_ABS_ENTITY

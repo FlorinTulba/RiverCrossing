@@ -14,8 +14,31 @@
 #define H_SCENARIO
 
 #include "scenarioDetails.h"
+#include "util.h"
+
+#include <cstddef>
+
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include <boost/property_tree/ptree.hpp>  // IWYU pragma: keep
+#include <boost/property_tree/ptree_fwd.hpp>
 
 namespace rc {
+
+namespace cond {
+class LogicalExpr;  // forward declaration
+}  // namespace cond
+
+namespace ent {
+class BankEntities;  // forward declaration
+}  // namespace ent
+
+namespace sol {
+class IAttempt;  // forward declaration
+}  // namespace sol
 
 /**
 Data and the solution for a river crossing puzzle:
@@ -25,12 +48,7 @@ Data and the solution for a river crossing puzzle:
 */
 class Scenario {
  public:
-  /**
-  Results from exploring the scenario.
-
-  There is an associated operator<<. Since the fields are public, the operator<<
-  does not appear here as friend.
-  */
+  /// Results from exploring the scenario.
   class Results {
    public:
     /// Updates the fields based on a new unsuccessful attempt
@@ -39,8 +57,10 @@ class Scenario {
                 const ent::BankEntities& currentLeftBank,
                 size_t& bestMinDistToGoal) noexcept;
 
+    void formatTo(FmtCtxIt&) const;  ///< formats the content
+
     /// The solution or an unsuccessful attempt
-    std::shared_ptr<const sol::IAttempt> attempt{};
+    std::shared_ptr<const sol::IAttempt> attempt;
 
     /// All the configurations identified as closest to the target left bank
     std::vector<ent::BankEntities> closestToTargetLeftBank;
@@ -52,7 +72,6 @@ class Scenario {
     size_t investigatedStates{};
   };
 
- public:
   /**
   Builds a scenario based on the input from the provided stream.
   If solveNow is true, it attempts to also solve this scenario using
@@ -67,10 +86,13 @@ class Scenario {
                     bool interactiveSol = false);
 
 #ifdef UNIT_TESTING
-  // Tests can provide rvalue scenarioStream parameters (ifstream/istringstream)
-  explicit Scenario(std::istream&& scenarioStream,
-                    bool solveNow = false,
-                    bool interactiveSol = false)
+  /// Tests can provide rvalue scenarioStream parameters
+  /// (ifstream/istringstream)
+  explicit Scenario(
+      std::istream&&
+          scenarioStream,  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+      bool solveNow = false,
+      bool interactiveSol = false)
       : Scenario{scenarioStream, solveNow, interactiveSol} {}
 #endif  // UNIT_TESING
 
@@ -98,10 +120,9 @@ class Scenario {
   [[nodiscard]] const Results& solution(bool usingBFS = true,
                                         bool interactiveSol = false);
 
-  [[nodiscard]] std::string toString()
-      const;  ///< data apart from the description
+  void formatTo(FmtCtxIt&) const;  ///< scenario details
 
-  PROTECTED:
+  PRIVATE:
   /// Prepares visualizing the solution
   void outputResults(const Results& res, bool interactiveSol = false) const;
 
@@ -129,16 +150,5 @@ class Scenario {
 };
 
 }  // namespace rc
-
-namespace std {
-
-inline auto& operator<<(auto& os, const rc::Scenario& sc) {
-  os << sc.toString();
-  return os;
-}
-
-ostream& operator<<(ostream& os, const rc::Scenario::Results& o);
-
-}  // namespace std
 
 #endif  // H_SCENARIO not defined

@@ -24,14 +24,31 @@ value.
 
 #endif  // UNIT_TESTING
 
+#include "absEntity.h"
 #include "entitiesManager.h"
 #include "entity.h"
+#include "symbolsTable.h"
 #include "util.h"
 
 #include <cassert>
+#include <cstddef>
+
+#include <algorithm>
+#include <format>
+#include <initializer_list>
 #include <iterator>
-#include <ranges>
+#include <map>
+#include <memory>
 #include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <gsl/assert>
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
+
 
 using namespace std;
 using namespace boost::property_tree;
@@ -48,42 +65,43 @@ bool IEntities::operator==(const IEntities& other) const noexcept {
 
 AllEntities::AllEntities(const ptree& entTree) {
   if (entTree.count("") == 0ULL)
-    throw domain_error{
-        HERE.function_name() +
-        " - The entities section should be an array of 3 or more entities!"s};
+    throw domain_error{format(
+        "{} - The entities section should be an array of 3 or more entities!",
+        HERE.function_name())};
   for (const auto& entPair : entTree)
     if (entPair.first.empty())
       operator+=(make_shared<const Entity>(entPair.second));
     else
-      throw domain_error{
-          HERE.function_name() +
-          " - The entities section should be an array of 3 or more entities!"s};
+      throw domain_error{format(
+          "{} - The entities section should be an array of 3 or more entities!",
+          HERE.function_name())};
 
   if (size(entities) < 3ULL)
-    throw domain_error{HERE.function_name() +
-                       " - Please specify at least 3 entities!"s};
+    throw domain_error{format("{} - Please specify at least 3 entities!",
+                              HERE.function_name())};
 
   const bool anyEntitiesWithoutType{_idsByTypes.contains("")};
   const bool singleType{size(_idsByTypes) == 1ULL};
   if ((singleType && !anyEntitiesWithoutType) ||
       (!singleType && anyEntitiesWithoutType))
     throw domain_error{
-        HERE.function_name() +
-        " - Either none or all entities must have the type specified! "
-        "When the type is specified, there must be at least 2 types!"s};
+        format("{} - Either none or all entities must have the type specified! "
+               "When the type is specified, there must be at least 2 types!",
+               HERE.function_name())};
 
   const bool anyEntitiesWithoutWeight{_idsByWeight.contains(0.)};
   const bool singleWeight{size(_idsByWeight) == 1ULL};
   if (!singleWeight && anyEntitiesWithoutWeight)
-    throw domain_error{
-        HERE.function_name() +
-        " - Either none or all entities must have the weight specified!"s};
+    throw domain_error{format(
+        "{} - Either none or all entities must have the weight specified!",
+        HERE.function_name())};
 
   if (_idsStartingFromLeftBank.empty())
     throw domain_error{
-        HERE.function_name() +
-        " - By convention, the first river crossing starts from the left bank, "
-        "but all provided entities are initially on the right bank!"s};
+        format("{} - By convention, the first river crossing starts from the "
+               "left bank, "
+               "but all provided entities are initially on the right bank!",
+               HERE.function_name())};
 
   /*
   Ensuring there is someone able to row on the left bank at the beginning.
@@ -96,8 +114,8 @@ AllEntities::AllEntities(const ptree& entTree) {
                               idsStartingFromLeftBank()};
   if (!leftBank.anyRowCapableEnts(InitialSymbolsTable()))
     throw domain_error{
-        HERE.function_name() +
-        " - There is nobody able to row on the starting left bank!"s};
+        format("{} - There is nobody able to row on the starting left bank!",
+               HERE.function_name())};
 }
 
 AllEntities& AllEntities::operator+=(const shared_ptr<const IEntity>& e) {
@@ -107,11 +125,11 @@ AllEntities& AllEntities::operator+=(const shared_ptr<const IEntity>& e) {
   const unsigned id{ent.id()};
   const string name{ent.name()}, type{ent.type()};
   if (byId.contains(id))
-    throw domain_error{HERE.function_name() + " - Duplicate entity id: "s +
-                       to_string(id)};
+    throw domain_error{
+        format("{} - Duplicate entity id: {}", HERE.function_name(), id)};
   if (byName.contains(name))
-    throw domain_error{HERE.function_name() + " - Duplicate entity name: `"s +
-                       name + "`"s};
+    throw domain_error{
+        format("{} - Duplicate entity name: `{}`", HERE.function_name(), name)};
 
   byId[id] = byName[name] = e;
   _idsByTypes[type].insert(id);
@@ -160,12 +178,12 @@ const vector<unsigned>& AllEntities::idsStartingFromRightBank() const noexcept {
   return _idsStartingFromRightBank;
 }
 
-string AllEntities::toString() const {
-  return ContView{
-      entities,
-      {.before = "Entities: [ ", .between = ", ", .after = " ]"},
-      [](const auto& pEnt) noexcept -> const IEntity& { return *pEnt; }}
-      .toString();
+void AllEntities::formatTo(FmtCtxIt& outIt) const {
+  outIt = format_to(
+      outIt, "Entities: [ {} ]",
+      ContView{entities, ", ", [](const auto& pEnt) noexcept -> const IEntity& {
+                 return *pEnt;
+               }});
 }
 
 bool IsolatedEntities::refersToSameScenario(
@@ -186,9 +204,10 @@ IsolatedEntities::IsolatedEntities(IsolatedEntities&& other) noexcept
 IsolatedEntities& IsolatedEntities::operator=(const IsolatedEntities& other) {
   if (&other != this) {
     if (!refersToSameScenario(other))
-      throw logic_error{HERE.function_name() +
-                        " - Don't assign a group that refers entities from a "
-                        "different scenario!"s};
+      throw logic_error{
+          format("{} - Don't assign a group that refers entities from a "
+                 "different scenario!",
+                 HERE.function_name())};
     _ids = other._ids;
     byType = other.byType;
   }
@@ -212,8 +231,8 @@ IsolatedEntities& IsolatedEntities::operator+=(unsigned id) {
           [id]};  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
                   // : Checked [] - uses at()
   if (!_ids.insert(id).second)
-    throw domain_error{HERE.function_name() + " - Duplicate entity id: "s +
-                       to_string(id)};
+    throw domain_error{
+        format("{} - Duplicate entity id: {}", HERE.function_name(), id)};
 
   byType[ent->type()].insert(id);
 
@@ -227,8 +246,8 @@ IsolatedEntities& IsolatedEntities::operator-=(unsigned id) {
                 // : Checked [] - uses at()
               ->type()};
   if (_ids.erase(id) == 0ULL)
-    throw domain_error{HERE.function_name() + " - Missing entity id: "s +
-                       to_string(id)};
+    throw domain_error{
+        format("{} - Missing entity id: {}", HERE.function_name(), id)};
 
   set<unsigned>& forType{byType[entType]};
   forType.erase(id);
@@ -264,23 +283,24 @@ bool IsolatedEntities::anyRowCapableEnts(const SymbolsTable& st) const {
   });
 }
 
-string IsolatedEntities::toString() const {
-  if (_ids.empty())
-    return "[]"s;
+void IsolatedEntities::formatTo(FmtCtxIt& outIt) const {
+  if (_ids.empty()) {
+    outIt = format_to(outIt, "[]");
+    return;
+  }
 
-  return ContView{
-      _ids,
-      {.before = "[ ", .between = ", ", .after = " ]"},
-      [this](unsigned id) {
-        ostringstream oss;
-        oss << (*all)
-                   [id]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
-                         // : Checked [] - uses at()
-                       ->name()
-            << '(' << id << ')';
-        return oss.str();
-      }}
-      .toString();
+  outIt = format_to(
+      outIt, "[ {} ]",
+      ContView{
+          _ids, ", ", [this](unsigned id) {
+            return format(
+                "{}({})",
+                (*all)
+                    [id]  // NOLINT(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+                          // : Checked [] - uses at()
+                        ->name(),
+                id);
+          }});
 }
 
 unique_ptr<IMovingEntitiesExt> DefMovingEntitiesExt::clone() const noexcept {
@@ -326,15 +346,14 @@ unique_ptr<IMovingEntitiesExt> AbsMovingEntitiesExt::clone() const noexcept {
   return _clone(nextExt->clone());
 }
 
-string AbsMovingEntitiesExt::toString(
-    bool suffixesInsteadOfPrefixes /* = true*/) const noexcept {
-  return makeNoexcept([this, suffixesInsteadOfPrefixes] {
-    // Only the matching extension categories will return non-empty strings
-    // given suffixesInsteadOfPrefixes
-    // (some display only as prefixes, the rest only as suffixes)
-    return _toString(suffixesInsteadOfPrefixes) +
-           nextExt->toString(suffixesInsteadOfPrefixes);
-  });
+void AbsMovingEntitiesExt::formatPrefixTo(FmtCtxIt& outIt) const {
+  _formatPrefixTo(outIt);
+  nextExt->formatPrefixTo(outIt);
+}
+
+void AbsMovingEntitiesExt::formatSuffixTo(FmtCtxIt& outIt) const {
+  _formatSuffixTo(outIt);
+  nextExt->formatSuffixTo(outIt);
 }
 
 MovingEntities::MovingEntities(const MovingEntities& other) noexcept
@@ -372,14 +391,10 @@ void MovingEntities::clear() noexcept {
   makeNoexcept([this] { extension->newGroup({}); });
 }
 
-string MovingEntities::toString() const {
-  ostringstream oss;
-  {
-    ToStringManager<IMovingEntitiesExt> tsm{*extension,
-                                            oss};  // extension wrapper
-    oss << IsolatedEntities::toString();
-  }  // ensures tsm's destructor flushes to oss before the return
-  return oss.str();
+void MovingEntities::formatTo(FmtCtxIt& outIt) const {
+  InfoWrapper iw{*extension, outIt};  // extension wrapper
+  IsolatedEntities::formatTo(outIt);
+  // the dtor of iw uses & updates outIt
 }
 
 BankEntities& BankEntities::operator=(const initializer_list<unsigned>& ids_) {

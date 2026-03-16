@@ -13,14 +13,26 @@
 #include "precompiled.h"
 // This keeps precompiled.h first; Otherwise header sorting might move it
 
+#include "absSolution.h"
 #include "configConstraint.h"
 #include "durationExt.h"
 #include "entitiesManager.h"
 #include "util.h"
 
+
 #include <cassert>
-#include <iomanip>
+
+#ifndef NDEBUG
+#include <cstdio>
+#endif  // NDEBUG not defined
+
+#include <format>
 #include <memory>
+#include <string>
+
+#ifndef NDEBUG
+#include <print>
+#endif  // NDEBUG not defined
 
 #include <gsl/pointers>
 
@@ -36,9 +48,8 @@ unique_ptr<const IStateExt> TimeStateExt::_clone(
 bool TimeStateExt::_validate() const {
   if (_time > info->maxDuration) {
 #ifndef NDEBUG
-    cout << "violates duration constraint [" << _time << " > "
-         << info->maxDuration << "]\n"
-         << flush;
+    println("violates duration constraint [{} > {}]", _time, info->maxDuration);
+    fflush(stdout);
 #endif             // NDEBUG
     return false;  // NOLINT(readability-simplify-boolean-expr)
   }
@@ -70,30 +81,20 @@ shared_ptr<const IStateExt> TimeStateExt::_extensionForNextState(
   }
 
   if (!foundMatch)
-    throw domain_error{
-        HERE.function_name() +
-        " - Provided CrossingDurationsOfConfigurations items don't cover "
-        "raft configuration: "s +
-        movedEnts.toString()};
+    throw domain_error{format(
+        "{} - Provided CrossingDurationsOfConfigurations items don't cover "
+        "raft configuration: {}",
+        HERE.function_name(), movedEnts)};
 
   return make_shared<const TimeStateExt>(timeOfNextState, *info, fromNextExt);
 }
 
 string TimeStateExt::_detailsForDemo() const {
-  ostringstream oss;
-  oss << "; Elapsed time units: " << _time;
-  return oss.str();
+  return format("; Elapsed time units: {}", _time);
 }
 
-string TimeStateExt::_toString(
-    bool suffixesInsteadOfPrefixes /* = true*/) const {
-  // This is displayed only as prefix information
-  if (suffixesInsteadOfPrefixes)
-    return {};
-
-  ostringstream oss;
-  oss << "[Elapsed time units: " << setw(4) << _time << "] ";
-  return oss.str();
+void TimeStateExt::_formatPrefixTo(FmtCtxIt& outIt) const {
+  outIt = format_to(outIt, "[Elapsed time units: {:4}] ", _time);
 }
 
 TimeStateExt::TimeStateExt(unsigned time_,

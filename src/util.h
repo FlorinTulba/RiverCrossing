@@ -15,17 +15,23 @@
 
 #include "warnings.h"
 
+#include <cstddef>
 #include <cstdio>
 
+#include <algorithm>
 #include <concepts>
 #include <exception>
 #include <filesystem>
-#include <iostream>
+#include <format>
+#include <functional>
+#include <iterator>
 #include <memory>
 #include <ranges>
-#include <sstream>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
+#include <utility>
 
 #ifdef __cpp_lib_source_location
 #include <source_location>
@@ -38,19 +44,19 @@
 
 #ifdef UNIT_TESTING
 
-#define PROTECTED public
 #define PRIVATE public
 
 #else  // UNIT_TESTING not defined
 
-#define PROTECTED protected
 #define PRIVATE private
 
 #endif  // UNIT_TESTING
 
-/// Less typing when specifying container ranges
+// NOLINTBEGIN(cppcoreguidelines-macro-usage) : Less typing when specifying
+// container ranges
 #define CBOUNDS(cont) std::cbegin(cont), std::cend(cont)
 #define BOUNDS(cont) std::begin(cont), std::end(cont)
+// NOLINTEND(cppcoreguidelines-macro-usage)
 
 // Access to source location information(file, line, col, function)
 #ifdef __cpp_lib_source_location
@@ -81,9 +87,10 @@ inline decltype(auto) throwIfNull(PointerLike auto&& ptr,
   if (ptr)
     return std::forward<decltype(ptr)>(ptr);
 
-  using namespace std::literals;
-  throw Exc{where.function_name() + " - "s + msg};
+  throw Exc{std::format("{} - {}", where.function_name(), msg)};
 }
+
+using FmtCtxIt = std::format_context::iterator;
 
 namespace rc {
 
@@ -108,17 +115,20 @@ decltype(auto) makeNoexcept(Func&& f, const LOC_INFO& where = HERE) noexcept {
     if (e.what())
       errMsg = e.what();
 
-  } catch (...) {
-    // Empty because errMsg is already set to "unknown exception"
+  } catch (...) {  // NOLINT(bugprone-empty-catch) : errMsg is already set to
+                   // "unknown exception"
   }
 
   MUTE_UNSAFE_BUFF_USE_WARN
+  // NOLINTBEGIN(cppcoreguidelines-pro-type-vararg,modernize-use-std-print) :
+  // Call unlikely to throw (cout/print could invoke allocators and fail)
   std::fprintf(stderr,
                "\nFatal Error: Noexcept-marked code threw!\n"
                "Exception: %s\n"
                "Function: %s\n"
                "File: %s:%u\n",
                errMsg, where.function_name(), where.file_name(), where.line());
+  // NOLINTEND(cppcoreguidelines-pro-type-vararg,modernize-use-std-print)
   UNMUTE_WARNING
 
   std::terminate();
@@ -165,7 +175,14 @@ decltype(auto) makeMoveNoexcept(T&& val,
   if constexpr (std::is_nothrow_move_constructible_v<T>)
     return std::forward<T>(val);
   else
-    return makeNoexcept([&val]() -> T { return std::move(val); }, where);
+    return makeNoexcept(
+        [&val]() -> T {
+          // NOLINTBEGIN(bugprone-move-forwarding-reference) : Forcing the move
+          // here to catch and report an unlikely exception caused by it
+          return std::move(val);
+          // NOLINTEND(bugprone-move-forwarding-reference)
+        },
+        where);
 }
 
 /**
@@ -176,13 +193,6 @@ it is (a subfolder of) RiverCrossing directory.
 */
 [[nodiscard]] std::filesystem::path projectFolder() noexcept;
 
-/// Delimiters when displaying a container
-struct ContViewDelims {
-  std::string_view before{};
-  std::string_view between{};
-  std::string_view after{};
-};
-
 /// Helper for displaying a container
 template <class FwCont, class Proj = std::identity>
   requires std::ranges::forward_range<FwCont>
@@ -190,12 +200,12 @@ class ContView {
  public:
   explicit constexpr ContView(
       const FwCont& cont,
-      const ContViewDelims& delims_ = {},
+      std::string_view sep_ = {},
       const Proj& proj_ =
           {}) noexcept(std::is_nothrow_copy_constructible_v<Proj> &&
                        std::is_nothrow_default_constructible_v<Proj>)
       : pCont{&cont},
-        delims{delims_},
+        sep{sep_},
         proj{proj_} {}
 
   ContView(const ContView&) = default;
@@ -205,79 +215,79 @@ class ContView {
   ContView& operator=(const ContView&) = delete;
   ContView& operator=(ContView&&) noexcept = delete;
 
-  std::string toString() const {
-    std::ostringstream oss;
-    oss << delims.before;
+  void formatTo(FmtCtxIt& outIt) const {
+    using namespace std;
 
     // Using begin() and end() since FwCont.empty() and FwCont.size()
     // might not be available.
-    const auto itBeg{pCont->begin()}, itEnd{pCont->end()};
-    if (itBeg != itEnd) {
-      oss << proj(*pCont->begin());
+    if (const auto itFirst{begin(*pCont)}; itFirst != end(*pCont)) {
+      outIt = format_to(outIt, "{}", proj(*itFirst));
 
       // The saved view prevents getting -Wdangling-reference in GCC
-      for (auto view{*pCont | std::views::drop(1)}; auto&& elem : view)
-        oss << delims.between << proj(elem);
+      for (auto rest{*pCont | views::drop(1)}; auto&& elem : rest)
+        outIt = format_to(outIt, "{}{}", sep, proj(elem));
     }
-
-    oss << delims.after;
-    return oss.str();
   }
 
  private:
   gsl::not_null<const FwCont*> pCont;  // not_null is not movable
-  ContViewDelims delims;
+  std::string_view sep;
   Proj proj;
 };
 
 template <class FwCont, class Proj>
-ContView(const FwCont&, const ContViewDelims&, const Proj&)
+ContView(const FwCont&, std::string_view, const Proj&)
     -> ContView<FwCont, Proj>;
 
 template <class FwCont>
 ContView(const FwCont&) -> ContView<FwCont, std::identity>;
 
+/// Concept for classes which can call 'formatTo(FmtCtxIt&)'
+template <class T>
+concept HasFormatTo = requires(const T& obj) {
+  { obj.formatTo(std::declval<FmtCtxIt&>()) } -> std::same_as<void>;
+};
+
 /**
-The template parameter represents a visitor displaying extended information
-about a host object.
+Class used within formatTo(FmtCtxIt) methods to display extra information
+about the host object.
+
+The template parameter represents a visitor displaying extended
+information about a host object.
 
 The extra information can be placed:
-
-- partially in front of the previous details with ExtendedInfo::toString(false)
-- and the rest at the end of the previous details with
-ExtendedInfo::toString(true)
-
-Ensures that these 2 calls to ExtendedInfo::toString(bool) wrap the block
-displaying the previous details.
+- in front of the previous details with ExtendedInfo::formatPrefixTo(outIt)
+- at the end of the previous details with ExtendedInfo::formatSuffixTo(outIt)
 */
 template <class ExtendedInfo>
   requires requires(ExtendedInfo& i) {
-    { i.toString(std::declval<bool>()) } -> std::same_as<std::string>;
+    { i.formatPrefixTo(std::declval<FmtCtxIt&>()) } -> std::same_as<void>;
+    { i.formatSuffixTo(std::declval<FmtCtxIt&>()) } -> std::same_as<void>;
   }
-class ToStringManager {
+class InfoWrapper {
  public:
-  ToStringManager(const ExtendedInfo& ext_, std::ostringstream& oss_)
-      : ext{&ext_},
-        oss{&oss_} {
-    (*oss) << ext->toString(false);
+  InfoWrapper(const ExtendedInfo& ext_, FmtCtxIt& it) : ext{&ext_}, pIt{&it} {
+    ext_.formatPrefixTo(it);
   }
 
-  ~ToStringManager() noexcept try {
-    (*oss) << ext->toString(true);
-  } catch (...) {
-    // Ensures a noexcept dtor
+  ~InfoWrapper() noexcept try {
+    ext->formatSuffixTo(*pIt);
+  } catch (...) {  // NOLINT(bugprone-empty-catch) : Ensures a noexcept dtor
   }
 
   // Makes no sense to copy / move
-  ToStringManager(const ToStringManager&) = delete;
-  ToStringManager(ToStringManager&&) = delete;
-  ToStringManager& operator=(const ToStringManager&) = delete;
-  ToStringManager& operator=(ToStringManager&&) noexcept = delete;
+  InfoWrapper(const InfoWrapper&) = delete;
+  InfoWrapper(InfoWrapper&&) = delete;
+  InfoWrapper& operator=(const InfoWrapper&) = delete;
+  InfoWrapper& operator=(InfoWrapper&&) noexcept = delete;
 
- protected:
+ private:
   gsl::not_null<const ExtendedInfo*> ext;
-  gsl::not_null<std::ostringstream*> oss;
+  gsl::not_null<FmtCtxIt*> pIt;
 };
+
+template <class ExtendedInfo>
+InfoWrapper(const ExtendedInfo&, FmtCtxIt&) -> InfoWrapper<ExtendedInfo>;
 
 /**
 Provides access to a certain decorator type within a hierarchy.
@@ -346,16 +356,30 @@ class DecoratorManager {
 
     return {};
   }
+
+ private:
+  /// Class only for friends (AbsDecorator - derived from DecoratorManager)
+  constexpr DecoratorManager() noexcept = default;
+  friend AbsDecorator;
 };
 
 }  // namespace rc
 
 namespace std {
 
-template <class Cont, class Proj>
-inline auto& operator<<(auto& os, const rc::ContView<Cont, Proj>& cont) {
-  return os << cont.toString();
-}
+/// Formatter for classes able to call 'formatTo(FmtCtxIt&)'
+template <rc::HasFormatTo T>
+class formatter<T> {  // NOLINT(bugprone-std-namespace-modification) : Required
+                      // this way
+ public:
+  constexpr auto parse(auto& ctx) { return ctx.begin(); }
+
+  auto format(const T& obj, auto& ctx) const {
+    auto outIt = ctx.out();
+    obj.formatTo(outIt);  // the method updates outIt
+    return outIt;
+  }
+};
 
 }  // namespace std
 

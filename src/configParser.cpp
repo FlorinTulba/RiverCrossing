@@ -26,12 +26,17 @@ when only the tests need to be updated
 
 #endif  // UNIT_TESTING defined
 
+#include "absConfigConstraint.h"
+#include "configConstraint.h"
+#include "configParser.h"
 #include "configParserDetail.hpp"
 #include "util.h"
 
-#include <iostream>
-
-#include <boost/core/demangle.hpp>
+#include <format>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
 
 using namespace rc::cond;
 
@@ -56,11 +61,9 @@ ConfigurationsTransferDurationInitType::constraints() && noexcept {
 
 ConfigurationsTransferDurationInitType&
 ConfigurationsTransferDurationInitType::setDuration(unsigned d) {
-  if (0U == d) {
-    using namespace std::literals;
-    throw std::logic_error{HERE.function_name() +
-                           " - 0 isn't allowed as duration parameter!"s};
-  }
+  if (0U == d)
+    throw std::logic_error{std::format(
+        "{} - 0 isn't allowed as duration parameter!", HERE.function_name())};
   _duration = d;
   return *this;
 }

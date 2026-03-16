@@ -27,13 +27,24 @@ value.
 #include "absConfigConstraint.h"
 #include "configParser.h"
 #include "entity.h"
+#include "symbolsTable.h"
 #include "util.h"
 
 #include <cassert>
-#include <sstream>
-#include <string>
 
+#include <format>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <utility>
+
+#include <gsl/pointers>
 #include <gsl/util>
+
+#include <boost/logic/tribool.hpp>
+#include <boost/property_tree/exceptions.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 using namespace std;
 using namespace boost::property_tree;
@@ -69,27 +80,27 @@ Entity::Entity(unsigned id_,
       _id{id_},
       _startsFromRightBank{startsFromRightBank_} {
   if (_weight < 0.)
-    throw invalid_argument{HERE.function_name() +
-                           " - Please don't specify negative weights!"s};
+    throw invalid_argument{format("{} - Please don't specify negative weights!",
+                                  HERE.function_name())};
   assert(_canRow);
 }
 
-Entity::Entity(const ptree& ent) : _type{ent.get("Type", ""s)} {
+Entity::Entity(const ptree& ent) : _type{ent.get("Type", string{})} {
   try {
     // get<unsigned> fails to signal negative values
     const int readId{ent.get<int>("Id")};
     if (readId < 0)
-      throw domain_error{HERE.function_name() +
-                         " - Entity id-s cannot be negative!"s};
+      throw domain_error{
+          format("{} - Entity id-s cannot be negative!", HERE.function_name())};
 
     _id = gsl::narrow_cast<unsigned>(readId);
     _name = ent.get<string>("Name");
   } catch (const ptree_bad_path& ex) {
-    throw domain_error{HERE.function_name() +
-                       " - Missing mandatory entity property! "s + ex.what()};
+    throw domain_error{format("{} - Missing mandatory entity property! {}",
+                              HERE.function_name(), ex.what())};
   } catch (const ptree_bad_data& ex) {
-    throw domain_error{HERE.function_name() +
-                       " - Invalid type of entity property! "s + ex.what()};
+    throw domain_error{format("{} - Invalid type of entity property! {}",
+                              HERE.function_name(), ex.what())};
   }
 
   try {
@@ -102,23 +113,23 @@ Entity::Entity(const ptree& ent) : _type{ent.get("Type", ""s)} {
       _weight = weightTree->get_value<double>();
       if (_weight <= 0.)
         throw domain_error{
-            HERE.function_name() +
-            " - Please don't specify 0 or negative values for weight!"s};
+            format("{} - Please don't specify 0 or negative values for weight!",
+                   HERE.function_name())};
     }
   } catch (const ptree_bad_data& ex) {
-    throw domain_error{HERE.function_name() +
-                       " - Invalid type of entity property! "s + ex.what()};
+    throw domain_error{format("{} - Invalid type of entity property! {}",
+                              HERE.function_name(), ex.what())};
   }
 
-  string canRowExpr{ent.get("CanRow", ""s)};
+  string canRowExpr{ent.get("CanRow", string{})};
   if (canRowExpr.empty())
-    canRowExpr = ent.get("CanTackleBridgeCrossing", "false"s);
-  else if (!ent.get("CanTackleBridgeCrossing", ""s).empty())
-    throw domain_error{
-        HERE.function_name() +
-        "Only one from the keys {CanRow, CanTackleBridgeCrossing} can appear. "
-        "Please correct entity with id="s +
-        to_string(_id)};
+    canRowExpr = ent.get("CanTackleBridgeCrossing", string{"false"});
+  else if (!ent.get("CanTackleBridgeCrossing", string{}).empty())
+    throw domain_error{format(
+        "{} - Only one from the keys {{CanRow, CanTackleBridgeCrossing}} "
+        "can appear. "
+        "Please correct entity with id={}",
+        HERE.function_name(), _id)};
   _canRow = canRowSemantic(canRowExpr);
   assert(_canRow);
 }
@@ -156,19 +167,22 @@ double Entity::weight() const noexcept {
   return _weight;
 }
 
-string Entity::toString() const {
-  ostringstream oss;
-  oss << "Entity " << _id << " {Name: `" << _name << '`';
+void Entity::formatTo(FmtCtxIt& outIt) const {
+  outIt = format_to(outIt, "Entity {} {{Name: `{}`", _id, _name);
+
   if (!_type.empty())
-    oss << ", Type: `" << _type << '`';
+    outIt = format_to(outIt, ", Type: `{}`", _type);
+
   if (_weight > 0.)
-    oss << ", Weight: " << _weight;
+    outIt = format_to(outIt, ", Weight: `{}`", _weight);
+
   if (_startsFromRightBank)
-    oss << ", StartsFromRightBank: true";
-  if (_canRow->toString() != "false")
-    oss << ", CanRow: `" << *_canRow << '`';
-  oss << '}';
-  return oss.str();
+    outIt = format_to(outIt, ", StartsFromRightBank: true");
+
+  if (format("{}", *_canRow) != "false")
+    outIt = format_to(outIt, ", CanRow: `{}`", *_canRow);
+
+  outIt = format_to(outIt, "}}");
 }
 
 }  // namespace rc::ent

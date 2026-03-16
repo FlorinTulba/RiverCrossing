@@ -13,17 +13,35 @@
 #ifndef H_CONFIG_CONSTRAINT
 #define H_CONFIG_CONSTRAINT
 
+#include "absConfigConstraint.h"
 #include "configParser.h"
+#include "symbolsTable.h"
 #include "util.h"
 
+#include <climits>
+
 #include <concepts>
+#include <format>
 #include <iterator>
+#include <memory>
+#include <set>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <variant>
+#include <vector>
 
 #include <gsl/pointers>
 
 #include <boost/logic/tribool.hpp>
+
+namespace rc::ent {
+// Forward declarations
+class AllEntities;
+class IsolatedEntities;
+class MovingEntities;
+}  // namespace rc::ent
 
 namespace rc::cond {
 
@@ -75,7 +93,7 @@ class AbsConfigConstraintValidatorExt
   virtual void checkIdsCfg(const IdsConstraint& /*cfg*/,
                            const ent::AllEntities& /*allEnts*/) const {}
 
- protected:
+ private:
   gsl::not_null<gsl::owner<const IConfigConstraintValidatorExt*>> nextExt;
 };
 
@@ -115,20 +133,21 @@ class ConfigConstraints {
   */
   [[nodiscard]] virtual bool check(const ent::IsolatedEntities& ents) const;
 
-  [[nodiscard]] std::string toString() const;
+  void formatTo(FmtCtxIt&) const;
 
  protected:
   ConfigConstraints(const ConfigConstraints&) = default;
   ConfigConstraints(ConfigConstraints&&) noexcept = default;
 
- protected:
-  /// Parsed constraints to be validated
-  grammar::ConstraintsVec constraints;
+  // NOLINTBEGIN(cppcoreguidelines-non-private-member-variables-in-classes) :
+  // Easier to use in subclasses when protected
+  grammar::ConstraintsVec constraints;  ///< Parsed constraints to be validated
 
   gsl::not_null<const ent::AllEntities*> allEnts;  ///< all known entities
 
   /// Are these constraints allowing certain configurations or disallowing them?
   bool _allowed;
+  // NOLINTEND(cppcoreguidelines-non-private-member-variables-in-classes)
 };
 
 /// Allows performing canRow, allowedLoads and other checks on raft/bridge
@@ -245,7 +264,9 @@ class AbsContextValidator : public IContextValidator {
   [[nodiscard]] virtual bool doValidate(const ent::MovingEntities& ents,
                                         const SymbolsTable& st) const = 0;
 
- protected:
+  // NOLINTBEGIN(cppcoreguidelines-non-private-member-variables-in-classes) :
+  // Easier to use in subclasses when protected
+
   // using shared_ptr as more configurations might use these fields
 
   /// A chained next validator
@@ -253,6 +274,7 @@ class AbsContextValidator : public IContextValidator {
 
   /// Possible handler for particular contexts
   std::shared_ptr<const IValidatorExceptionHandler> ownValidatorExcHandler;
+  // NOLINTEND(cppcoreguidelines-non-private-member-variables-in-classes)
 };
 
 /// Interface for the extensions for transfer constraints
@@ -360,8 +382,10 @@ class AbsTransferConstraintsExt
     return true;
   }
 
- protected:
+  // NOLINTBEGIN(cppcoreguidelines-non-private-member-variables-in-classes) :
+  // Easier to use in subclasses when protected
   gsl::not_null<gsl::owner<const ITransferConstraintsExt*>> nextExt;
+  // NOLINTEND(cppcoreguidelines-non-private-member-variables-in-classes)
 };
 
 /// ConfigConstraints for raft/bridge configurations
@@ -398,7 +422,7 @@ class TransferConstraints : public ConfigConstraints {
   /// @return the minimal capacity suitable for these constraints
   [[nodiscard]] unsigned minRequiredCapacity() const noexcept;
 
- protected:
+ private:
   gsl::not_null<const ITransferConstraintsExt*> extension;
 
   /// How many entities are allowed on the raft/bridge at once
@@ -432,9 +456,9 @@ class ConfigurationsTransferDuration {
   /// Traversal duration for those configurations
   [[nodiscard]] unsigned duration() const noexcept;
 
-  [[nodiscard]] std::string toString() const;
+  void formatTo(FmtCtxIt&) const;
 
- protected:
+ private:
   /// All configurations with the given duration
   TransferConstraints constraints;
   unsigned _duration{};  ///< traversal duration for those configurations
@@ -489,9 +513,9 @@ class TypesConstraint : public IConfigConstraint {
     return mandatoryTypes;
   }
 
-  [[nodiscard]] std::string toString() const override;
+  void formatTo(FmtCtxIt&) const override;
 
-  PROTECTED:
+  PRIVATE:
   /// All the mentioned types
   std::unordered_set<std::string> mentionedTypes;
 
@@ -534,13 +558,11 @@ class IdsConstraint : public IConfigConstraint {
   IdsConstraint& addMandatoryGroup(const Cont& group) {
     std::unordered_set<unsigned> newMentionedIds{mentionedIds};
     newMentionedIds.insert(CBOUNDS(group));
-    if (std::size(mentionedIds) + std::size(group) >
-        std::size(newMentionedIds)) {
-      using namespace std::literals;
-      throw std::domain_error{
-          HERE.function_name() +
-          " - Found id(s) mentioned earlier in the same Ids constraint!"s};
-    }
+    if (std::size(mentionedIds) + std::size(group) > std::size(newMentionedIds))
+      throw std::domain_error{std::format(
+          "{} - Found id(s) mentioned earlier in the same Ids constraint!",
+          HERE.function_name())};
+
     mentionedIds = newMentionedIds;
 
     mandatoryGroups.emplace_back(CBOUNDS(group));
@@ -559,13 +581,11 @@ class IdsConstraint : public IConfigConstraint {
   IdsConstraint& addOptionalGroup(const Cont& group) {
     std::unordered_set<unsigned> newMentionedIds{mentionedIds};
     newMentionedIds.insert(CBOUNDS(group));
-    if (std::size(mentionedIds) + std::size(group) >
-        std::size(newMentionedIds)) {
-      using namespace std::literals;
-      throw std::domain_error{
-          HERE.function_name() +
-          " - Found id(s) mentioned earlier in the same Ids constraint!"s};
-    }
+    if (std::size(mentionedIds) + std::size(group) > std::size(newMentionedIds))
+      throw std::domain_error{std::format(
+          "{} - Found id(s) mentioned earlier in the same Ids constraint!",
+          HERE.function_name())};
+
     mentionedIds = newMentionedIds;
 
     optionalGroups.emplace_back(CBOUNDS(group));
@@ -610,7 +630,7 @@ class IdsConstraint : public IConfigConstraint {
   /// @return the length of the longest possible mismatch
   [[nodiscard]] unsigned longestMismatchLength() const noexcept override;
 
-  [[nodiscard]] std::string toString() const override;
+  void formatTo(FmtCtxIt&) const override;
 
  private:
   /**
@@ -629,7 +649,7 @@ class IdsConstraint : public IConfigConstraint {
   [[nodiscard]] bool canSatisfyMandatoryGroups(
       std::set<unsigned>& ids) const noexcept;
 
-  PROTECTED:
+  PRIVATE:
   /// All id-s mentioned by the constraint
   std::unordered_set<unsigned> mentionedIds;
 
@@ -674,7 +694,7 @@ class BoolConst : public LogicalExpr {
   /// @return the contained bool constant
   [[nodiscard]] bool eval(const SymbolsTable&) const noexcept override;
 
-  [[nodiscard]] std::string toString() const override;
+  void formatTo(FmtCtxIt&) const override;
 };
 
 /// Negation of a logical expression
@@ -694,9 +714,9 @@ class Not : public LogicalExpr {
 
   [[nodiscard]] bool eval(const SymbolsTable& st) const override;
 
-  [[nodiscard]] std::string toString() const override;
+  void formatTo(FmtCtxIt&) const override;
 
- protected:
+ private:
   /// The expression to negate
   gsl::not_null<std::shared_ptr<const LogicalExpr>> _le;
 };
@@ -748,7 +768,7 @@ class ValueOrRange {
   */
   [[nodiscard]] std::pair<double, double> range(const SymbolsTable& st) const;
 
-  [[nodiscard]] std::string toString() const;
+  void formatTo(FmtCtxIt&) const;
 
  private:
   /// @throw logic_error for NaN values
@@ -760,7 +780,6 @@ class ValueOrRange {
   /// @throw logic_error for NULL / NaN values or for out of order values
   void validate() const;
 
- protected:
   std::variant<ValueType, RangeType> _valueOrRange;
 };
 
@@ -792,9 +811,9 @@ class ValueSet : public IValues<double> {
   [[nodiscard]] bool contains(const double& v,
                               const SymbolsTable& st = {}) const override;
 
-  [[nodiscard]] std::string toString() const override;
+  void formatTo(FmtCtxIt&) const override;
 
-  PROTECTED:
+  PRIVATE:
   /// The values and the ranges
   std::vector<ValueOrRange> vors;
 
@@ -835,13 +854,11 @@ class BelongToCondition : public LogicalExpr {
     return _valueSet->contains(_e->eval(st), st);
   }
 
-  [[nodiscard]] std::string toString() const override {
-    std::ostringstream oss;
-    oss << *_e << " in " << *_valueSet;
-    return oss.str();
+  void formatTo(FmtCtxIt& outIt) const override {
+    outIt = std::format_to(outIt, "{} in {}", *_e, *_valueSet);
   }
 
- protected:
+ private:
   /// Expression to be checked
   gsl::not_null<std::shared_ptr<const AbsExpr<Type>>> _e;
 
@@ -863,7 +880,7 @@ class NumericConst : public NumericExpr {
   /// @return the contained constant
   [[nodiscard]] double eval(const SymbolsTable&) const noexcept override;
 
-  [[nodiscard]] std::string toString() const override;
+  void formatTo(FmtCtxIt&) const override;
 };
 
 /// The name of a variable
@@ -884,9 +901,9 @@ class NumericVariable : public NumericExpr {
   /// @throw out_of_range when name is missing from the symbols table
   [[nodiscard]] double eval(const SymbolsTable& st) const override;
 
-  [[nodiscard]] std::string toString() const noexcept override;
+  void formatTo(FmtCtxIt&) const override;
 
- protected:
+ private:
   /// The considered name
   std::string name;
 };
@@ -910,9 +927,9 @@ class Addition : public NumericExpr {
   /// @throw out_of_range whenever a variable isn't found
   [[nodiscard]] double eval(const SymbolsTable& st) const override;
 
-  [[nodiscard]] std::string toString() const override;
+  void formatTo(FmtCtxIt&) const override;
 
- protected:
+ private:
   gsl::not_null<std::shared_ptr<const NumericExpr>> left;
   gsl::not_null<std::shared_ptr<const NumericExpr>> right;
 };
@@ -944,7 +961,7 @@ class Modulus : public NumericExpr {
   */
   [[nodiscard]] double eval(const SymbolsTable& st) const override;
 
-  [[nodiscard]] std::string toString() const override;
+  void formatTo(FmtCtxIt&) const override;
 
  protected:
   /**
@@ -960,31 +977,11 @@ class Modulus : public NumericExpr {
   */
   [[nodiscard]] static long validOperation(long numeratorL, long denominatorL);
 
- protected:
+ private:
   gsl::not_null<std::shared_ptr<const NumericExpr>> numerator;
   gsl::not_null<std::shared_ptr<const NumericExpr>> denominator;
 };
 
 }  // namespace rc::cond
 
-namespace std {
-
-inline auto& operator<<(auto& os, const rc::cond::ConfigConstraints& c) {
-  os << c.toString();
-  return os;
-}
-
-inline auto& operator<<(auto& os,
-                        const rc::cond::ConfigurationsTransferDuration& ctd) {
-  os << ctd.toString();
-  return os;
-}
-
-inline auto& operator<<(auto& os, const rc::cond::ValueOrRange& vor) {
-  os << vor.toString();
-  return os;
-}
-
-}  // namespace std
-
-#endif  // H_CONFIG_CONSTRAINT not defined
+#endif  // !H_CONFIG_CONSTRAINT

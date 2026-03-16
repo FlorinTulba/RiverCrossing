@@ -24,20 +24,41 @@ value.
 
 #endif  // UNIT_TESTING defined
 
+#include "absConfigConstraint.h"
 #include "configConstraint.h"
+#include "configParser.h"
 #include "entitiesManager.h"
 #include "mathRelated.h"
+#include "nan.h"
+#include "symbolsTable.h"
 #include "util.h"
 #include "warnings.h"
 
-#include <algorithm>
 #include <cassert>
+#include <climits>
 #include <cmath>
-#include <exception>
-#include <iomanip>
-#include <ranges>
+#include <cstddef>
+#include <cstdio>
 
+#include <algorithm>
+#include <exception>
+#include <format>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <optional>
+#include <print>
+#include <ranges>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
+
+#include <gsl/pointers>
 #include <gsl/util>
+
+#include <boost/logic/tribool.hpp>
 
 using namespace std;
 
@@ -198,38 +219,36 @@ bool ConfigConstraints::check(const ent::IsolatedEntities& ents) const {
     found = true;
 
 #ifndef NDEBUG
-    if (!_allowed)
-      cout << "violates NOT{" << **it << "} : "
-           << ContView{ents.ids(),
-                       {.before = "", .between = " ", .after = "\n"}}
-           << flush;
+    if (!_allowed) {
+      println("violates NOT{{ {} }} : {}", **it, ContView{ents.ids(), " "});
+      fflush(stdout);
+    }
 #endif  // NDEBUG
   }
 
 #ifndef NDEBUG
-  if (_allowed != found)
-    cout << "violates " << *this << " : "
-         << ContView{ents.ids(), {.before = "", .between = " ", .after = "\n"}}
-         << flush;
+  if (_allowed != found) {
+    println("violates {} : {}", *this, ContView{ents.ids(), " "});
+    fflush(stdout);
+  }
 #endif  // NDEBUG
 
   return found == _allowed;
 }
 
-string ConfigConstraints::toString() const {
-  if (constraints.empty())
-    return "{}"s;
+void ConfigConstraints::formatTo(FmtCtxIt& outIt) const {
+  if (constraints.empty()) {
+    outIt = format_to(outIt, "{{}}");
+    return;
+  }
 
-  ostringstream oss;
-  if (!_allowed)
-    oss << "NOT";
-
-  oss << ContView{constraints,
-                  {.before = "{ ", .between = " ; ", .after = " }"},
-                  [](const auto& pConf) noexcept -> const IConfigConstraint& {
-                    return *pConf;
-                  }};
-  return oss.str();
+  const string_view placeholderNot{(!_allowed) ? "NOT" : ""};
+  outIt = format_to(
+      outIt, "{}{{ {} }}", placeholderNot,
+      ContView{constraints, " ; ",
+               [](const auto& pConf) noexcept -> const IConfigConstraint& {
+                 return *pConf;
+               }});
 }
 
 TransferConstraints::TransferConstraints(
@@ -257,10 +276,9 @@ bool TransferConstraints::check(const ent::IsolatedEntities& ents) const {
 
   if (ents.count() > static_cast<size_t>(*capacity)) {
 #ifndef NDEBUG
-    cout << "violates capacity constraint [ " << ents.count() << " > "
-         << *capacity << " ] : "
-         << ContView{entsIds, {.before = "", .between = " ", .after = "\n"}}
-         << flush;
+    println("violates capacity constraint [ {} > {} ] : {}", ents.count(),
+            *capacity, ContView{entsIds, " "});
+    fflush(stdout);
 #endif  // NDEBUG
     return false;
   }
@@ -307,10 +325,8 @@ unsigned ConfigurationsTransferDuration::duration() const noexcept {
   return _duration;
 }
 
-string ConfigurationsTransferDuration::toString() const {
-  ostringstream oss;
-  oss << constraints << " need " << _duration << " time units";
-  return oss.str();
+void ConfigurationsTransferDuration::formatTo(FmtCtxIt& outIt) const {
+  outIt = format_to(outIt, "{} need {} time units", constraints, _duration);
 }
 
 unique_ptr<const IConfigConstraint> TypesConstraint::clone() const noexcept {
@@ -330,8 +346,8 @@ void TypesConstraint::validate(
           mentionedTypes,
           [&idsByTypes](const auto& t) { return idsByTypes.contains(t); })};
       it != cend(mentionedTypes))
-    throw logic_error{HERE.function_name() + " - Unknown type name `"s + *it +
-                      "` in constraint `"s + toString() + "`!"s};
+    throw logic_error{format("{} - Unknown type name `{}` in constraint `{}`!",
+                             HERE.function_name(), *it, *this)};
 
   size_t minRequiredCount{};
   for (const auto& typeAndLimits : mandatoryTypes) {
@@ -340,19 +356,19 @@ void TypesConstraint::validate(
     const size_t minLim{static_cast<size_t>(typeAndLimits.second.first)};
     const size_t available{size(matchingIds)};
     if (minLim > available)
-      throw logic_error{HERE.function_name() + " - Constraint `"s + toString() +
-                        "` is asking for more entities ("s + to_string(minLim) +
-                        ") of type "s + t + " than available ("s +
-                        to_string(available) + ")!"s};
+      throw logic_error{
+          format("{} - Constraint `{}` is asking for more entities ({}) of "
+                 "type {} than available ({})!",
+                 HERE.function_name(), *this, minLim, t, available)};
 
     minRequiredCount += minLim;
   }
 
   if (minRequiredCount > static_cast<size_t>(capacity))
-    throw logic_error{HERE.function_name() + " - Constraint `"s + toString() +
-                      "` is asking for more entities ("s +
-                      to_string(minRequiredCount) + ") than the capacity ("s +
-                      to_string(capacity) + ")!"s};
+    throw logic_error{
+        format("{} - Constraint `{}` is asking for more entities ({}) than the "
+               "capacity ({})!",
+               HERE.function_name(), *this, minRequiredCount, capacity)};
 
   valExt.check(*this, allEnts);
 }
@@ -362,18 +378,18 @@ TypesConstraint& TypesConstraint::addTypeRange(
     unsigned minIncl /* = 0U*/,
     unsigned maxIncl /* = UINT_MAX*/) {
   if (minIncl > maxIncl)
-    throw logic_error{HERE.function_name() +
-                      " - Parameter minIncl must be at most maxIncl!"s};
+    throw logic_error{format("{} - Parameter minIncl must be at most maxIncl!",
+                             HERE.function_name())};
 
   if (!mentionedTypes.insert(newType).second)
-    throw logic_error{HERE.function_name() +
-                      " - Duplicate newType parameter: "s + newType};
+    throw logic_error{format("{} - Duplicate newType parameter: {}",
+                             HERE.function_name(), newType)};
 
   if (0U == maxIncl) {
-    cout << "[Notification] " << HERE.function_name()
-         << ": Unnecessary term within the configuration: 0 x " << newType
-         << '\n'
-         << flush;
+    println(
+        "[Notification] {}: Unnecessary term within the configuration: 0 x {}",
+        HERE.function_name(), newType);
+    fflush(stdout);
     return *this;
   }
 
@@ -440,45 +456,48 @@ unsigned TypesConstraint::longestMatchLength() const noexcept {
   return _longestMatchLength;
 }
 
-string TypesConstraint::toString() const {
-  ostringstream oss;
-  oss << "[ ";
+void TypesConstraint::formatTo(FmtCtxIt& outIt) const {
+  outIt = format_to(outIt, "[ ");
 
   for (const auto& typeRange : mandatoryTypes) {
-    oss << typeRange.first;
+    outIt = format_to(outIt, "{}", typeRange.first);
+
     const unsigned minIncl{typeRange.second.first},
         maxIncl{typeRange.second.second};
     assert(minIncl > 0U);
     if (minIncl == maxIncl) {
       if (minIncl == 1U) {
-        oss << ' ';
+        outIt = format_to(outIt, " ");
         continue;
       }
-      oss << '{' << minIncl << "} ";
+      outIt = format_to(outIt, "{{{}}} ", minIncl);
+
     } else {
       if (minIncl == 1U && maxIncl == UINT_MAX) {
-        oss << "+ ";
+        outIt = format_to(outIt, "+ ");
         continue;
       }
-      oss << '{' << minIncl << ',';
+      outIt = format_to(outIt, "{{{},", minIncl);
       if (maxIncl < UINT_MAX)
-        oss << maxIncl;
-      oss << "} ";
+        outIt = format_to(outIt, "{}", maxIncl);
+      outIt = format_to(outIt, "}} ");
     }
   }
+
   for (const auto& typeRange : optionalTypes) {
-    oss << typeRange.first;
+    outIt = format_to(outIt, "{}", typeRange.first);
     const unsigned maxIncl{typeRange.second};
     if (maxIncl == 1U)
-      oss << "? ";
+      outIt = format_to(outIt, "? ");
+
     else if (maxIncl == UINT_MAX)
-      oss << "* ";
+      outIt = format_to(outIt, "* ");
+
     else
-      oss << "{0," << maxIncl << "} ";
+      outIt = format_to(outIt, "{{0,{}}} ", maxIncl);
   }
 
-  oss << ']';
-  return oss.str();
+  outIt = format_to(outIt, "]");
 }
 
 unique_ptr<const IConfigConstraint> IdsConstraint::clone() const noexcept {
@@ -497,32 +516,31 @@ void IdsConstraint::validate(
   const size_t available{allEnts.count()};
 
   if (requiredIdsCount > static_cast<size_t>(capacity))
-    throw logic_error{HERE.function_name() + " - Constraint `"s + toString() +
-                      "` is asking for more entities ("s +
-                      to_string(requiredIdsCount) + ") than the capacity ("s +
-                      to_string(capacity) + ")!"s};
+    throw logic_error{
+        format("{} - Constraint `{}` is asking for more entities ({}) than the "
+               "capacity ({})!",
+               HERE.function_name(), *this, requiredIdsCount, capacity)};
 
   if (requiredIdsCount > available)
-    throw logic_error{HERE.function_name() + " - Constraint `"s + toString() +
-                      "` is asking for more entities ("s +
-                      to_string(requiredIdsCount) + ") than available ("s +
-                      to_string(available) + ")!"s};
+    throw logic_error{
+        format("{} - Constraint `{}` is asking for more entities ({}) than "
+               "available ({})!",
+               HERE.function_name(), *this, requiredIdsCount, available)};
 
   const set<unsigned>& ids{allEnts.ids()};
   if (const auto it{ranges::find_if_not(
           mentionedIds, [&ids](const auto id) { return ids.contains(id); })};
       it != cend(mentionedIds))
-    throw logic_error{HERE.function_name() + " - Unknown entity id `"s +
-                      to_string(*it) + "` in constraint `"s + toString() +
-                      "`!"s};
+    throw logic_error{format("{} - Unknown entity id `{}` in constraint `{}`!",
+                             HERE.function_name(), *it, *this)};
 
   valExt.check(*this, allEnts);
 }
 
 IdsConstraint& IdsConstraint::addMandatoryId(unsigned id) {
   if (!mentionedIds.insert(id).second)
-    throw logic_error{HERE.function_name() + " - Duplicate id parameter: "s +
-                      to_string(id)};
+    throw logic_error{
+        format("{} - Duplicate id parameter : {}", HERE.function_name(), id)};
 
   mandatoryGroups.emplace_back();
   mandatoryGroups.back().insert(id);
@@ -535,8 +553,8 @@ IdsConstraint& IdsConstraint::addMandatoryId(unsigned id) {
 
 IdsConstraint& IdsConstraint::addOptionalId(unsigned id) {
   if (!mentionedIds.insert(id).second)
-    throw logic_error{HERE.function_name() + " - Duplicate id parameter: "s +
-                      to_string(id)};
+    throw logic_error{
+        format("{} - Duplicate id parameter: {}", HERE.function_name(), id)};
 
   optionalGroups.emplace_back();
   optionalGroups.back().insert(id);
@@ -549,8 +567,8 @@ IdsConstraint& IdsConstraint::addOptionalId(unsigned id) {
 
 IdsConstraint& IdsConstraint::addAvoidedId(unsigned id) {
   if (!mentionedIds.insert(id).second)
-    throw logic_error{HERE.function_name() + " - Duplicate id parameter: "s +
-                      to_string(id)};
+    throw logic_error{
+        format("{} - Duplicate id parameter: {}", HERE.function_name(), id)};
   avoidedIds.insert(id);
 
   return *this;
@@ -651,52 +669,53 @@ unsigned IdsConstraint::longestMismatchLength() const noexcept {
   return expectedExtraIds - 1U;
 }
 
-string IdsConstraint::toString() const {
-  ostringstream oss;
-  oss << "[";
+void IdsConstraint::formatTo(FmtCtxIt& outIt) const {
+  outIt = format_to(outIt, "[");
 
-  if (!mandatoryGroups.empty() || expectedExtraIds > 0U) {
-    oss << " Mandatory={";
-    for (const auto& group : mandatoryGroups) {
+  // Display groups separated by ' '
+  const auto showGroups{[&outIt](const auto& groups) {
+    const auto showGroup{[&outIt](const auto& group) {
       if (size(group) == 1ULL)
-        oss << *cbegin(group);
+        outIt = format_to(outIt, "{}", *cbegin(group));
       else
-        oss << ContView{group, {.before = "(", .between = "|", .after = ")"}};
-      oss << ' ';
+        outIt = format_to(outIt, "({})", ContView{group, "|"});
+    }};
+
+    showGroup(*cbegin(groups));
+    for (const auto& group : groups | views::drop(1)) {
+      outIt = format_to(outIt, " ");
+      showGroup(group);
+    }
+  }};
+
+  if (const bool hasMandatoryGroups{!mandatoryGroups.empty()};
+      hasMandatoryGroups || expectedExtraIds > 0U) {
+    outIt = format_to(outIt, " Mandatory={{");
+    if (hasMandatoryGroups)
+      showGroups(mandatoryGroups);
+
+    if (expectedExtraIds > 0U) {
+      if (hasMandatoryGroups)
+        outIt = format_to(outIt, " ");
+      outIt = format_to(outIt, "extra_ids_count={}", expectedExtraIds);
     }
 
-    if (expectedExtraIds > 0U)
-      oss << "extra_ids_count=" << expectedExtraIds << ' ';
-
-    // Overwrite last blank with }
-    oss.seekp(-1, ios_base::cur);
-    oss << '}';
+    outIt = format_to(outIt, "}}");
   }
 
   if (!avoidedIds.empty())
-    oss << " Avoided="
-        << ContView{avoidedIds, {.before = "{", .between = ",", .after = "}"}};
+    outIt = format_to(outIt, " Avoided={{{}}}", ContView{avoidedIds, ","});
 
   if (!optionalGroups.empty()) {
-    oss << " Optional={";
-    for (const auto& group : optionalGroups) {
-      if (size(group) == 1ULL)
-        oss << *cbegin(group);
-      else
-        oss << ContView{group, {.before = "(", .between = "|", .after = ")"}};
-      oss << ' ';
-    }
-
-    // Overwrite last blank with }
-    oss.seekp(-1, ios_base::cur);
-    oss << '}';
+    outIt = format_to(outIt, " Optional={{");
+    showGroups(optionalGroups);
+    outIt = format_to(outIt, "}}");
   }
 
   if (!capacityLimit)
-    oss << " any_number_from_the_others";
+    outIt = format_to(outIt, " any_number_from_the_others");
 
-  oss << " ]";
-  return oss.str();
+  outIt = format_to(outIt, " ]");
 }
 
 bool BoolConst::eval(const SymbolsTable&) const noexcept {
@@ -704,11 +723,9 @@ bool BoolConst::eval(const SymbolsTable&) const noexcept {
   return val.value_or(false);
 }
 
-string BoolConst::toString() const {
-  ostringstream oss;
+void BoolConst::formatTo(FmtCtxIt& outIt) const {
   assert(val.has_value());
-  oss << boolalpha << val.value_or(false);
-  return oss.str();
+  outIt = format_to(outIt, "{}", val.value_or(false));
 }
 
 Not::Not(const shared_ptr<const LogicalExpr>& le)
@@ -723,23 +740,22 @@ bool Not::eval(const SymbolsTable& st) const {
   return val.value_or(!_le->eval(st));
 }
 
-string Not::toString() const {
-  ostringstream oss;
-  oss << "not(" << _le->toString() << ')';
-  return oss.str();
+void Not::formatTo(FmtCtxIt& outIt) const {
+  outIt = format_to(outIt, "not({})", *_le);
 }
 
 void ValueOrRange::validateDouble(double d) {
-  if (isnan(d))
-    throw logic_error{
-        HERE.function_name() +
-        " - The value or the range limits need to be valid double values!"s};
+  if (isNaN(d))
+    throw logic_error{format(
+        "{} - The value or the range limits need to be valid double values!",
+        HERE.function_name())};
 }
 
 void ValueOrRange::validateRange(double a, double b) {
   if (a > b)
-    throw logic_error{HERE.function_name() +
-                      " - The range limits need to be in ascending order!"s};
+    throw logic_error{
+        format("{} - The range limits need to be in ascending order!",
+               HERE.function_name())};
 }
 
 void ValueOrRange::validate() const {
@@ -815,8 +831,8 @@ bool ValueOrRange::isRange() const noexcept {
 
 double ValueOrRange::value(const SymbolsTable& st) const {
   if (isRange())
-    throw logic_error{HERE.function_name() +
-                      " - cannot be called on a range!"s};
+    throw logic_error{
+        format("{} - cannot be called on a range!", HERE.function_name())};
   const double v{get<ValueType>(_valueOrRange)->eval(st)};
   validateDouble(v);
   return v;
@@ -824,8 +840,8 @@ double ValueOrRange::value(const SymbolsTable& st) const {
 
 pair<double, double> ValueOrRange::range(const SymbolsTable& st) const {
   if (!isRange())
-    throw logic_error{HERE.function_name() +
-                      " - cannot be called on a simple value!"s};
+    throw logic_error{format("{} - cannot be called on a simple value!",
+                             HERE.function_name())};
   const RangeType range{get<RangeType>(_valueOrRange)};
   const double from{range.first->eval(st)};
   const double to{range.second->eval(st)};
@@ -835,16 +851,14 @@ pair<double, double> ValueOrRange::range(const SymbolsTable& st) const {
   return {from, to};
 }
 
-string ValueOrRange::toString() const {
-  ostringstream oss;
+void ValueOrRange::formatTo(FmtCtxIt& outIt) const {
   if (const ValueType* value_{get_if<ValueType>(&_valueOrRange)}) {
-    oss << **value_;
-  } else {
-    const RangeType range{get<RangeType>(_valueOrRange)};
-    oss << *range.first << " .. " << *range.second;
+    outIt = format_to(outIt, "{}", **value_);
+    return;
   }
 
-  return oss.str();
+  const RangeType range{get<RangeType>(_valueOrRange)};
+  outIt = format_to(outIt, "{} .. {}", *range.first, *range.second);
 }
 
 ValueSet& ValueSet::add(const ValueOrRange& vor) noexcept {
@@ -888,9 +902,8 @@ bool ValueSet::contains(const double& v,
   });
 }
 
-string ValueSet::toString() const {
-  return ContView{vors, {.before = "{", .between = ", ", .after = "}"}}
-      .toString();
+void ValueSet::formatTo(FmtCtxIt& outIt) const {
+  outIt = format_to(outIt, "{{{}}}", ContView{vors, ", "});
 }
 
 double NumericConst::eval(const SymbolsTable&) const noexcept {
@@ -898,11 +911,9 @@ double NumericConst::eval(const SymbolsTable&) const noexcept {
   return val.value_or(0.);
 }
 
-string NumericConst::toString() const {
-  ostringstream oss;
+void NumericConst::formatTo(FmtCtxIt& outIt) const {
   assert(val.has_value());
-  oss << val.value_or(0.);
-  return oss.str();
+  outIt = format_to(outIt, "{}", val.value_or(0.));
 }
 
 NumericVariable::NumericVariable(string varName) noexcept
@@ -916,8 +927,8 @@ double NumericVariable::eval(const SymbolsTable& st) const {
   return st.at(name);
 }
 
-string NumericVariable::toString() const noexcept {
-  return makeCopyNoexcept(name);
+void NumericVariable::formatTo(FmtCtxIt& outIt) const {
+  outIt = format_to(outIt, "{}", name);
 }
 
 Addition::Addition(const shared_ptr<const NumericExpr>& left_,
@@ -940,25 +951,30 @@ double Addition::eval(const SymbolsTable& st) const {
   return val.value_or(left->eval(st) + right->eval(st));
 }
 
-string Addition::toString() const {
-  if (val)
-    return to_string(*val);
-  return "("s + left->toString() + " + "s + right->toString() + ")"s;
+void Addition::formatTo(FmtCtxIt& outIt) const {
+  if (val) {
+    outIt = format_to(outIt, "{}", *val);
+    return;
+  }
+  outIt = format_to(outIt, "({} + {})", *left, *right);
 }
 
 long Modulus::validLong(double v) {
   const long result{static_cast<long>(v)};
   if (abs(v - static_cast<double>(result)) > Eps)
-    throw logic_error{HERE.function_name() +
-                      " - Operands of modulus need to be integer values!"s};
+    throw logic_error{
+        format("{} - Operands of modulus need to be integer values!",
+               HERE.function_name())};
   return result;
 }
 
 long Modulus::validOperation(long numeratorL, long denominatorL) {
   if (0L == denominatorL) {
     if (0L != numeratorL)
-      throw overflow_error{HERE.function_name() + " - denominator is 0!"s};
-    throw logic_error{HERE.function_name() + " - both operands are 0!"s};
+      throw overflow_error{
+          format("{} - denominator is 0!", HERE.function_name())};
+    throw logic_error{
+        format("{} - both operands are 0!", HERE.function_name())};
   }
 
   return numeratorL % denominatorL;
@@ -1004,20 +1020,12 @@ double Modulus::eval(const SymbolsTable& st) const {
   return static_cast<double>(validOperation(numeratorL, denominatorL));
 }
 
-string Modulus::toString() const {
-  if (val)
-    return to_string(*val);
-  return "("s + numerator->toString() + " % "s + denominator->toString() + ")"s;
+void Modulus::formatTo(FmtCtxIt& outIt) const {
+  if (val) {
+    outIt = format_to(outIt, "{}", *val);
+    return;
+  }
+  outIt = format_to(outIt, "({} % {})", *numerator, *denominator);
 }
 
 }  // namespace rc::cond
-
-namespace std {
-
-// NOLINTNEXTLINE(bugprone-std-namespace-modification) : Classic overloading
-auto& operator<<(auto& os, const rc::cond::ValueSet& vs) {
-  os << vs.toString();
-  return os;
-}
-
-}  // namespace std

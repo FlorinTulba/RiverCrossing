@@ -15,6 +15,8 @@
 
 #include "util.h"
 
+#include <filesystem>
+
 namespace rc {
 
 std::filesystem::path projectFolder() noexcept {

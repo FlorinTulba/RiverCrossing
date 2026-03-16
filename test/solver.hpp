@@ -18,27 +18,56 @@
 
 #ifdef UNIT_TESTING
 
+#include "absConfigConstraint.h"
+#include "absSolution.h"
+#include "configConstraint.h"
+#include "configParser.h"
 #include "durationExt.h"
+#include "entitiesManager.h"
 #include "entity.h"
 #include "mathRelated.h"
+#include "nan.h"
+#include "scenario.h"
+#include "scenarioDetails.h"
 #include "solverDetail.hpp"
+#include "symbolsTable.h"
 #include "transferredLoadExt.h"
 #include "util.h"
 #include "warnings.h"
 
 #include <cassert>
+#include <cfloat>
 #include <climits>
 #include <cmath>
+#include <cstddef>
+#include <cstdio>
+
+#include <algorithm>
 #include <concepts>
+#include <format>
+#include <initializer_list>
 #include <iterator>
+#include <memory>
 #include <numeric>
+#include <print>
+#include <set>
+#include <stdexcept>
+#include <string>
 #include <tuple>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include <gsl/pointers>
 #include <gsl/util>
 
-#include <boost/test/unit_test.hpp>
+#include <boost/logic/tribool.hpp>
+#include <boost/test/tools/context.hpp>
+#include <boost/test/tools/fpc_tolerance.hpp>
+#include <boost/test/tools/interface.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test.hpp>  // IWYU pragma: keep
+#include <boost/test/unit_test_suite.hpp>
 
 using std::ignore;
 
@@ -84,27 +113,22 @@ template <class IfEntities>
       [](const rc::ent::IEntities* retCfg, const set<unsigned>& cfg) {
         assert(retCfg);
         const bool ret{*retCfg == cfg};
-        if (!ret)
-          cout << rc::ContView{retCfg->ids(),
-                               {.before = "[ ", .between = " ", .after = " ]"}}
-               << " != "
-               << rc::ContView{cfg,
-                               {.before = "[ ",
-                                .between = " ",
-                                .after = " ]\n"}}
-               << flush;
+        if (!ret) {
+          println("[ {} ] != [ {} ]", rc::ContView{retCfg->ids(), " "},
+                  rc::ContView{cfg, " "});
+          fflush(stdout);
+        }
         return ret;
       })};
   if (!result) {
-    cout << "IEntities { ";
+    print("IEntities {{ ");
     for (const gsl::not_null<const IfEntities*> retCfg : returnedConfigs)
-      cout << rc::ContView{retCfg->ids(),
-                           {.before = "[ ", .between = " ", .after = " ] "}};
-    cout << "} != ExpectedEntities { ";
+      print("[ {} ] ", rc::ContView{retCfg->ids(), " "});
+    print("}} != ExpectedEntities {{ ");
     for (const set<unsigned>& cfg : expectedConfigs)
-      cout << rc::ContView{cfg,
-                           {.before = "[ ", .between = " ", .after = " ] "}};
-    cout << "}\n" << flush;
+      print("[ {} ] ", rc::ContView{cfg, " "});
+    println("}}");
+    fflush(stdout);
   }
   return result;
 }
@@ -121,6 +145,9 @@ template <class IfEntities>
 MUTE_GLOBAL_CTOR_WARN
 
 BOOST_AUTO_TEST_SUITE(solver, *boost::unit_test::tolerance(rc::Eps))
+
+// NOLINTBEGIN(cppcoreguidelines-avoid-do-while,cppcoreguidelines-pro-type-vararg)
+// : BOOST_CHECK... expansion
 
 BOOST_AUTO_TEST_CASE(generateCombinations_usecases) {
   using namespace std;
@@ -148,7 +175,8 @@ BOOST_AUTO_TEST_CASE(generateCombinations_usecases) {
   constexpr size_t n{6};
   constexpr ptrdiff_t k{3};
   vals.resize(n);
-  iota(BOUNDS(vals), 1);
+  iota(BOUNDS(vals), 1);  // NOLINT(modernize-use-ranges) : Partial ranges::iota
+                          // implementation in clang++21 on FreeBSD
   combs.clear();
 
   // 3-combinations of the 1..6 set produces a single empty combination
@@ -584,8 +612,8 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
 
         // allow confirmed configurations
         for (const ent::MovingEntities* cfg : configsForABank) {
-          if (cfg)
-            BOOST_TEST_CONTEXT("for raft cfg: `" << *cfg << '`') {
+          if (nullptr != cfg)
+            BOOST_TEST_CONTEXT(format("for raft cfg: `{}`", *cfg)) {
               BOOST_CHECK(validator->validate(*cfg, emptySt));
             }
         }
@@ -743,8 +771,8 @@ BOOST_AUTO_TEST_CASE(movingConfigsManager_usecases) {
 
         // allow confirmed configurations
         for (const ent::MovingEntities* cfg : configsForABank) {
-          if (cfg)
-            BOOST_TEST_CONTEXT("for raft cfg: `" << *cfg << '`') {
+          if (nullptr != cfg)
+            BOOST_TEST_CONTEXT(format("for raft cfg: `{}`", *cfg)) {
               BOOST_CHECK(validator->validate(*cfg, emptySt));
             }
         }
@@ -832,14 +860,17 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
       stateExt3 = make_shared<const TimeStateExt>(t + 1U, info);
       stateExt4 = make_shared<const TimeStateExt>(t - 1U, info);
       State s{left, right, true, stateExt};
-      State s1{s};
+      State s1{s};  // NOLINT(performance-unnecessary-copy-initialization) :
+                    // Testing copy ctor
     } catch (...) {
       BOOST_REQUIRE(false);  // Unexpected exception
     }
 
-    State s{left, right, true, stateExt}, s1{s}, s2{s},
-        s3{left, right, true, stateExt3}, s4{left, right, true, stateExt4},
-        s5{left5, right5, true, stateExt};
+    State s{left, right, true, stateExt},
+        s1{s},  // NOLINT(performance-unnecessary-copy-initialization)
+                // : Testing s.handledBy(s1)
+        s2{s}, s3{left, right, true, stateExt3},
+        s4{left, right, true, stateExt4}, s5{left5, right5, true, stateExt};
     s2._nextMoveFromLeft = !s2._nextMoveFromLeft;
     vector<unique_ptr<const IState>> someStates;
     someStates.emplace_back(s2.clone());
@@ -929,15 +960,14 @@ BOOST_AUTO_TEST_CASE(algorithmStates_usecases) {
       PrevLoadStateExt plse1{InitialSymbolsTable(), info,
                              timeExt};  // CrossingIndex 0
       State s1{left, right, true, plse1.clone()};
-      BOOST_REQUIRE(isnan(
+      BOOST_REQUIRE(isNaN(
           plse1.prevRaftLoad()));  // Fails if wrong compilation flags around
-      // '-ffast-math' and NaN handling. See:
-      // 'mathRelated.h'
+      // '-ffast-math' and NaN handling. See: 'mathRelated.h'
 
       PrevLoadStateExt plse2{SymbolsTable{{{"CrossingIndex", 1.}}}, info,
                              timeExt};
       State s2{left, right, true, plse2.clone()};
-      BOOST_CHECK(isnan(plse2.prevRaftLoad()));
+      BOOST_CHECK(isNaN(plse2.prevRaftLoad()));
 
       PrevLoadStateExt plse3{
           SymbolsTable{{{"CrossingIndex", 2.}, {"PreviousRaftLoad", 10.}}},
@@ -1467,6 +1497,7 @@ BOOST_AUTO_TEST_CASE(solvingVariousScenarios) {
     BOOST_CHECK(false);  // Unexpected exception
   }
 }
+// NOLINTEND(cppcoreguidelines-avoid-do-while,cppcoreguidelines-pro-type-vararg)
 
 BOOST_AUTO_TEST_SUITE_END()
 

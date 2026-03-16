@@ -14,6 +14,9 @@
 #define H_ROW_ABILITY_EXT
 
 #include "configConstraint.h"
+#include "symbolsTable.h"
+
+#include <memory>
 
 namespace rc::cond {
 

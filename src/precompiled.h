@@ -16,7 +16,8 @@
 #ifndef H_PRECOMPILED
 #define H_PRECOMPILED
 
-#include "nanConcerns.h"
+// NOLINTBEGIN(misc-include-cleaner) : PCH-s don't need to use the headers
+
 #include "util.h"
 
 #include <cassert>
@@ -25,31 +26,28 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
-#include <cstring>
 
 #include <algorithm>
 #include <array>
 #include <concepts>
 #include <exception>
 #include <filesystem>
-#include <iomanip>
-#include <iostream>
+#include <format>
 #include <iterator>
 #include <limits>
 #include <map>
 #include <memory>
 #include <numeric>
 #include <optional>
-#include <queue>
+#include <print>
 #include <set>
-#include <sstream>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <tuple>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #ifdef __cpp_lib_source_location
@@ -59,10 +57,11 @@
 #endif  // defined(__cpp_lib_source_location)
 
 #include <boost/core/demangle.hpp>
-#include <boost/fusion/include/at.hpp>
+#include <boost/fusion/sequence/intrinsic/at.hpp>
 #include <boost/logic/tribool.hpp>
+#include <boost/property_tree/exceptions.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 #include <boost/spirit/home/x3.hpp>
 #include <boost/spirit/home/x3/support/utility/error_reporting.hpp>
 
@@ -96,5 +95,7 @@ https://www.boost.org/doc/libs/1_87_0/libs/test/doc/html/boost_test/utf_referenc
 */
 
 #endif  // UNIT_TESTING
+
+// NOLINTEND(misc-include-cleaner)
 
 #endif  // !H_PRECOMPILED

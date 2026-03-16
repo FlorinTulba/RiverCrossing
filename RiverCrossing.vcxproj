@@ -25,7 +25,7 @@
     <ClInclude Include="src\entitiesManager.h" />
     <ClInclude Include="src\entity.h" />
     <ClInclude Include="src\mathRelated.h" />
-    <ClInclude Include="src\nanConcerns.h" />
+    <ClInclude Include="src\nan.h" />
     <ClInclude Include="src\precompiled.h" />
     <ClInclude Include="src\rowAbilityExt.h" />
     <ClInclude Include="src\scenario.h" />

@@ -14,9 +14,14 @@
 #define H_ABS_CONFIG_CONSTRAINT
 
 #include "entitiesManager.h"
+#include "symbolsTable.h"
+#include "util.h"
 
 #include <climits>
+
+#include <memory>
 #include <optional>
+#include <string>
 
 namespace rc::cond {
 
@@ -98,16 +103,21 @@ class IConfigConstraint {
 
   /// Is there a match between the provided collection and the constraint's
   /// data?
-  virtual bool matches(const ent::IsolatedEntities& ents) const noexcept = 0;
+  [[nodiscard]] virtual bool matches(
+      const ent::IsolatedEntities& ents) const noexcept = 0;
 
   /// @return the length of the longest possible match
-  virtual unsigned longestMatchLength() const noexcept { return UINT_MAX; }
+  [[nodiscard]] virtual unsigned longestMatchLength() const noexcept {
+    return UINT_MAX;
+  }
 
   /// @return the length of the longest possible mismatch
-  virtual unsigned longestMismatchLength() const noexcept { return UINT_MAX; }
+  [[nodiscard]] virtual unsigned longestMismatchLength() const noexcept {
+    return UINT_MAX;
+  }
 
   /// Describes the constraint
-  virtual std::string toString() const = 0;
+  virtual void formatTo(FmtCtxIt&) const = 0;
 
  protected:
   IConfigConstraint() noexcept = default;
@@ -128,12 +138,13 @@ class AbsExpr {
   AbsExpr& operator=(AbsExpr&&) noexcept = delete;
 
   /// Provide the cached result of the expression when this is a constant
-  constexpr const std::optional<Type>& constValue() const noexcept {
+  [[nodiscard]] constexpr const std::optional<Type>& constValue()
+      const noexcept {
     return val;
   }
 
   /// Checks if there is a dependency on `varName`
-  virtual bool dependsOnVariable(
+  [[nodiscard]] virtual bool dependsOnVariable(
       const std::string& /*varName*/) const noexcept {
     return false;
   }
@@ -143,16 +154,18 @@ class AbsExpr {
     @return the expression evaluated using the provided symbols' values
     @throw out_of_range when referring symbols missing from the table
   */
-  virtual Type eval(const SymbolsTable& st) const = 0;
+  [[nodiscard]] virtual Type eval(const SymbolsTable& st) const = 0;
 
-  virtual std::string toString() const = 0;
+  virtual void formatTo(FmtCtxIt&) const = 0;
 
  protected:
   constexpr AbsExpr(const std::optional<Type>& val_ = {}) noexcept
       : val{val_} {}
 
   /// Cached result of the expression if possible
-  std::optional<Type> val;
+  std::optional<Type>
+      val;  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
+            // : Easier to set in subclasses when protected
 };
 
 /// Base of numeric expression types
@@ -194,21 +207,23 @@ class IValues {
   IValues& operator=(const IValues&) = delete;
   IValues& operator=(IValues&&) noexcept = delete;
 
-  virtual bool empty() const noexcept = 0;
+  [[nodiscard]] virtual bool empty() const noexcept = 0;
 
-  virtual bool constSet() const noexcept = 0;  ///< are the values all constant?
+  [[nodiscard]] virtual bool constSet()
+      const noexcept = 0;  ///< are the values all constant?
 
   /// Checks if there is a dependency on `varName`
-  virtual bool dependsOnVariable(
+  [[nodiscard]] virtual bool dependsOnVariable(
       const std::string& /*varName*/) const noexcept {
     return false;
   }
 
   /// Checks if v is covered by current values and ranges based on the symbols'
   /// table
-  virtual bool contains(const Type& v, const SymbolsTable& st = {}) const = 0;
+  [[nodiscard]] virtual bool contains(const Type& v,
+                                      const SymbolsTable& st = {}) const = 0;
 
-  virtual std::string toString() const = 0;
+  virtual void formatTo(FmtCtxIt&) const = 0;
 
  protected:
   IValues() noexcept = default;
@@ -219,25 +234,4 @@ class IValues {
 
 }  // namespace rc::cond
 
-namespace std {
-
-inline auto& operator<<(auto& os, const rc::cond::IConfigConstraint& c) {
-  os << c.toString();
-  return os;
-}
-
-template <typename Type>
-inline auto& operator<<(auto& os, const rc::cond::AbsExpr<Type>& e) {
-  os << e.toString();
-  return os;
-}
-
-template <typename Type>
-inline auto& operator<<(auto& os, const rc::cond::IValues<Type>& vs) {
-  os << vs.toString();
-  return os;
-}
-
-}  // namespace std
-
-#endif  // H_ABS_CONFIG_CONSTRAINT not defined
+#endif  // !H_ABS_CONFIG_CONSTRAINT

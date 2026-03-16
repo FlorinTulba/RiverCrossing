@@ -13,18 +13,38 @@
 #include "precompiled.h"
 // This keeps precompiled.h first; Otherwise header sorting might move it
 
+#include "absConfigConstraint.h"
+#include "absSolution.h"
+#include "configConstraint.h"
+#include "entitiesManager.h"
 #include "mathRelated.h"
+#include "nan.h"
+#include "symbolsTable.h"
 #include "transferredLoadExt.h"
 #include "util.h"
 
 #include <cassert>
 #include <cmath>
-#include <iostream>
+#include <cstddef>
+#include <cstdio>
+
+#include <format>
+#include <iterator>
+#include <map>
+#include <memory>
 #include <numeric>
-#include <sstream>
+#include <set>
+#include <string>
+#include <utility>
+
+#ifndef NDEBUG
+#include <print>
+#endif  // NDEBUG not defined
 
 #include <gsl/pointers>
 #include <gsl/util>
+
+#include <boost/logic/tribool.hpp>
 
 using namespace std;
 
@@ -83,15 +103,8 @@ unique_ptr<IMovingEntitiesExt> TotalLoadExt::_clone(
   return make_unique<TotalLoadExt>(all, load, std::move(cloneOfNextExt));
 }
 
-string TotalLoadExt::_toString(
-    bool suffixesInsteadOfPrefixes /* = true*/) const {
-  // Suffix information
-  if (!suffixesInsteadOfPrefixes)
-    return {};
-
-  ostringstream oss;
-  oss << " weighing " << load;
-  return oss.str();
+void TotalLoadExt::_formatSuffixTo(FmtCtxIt& outIt) const {
+  outIt = format_to(outIt, " weighing {}", load);
 }
 
 TotalLoadExt::TotalLoadExt(const shared_ptr<const AllEntities>& all_,
@@ -131,11 +144,10 @@ void MaxLoadValidatorExt::checkTypesCfg(const TypesConstraint& cfg,
   }
 
   if (minConfigWeight - Eps > _maxLoad)
-    throw logic_error{HERE.function_name() + " - Constraint `"s +
-                      cfg.toString() + "` produces a load >= "s +
-                      to_string(minConfigWeight) +
-                      ", which is more than the maximum allowed load ("s +
-                      to_string(_maxLoad) + ")!"s};
+    throw logic_error{
+        format("{} - Constraint `{}` produces a load >= {}, which is more than "
+               "the maximum allowed load ({})!",
+               HERE.function_name(), cfg, minConfigWeight, _maxLoad)};
 }
 
 /// @throw logic_error if the ids configuration does not respect current
@@ -177,10 +189,9 @@ bool MaxLoadTransferConstraintsExt::_check(
   if (entsWeight - Eps > *_maxLoad) {
 #ifndef NDEBUG
     const auto& entsIds{cfg.ids()};
-    cout << "violates maxWeight constraint [ " << entsWeight << " > "
-         << *_maxLoad << " ] : "
-         << ContView{entsIds, {.before = "", .between = " ", .after = "\n"}}
-         << flush;
+    println("violates maxWeight constraint [ {} > {} ] : {}", entsWeight,
+            *_maxLoad, ContView{entsIds, " "});
+    fflush(stdout);
 #endif             // NDEBUG
     return false;  // NOLINT(readability-simplify-boolean-expr)
   }
@@ -207,9 +218,10 @@ InitiallyNoPrevRaftLoadExcHandler::InitiallyNoPrevRaftLoadExcHandler(
       dependsOnPreviousRaftLoad{
           _allowedLoads->dependsOnVariable("PreviousRaftLoad")} {
   if (_allowedLoads->empty())
-    throw invalid_argument{HERE.function_name() +
-                           " - doesn't accept empty allowedLoads parameter! "
-                           "Some loads must be allowed!"s};
+    throw invalid_argument{
+        format("{} - doesn't accept empty allowedLoads parameter! "
+               "Some loads must be allowed!",
+               HERE.function_name())};
 }
 
 boost::logic::tribool InitiallyNoPrevRaftLoadExcHandler::assess(
@@ -243,11 +255,11 @@ bool AllowedLoadsValidator::doValidate(const ent::MovingEntities& ents,
   const double entsWeight{totalLoadExt->totalLoad()};
   const bool valid{_allowedLoads->contains(entsWeight, st)};
 #ifndef NDEBUG
-  if (!valid)
-    cout << "Invalid load [" << entsWeight << " outside " << *_allowedLoads
-         << "] : "
-         << ContView{ents.ids(), {.before = "", .between = " ", .after = "\n"}}
-         << flush;
+  if (!valid) {
+    println("Invalid load [{} outside {}] : {}", entsWeight, *_allowedLoads,
+            ContView{ents.ids(), " "});
+    fflush(stdout);
+  }
 #endif  // NDEBUG
   return valid;
 }
@@ -287,7 +299,7 @@ bool PrevLoadStateExt::_isNotBetterThan(const IState& s2) const {
   than the length of the solution starting fresh with the move about to consider
   next from this revisited initial state.
   */
-  if (isnan(otherPreviousRaftLoad))
+  if (isNaN(otherPreviousRaftLoad))
     return true;  // deciding to disallow revisiting the initial state
 
   return abs(previousRaftLoad - otherPreviousRaftLoad) < Eps;
@@ -306,26 +318,17 @@ shared_ptr<const IStateExt> PrevLoadStateExt::_extensionForNextState(
 }
 
 string PrevLoadStateExt::_detailsForDemo() const {
-  if (isnan(previousRaftLoad))
+  if (isNaN(previousRaftLoad))
     return {};
 
-  ostringstream oss;
-  oss << "; Previous transferred load: " << previousRaftLoad;
-  return oss.str();
+  return format("; Previous transferred load: {}", previousRaftLoad);
 }
 
-string PrevLoadStateExt::_toString(
-    bool suffixesInsteadOfPrefixes /* = true*/) const {
-  // This is displayed only as suffix information
-  if (!suffixesInsteadOfPrefixes)
-    return {};
+void PrevLoadStateExt::_formatSuffixTo(FmtCtxIt& outIt) const {
+  if (isNaN(previousRaftLoad))
+    return;
 
-  if (isnan(previousRaftLoad))
-    return {};
-
-  ostringstream oss;
-  oss << " ; PrevRaftLoad: " << previousRaftLoad;
-  return oss.str();
+  outIt = format_to(outIt, " ; PrevRaftLoad: {}", previousRaftLoad);
 }
 
 PrevLoadStateExt::PrevLoadStateExt(unsigned crossingIndex_,
@@ -347,20 +350,22 @@ PrevLoadStateExt::PrevLoadStateExt(const SymbolsTable& symbols,
   const auto itCrossingIndex = symbols.find("CrossingIndex"),
              itPreviousRaftLoad = symbols.find("PreviousRaftLoad");
   if (itCrossingIndex == stEnd)
-    throw logic_error{HERE.function_name() +
-                      " - needs to get `symbols` table containing an entry for "
-                      "CrossingIndex!"s};
+    throw logic_error{
+        format("{} - needs to get `symbols` table containing an entry for "
+               "CrossingIndex!",
+               HERE.function_name())};
 
   crossingIndex = gsl::narrow_cast<unsigned>(
       floor(.5 + itCrossingIndex->second));  // rounded value
   if (itPreviousRaftLoad == stEnd) {
     if (crossingIndex >= 2U)
-      throw logic_error{HERE.function_name() +
-                        " - needs to get `symbols` table containing an entry "
-                        "for PreviousRaftLoad "
-                        "when the CrossingIndex entry is >= 2 !"s};
+      throw logic_error{
+          format("{} - needs to get `symbols` table containing an entry "
+                 "for PreviousRaftLoad "
+                 "when the CrossingIndex entry is >= 2 !",
+                 HERE.function_name())};
 
-    previousRaftLoad = numeric_limits<double>::quiet_NaN();
+    previousRaftLoad = NaN<double>;
 
   } else {
     previousRaftLoad = itPreviousRaftLoad->second;

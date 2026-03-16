@@ -13,7 +13,21 @@
 #ifndef H_TRANSFERRED_LOAD_EXT
 #define H_TRANSFERRED_LOAD_EXT
 
+#include "absConfigConstraint.h"
+#include "absSolution.h"
+#include "configConstraint.h"
+#include "entitiesManager.h"
 #include "scenarioDetails.h"
+#include "symbolsTable.h"
+#include "util.h"
+
+#include <memory>
+#include <set>
+#include <string>
+
+#include <gsl/pointers>
+
+#include <boost/logic/tribool.hpp>
 
 namespace rc {
 
@@ -65,14 +79,10 @@ class TotalLoadExt : public AbsMovingEntitiesExt {
       std::unique_ptr<IMovingEntitiesExt> cloneOfNextExt)
       const noexcept override;
 
-  /**
-  Display either only suffix (most of them), or only prefix extensions.
-  It needs to be called before (with param false) and after (with param true)
-  the information of the moving entities
-  */
-  [[nodiscard]] std::string _toString(
-      bool suffixesInsteadOfPrefixes = true) const override;
+  /// Display suffix extensions
+  void _formatSuffixTo(FmtCtxIt&) const override;
 
+ private:
   double load;  ///< total load of the raft/bridge
 };
 
@@ -108,6 +118,7 @@ class MaxLoadValidatorExt : public AbsConfigConstraintValidatorExt {
   void checkIdsCfg(const IdsConstraint&,
                    const ent::AllEntities&) const override;
 
+ private:
   double _maxLoad;  ///< max allowed total raft/bridge load
 };
 
@@ -140,6 +151,7 @@ class MaxLoadTransferConstraintsExt : public AbsTransferConstraintsExt {
   /// @throw logic_error for invalid extension
   [[nodiscard]] bool _check(const ent::MovingEntities& cfg) const override;
 
+ private:
   /// Max allowed total raft/bridge load
   gsl::not_null<const double*> _maxLoad;
 };
@@ -177,7 +189,7 @@ class InitiallyNoPrevRaftLoadExcHandler : public IValidatorExceptionHandler {
       const ent::MovingEntities&,
       const SymbolsTable& st) const noexcept override;
 
-  PROTECTED:
+  PRIVATE:
   /// The allowed loads
   gsl::not_null<std::shared_ptr<const IValues<double>>> _allowedLoads;
   bool dependsOnPreviousRaftLoad;
@@ -206,6 +218,7 @@ class AllowedLoadsValidator : public AbsContextValidator {
   [[nodiscard]] bool doValidate(const ent::MovingEntities& ents,
                                 const SymbolsTable& st) const override;
 
+ private:
   /// The allowed loads
   gsl::not_null<std::shared_ptr<const IValues<double>>> _allowedLoads;
 };
@@ -263,9 +276,10 @@ class PrevLoadStateExt : public AbsStateExt {
   */
   [[nodiscard]] std::string _detailsForDemo() const override;
 
-  [[nodiscard]] std::string _toString(
-      bool suffixesInsteadOfPrefixes /* = true*/) const override;
+  /// Display suffix extensions
+  void _formatSuffixTo(FmtCtxIt&) const override;
 
+ private:
   double previousRaftLoad;
   unsigned crossingIndex;
 };
