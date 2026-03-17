@@ -10,7 +10,7 @@
 /.vs
 /.vscode
 .clangd
-/Versions
+/private
 
 /.deps
 /src/precompiled.h.gch
