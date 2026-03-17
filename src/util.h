@@ -27,27 +27,19 @@
 #include <iterator>
 #include <memory>
 #include <ranges>
+#include <source_location>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
 
-#ifdef __cpp_lib_source_location
-#include <source_location>
-
-#else
-#include <boost/assert/source_location.hpp>
-#endif  // defined(__cpp_lib_source_location)
-
 #include <gsl/pointers>
 
 #ifdef UNIT_TESTING
-
 #define PRIVATE public
 
 #else  // UNIT_TESTING not defined
-
 #define PRIVATE private
 
 #endif  // UNIT_TESTING
@@ -59,14 +51,8 @@
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
 // Access to source location information(file, line, col, function)
-#ifdef __cpp_lib_source_location
 #define LOC_INFO std::source_location
-#define HERE std::source_location::current()
-
-#else
-#define LOC_INFO boost::source_location
-#define HERE BOOST_CURRENT_LOCATION
-#endif  // defined(__cpp_lib_source_location)
+#define HERE LOC_INFO::current()
 
 /// Concept for pointer-like types: raw pointers, smart pointers, and nullptr_t
 template <typename T>
