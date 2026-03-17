@@ -18,66 +18,40 @@
 
 // NOLINTBEGIN(misc-include-cleaner) : PCH-s don't need to use the headers
 
-#include "util.h"
+#include "util.h"  // IWYU pragma: export
 
+// Set of includes not imported by "util.h"
 #include <cassert>
 #include <cfloat>
 #include <climits>
 #include <cmath>
-#include <cstddef>
-#include <cstdio>
 
-#include <algorithm>
 #include <array>
-#include <concepts>
-#include <exception>
-#include <filesystem>
-#include <format>
-#include <iterator>
-#include <limits>
+#include <initializer_list>
+#include <iostream>
 #include <map>
-#include <memory>
 #include <numeric>
 #include <optional>
 #include <print>
 #include <set>
-#include <stdexcept>
-#include <string>
-#include <string_view>
+#include <sstream>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
-#ifdef __cpp_lib_source_location
-#include <source_location>
-#else
-#include <boost/assert/source_location.hpp>
-#endif  // defined(__cpp_lib_source_location)
+#include <gsl/assert>
+#include <gsl/span>
+#include <gsl/util>
 
 #include <boost/core/demangle.hpp>
-#include <boost/fusion/sequence/intrinsic/at.hpp>
 #include <boost/logic/tribool.hpp>
 #include <boost/property_tree/exceptions.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
-#include <boost/spirit/home/x3.hpp>
-#include <boost/spirit/home/x3/support/utility/error_reporting.hpp>
-
-#include <gsl/assert>
-#include <gsl/pointers>
-#include <gsl/util>
-
-// GSL before 4.1.0 doesn't have <gsl/zstring>
-#if __has_include(<gsl/zstring>)
-#include <gsl/zstring>
-
-#else
-#include <gsl/span>
-#include <gsl/string_span>
-
-#endif  // <zstring> available or not
 
 #ifdef UNIT_TESTING
 
