@@ -46,8 +46,22 @@
 #include <boost/spirit/home/x3/numeric/real.hpp>
 #include <boost/spirit/home/x3/numeric/uint.hpp>
 #include <boost/spirit/home/x3/string/literal_string.hpp>
-#include <boost/spirit/home/x3/support/expectation.hpp>
 #include <boost/spirit/home/x3/support/utility/error_reporting.hpp>
+
+// Boost Spirit X3 restructured and the definition of 'expectation_failure'
+// changed its namespace and location
+#if __has_include(<boost/spirit/home/x3/support/expectation.hpp>)
+#include <boost/spirit/home/x3/support/expectation.hpp>
+using boost::spirit::x3::throwing::expectation_failure;
+
+#elif __has_include(<boost/spirit/home/x3/directive/expect.hpp>)
+#include <boost/spirit/home/x3/directive/expect.hpp>
+using boost::spirit::x3::expectation_failure;
+
+#else
+#error Cannot provide a header containing \
+  boost::spirit::x3[::throwing]::expectation_failure!
+#endif
 
 namespace bs = boost::spirit;
 namespace bsx = bs::x3;
@@ -205,11 +219,11 @@ const auto forwardAttr = [](const auto& ctx) { _val(ctx) = _attr(ctx); };
 // NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access) :
 // Normal grammar expressions
 // NOLINTBEGIN(bugprone-chained-comparison) : Normal grammar expressions
-const auto logicalExpr_def = omit[-("if" > +blank)] >
-                             ((("not" >> omit[*blank]) > ('(' >> omit[*blank]) >
-                               (condition >> omit[*blank]) >
-                               ')')[createWith1Param<rc::cond::Not>] |
-                              condition[forwardAttr]);
+const auto logicalExpr_def =
+    omit[-("if" > +blank)] >
+    ((("not" >> omit[*blank]) > ('(' >> omit[*blank]) >
+      (condition >> omit[*blank]) > ')')[createWith1Param<rc::cond::Not>] |
+     condition[forwardAttr]);
 
 // Semantic actions and definition for 'condition'
 inline auto setBoolConst() {
@@ -248,11 +262,11 @@ const auto appendToValueSet = [](const auto& ctx) {
   _val(ctx).add(*_attr(ctx));
 };
 
-const auto valueSet_def = omit[*blank] >> !blank >>
-                          (((valueOrRange[appendToValueSet] %
-                             (*blank >> ',' >> *blank)) >>
-                            omit[*blank] >> !blank) |
-                           eps);
+const auto valueSet_def =
+    omit[*blank] >> !blank >>
+    (((valueOrRange[appendToValueSet] % (*blank >> ',' >> *blank)) >>
+      omit[*blank] >> !blank) |
+     eps);
 
 // Semantic actions and definition for 'valueOrRange'
 template <class Type>
@@ -380,9 +394,9 @@ const auto idsConfig_def =
     &(blank | eoi);
 
 // Definition for 'idsGroup'
-const auto idsGroup_def = ('(' >> omit[*blank]) > uint_ >
-                          (+((omit[*blank] >> '|' >> omit[*blank]) > uint_) >>
-                           omit[*blank]) > ')';
+const auto idsGroup_def =
+    ('(' >> omit[*blank]) > uint_ >
+    (+((omit[*blank] >> '|' >> omit[*blank]) > uint_) >> omit[*blank]) > ')';
 // NOLINTEND(bugprone-chained-comparison)
 // NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 // NOLINTEND(bugprone-throwing-static-initialization)
@@ -438,7 +452,7 @@ template <class RuleType>
     const string_view problem{reachedPoint, itEnd};
     format_to(errIt, "\tThere is a problem with: `{:s}`\n", problem);
 
-  } catch (const bsx::expectation_failure<string::const_iterator>& e) {
+  } catch (const expectation_failure<string::const_iterator>& e) {
     // NOLINTNEXTLINE(bugprone-dangling-handle) : view of 's' won't dangle
     const string_view got{e.where(), itEnd};
     format_to(errIt, "\tExpecting {}\n\t      Got `{:s}`",
