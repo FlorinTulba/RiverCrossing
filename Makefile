@@ -791,9 +791,7 @@ GOALS_NEEDING_DEPFILES += $(__ALL_OBJ_FILES)
 # Commands for generating a precompiled header
 define generatePch
 	@printf "\n[$(BUILD_TYPE)] **** Compiling PCH '$(@F)' ****\n"
-	$(CXX) -c $(CXXFLAGS) $(BYPASSED_WARNINGS) $(INCLUDES) -x c++-header\
-	  $(depFileCompileFlags) -o $@ $< &&\
-	$(fixDepFile)
+	$(CXX) -c $(CXXFLAGS) $(BYPASSED_WARNINGS) $(INCLUDES) -x c++-header -o $@ $<
 endef
 
 # Adds a compile rule 'precompiled.h' -> $(PCH_$(buildType)).
