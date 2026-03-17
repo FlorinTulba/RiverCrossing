@@ -19,7 +19,6 @@
 #include "entitiesManager.h"
 #include "util.h"
 
-
 #include <cassert>
 
 #ifndef NDEBUG
