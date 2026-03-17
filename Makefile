@@ -738,6 +738,7 @@ endef
 # dependency files '.d.raw'.
 # -MT $@: force a rule for enumerating the prerequisites of the target file
 # -MMD: generate dependency files for non-system headers only
+#  Use -MD to get also the system headers included by the given translation unit.
 # -MP: add phony targets for each dependency to avoid errors when a header is removed
 # -MF file: specify the file to write the dependencies to
 #
