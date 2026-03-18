@@ -18,9 +18,35 @@
 
 // NOLINTBEGIN(misc-include-cleaner) : PCH-s don't need to use the headers
 
+/*
+Below is a set of official headers imported in at least 2 translation units.
+The ones imported by "util.h" are not enumerated here again.
+
+Better performance could be achieved by directly importing
+implementation-specific, non-official headers, (wrapped by the required official
+headers mentioned in code) if many official headers (in)directly import them.
+
+Proof:
+- appended '-DH_PRECOMPILED -H -Winvalid-pch' to COMMON_CXXFLAGS in the Makefile
+- ran 'make CXX=g++14 tests >private/build.log 2>&1'
+- the top of most frequently imported headers based on the resulted 'build.log'
+showed:
+  * '/usr/include/c++/14/bits/version.h' was first, included 578 times by all
+the import paths
+  * the first official header '/usr/include/c++/14/climits' only on 12-th
+position with just 69 inclusions.
+  * there are compiler/version/library-specific includes
+
+Since the project supports several compilers and environments, it would be
+difficult to maintain an optimal set of (implementation-specific) headers
+customized for each combination of the mentioned factors.
+
+The most maintainable/portable solution was enumerating only official headers,
+based on their use count throughout the project.
+*/
+
 #include "util.h"  // IWYU pragma: export
 
-// Set of includes not imported by "util.h"
 #include <cassert>
 #include <cfloat>
 #include <climits>
@@ -38,7 +64,6 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
-#include <utility>
 #include <variant>
 #include <vector>
 
