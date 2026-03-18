@@ -206,12 +206,12 @@ class ContView {
 
     // Using begin() and end() since FwCont.empty() and FwCont.size()
     // might not be available.
-    if (const auto itFirst{begin(*pCont)}; itFirst != end(*pCont)) {
-      outIt = format_to(outIt, "{}", proj(*itFirst));
+    const auto itEnd{end(*pCont)};
+    if (auto it{begin(*pCont)}; it != itEnd) {
+      outIt = format_to(outIt, "{}", proj(*it));
 
-      // The saved view prevents getting -Wdangling-reference in GCC
-      for (auto rest{*pCont | views::drop(1)}; auto&& elem : rest)
-        outIt = format_to(outIt, "{}{}", sep, proj(elem));
+      while (++it != itEnd)
+        outIt = format_to(outIt, "{}{}", sep, proj(*it));
     }
   }
 
