@@ -226,7 +226,7 @@ const auto logicalExpr_def =
      condition[forwardAttr]);
 
 // Semantic actions and definition for 'condition'
-inline auto setBoolConst() {
+inline auto setBoolConst() noexcept {  // noexcept because just returns lambda
   return [](const auto& ctx) {
     using namespace std;
 
