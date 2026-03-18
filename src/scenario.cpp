@@ -943,8 +943,18 @@ namespace {
 /// Settings for the project
 class Config {
  public:
-  Config() : projDir{rc::projectFolder()}, scenariosDir{projDir / "Scenarios"} {
-    if (projDir.empty())
+  Config(const Config&) = delete;
+  Config(Config&&) noexcept = default;
+  ~Config() noexcept = default;
+
+  Config& operator=(const Config&) = delete;
+  Config& operator=(Config&&) noexcept = delete;
+
+  static Config load() {
+    Config cfg;
+    cfg.projDir = rc::projectFolder();
+    cfg.scenariosDir = cfg.projDir / "Scenarios";
+    if (cfg.projDir.empty())
       throw runtime_error{
           format("{} - Couldn't locate the base folder of the project or "
                  "the Scenarios folder! "
@@ -952,21 +962,25 @@ class Config {
                  "RiverCrossing directory!",
                  HERE.function_name())};
 
-    if (!exists(scenariosDir))
+    if (!exists(cfg.scenariosDir))
       throw runtime_error{format("{} - Couldn't locate the Scenarios folder!",
                                  HERE.function_name())};
 
     const directory_iterator itEnd;
-    for (directory_iterator it{scenariosDir}; it != itEnd; ++it) {
+    for (directory_iterator it{cfg.scenariosDir}; it != itEnd; ++it) {
       fs::path file{it->path()};
       if (file.extension().string() != ".json")
         continue;
 
-      _scenarios.emplace_back(std::move(file));
+      cfg._scenarios.emplace_back(std::move(file));
     }
+
+    return cfg;
   }
 
  private:
+  Config() noexcept = default;
+
   fs::path projDir;
   fs::path scenariosDir;
 
@@ -994,7 +1008,7 @@ int main(int argc, zstring* argv) try {
   fflush(stdout);
 #endif  // NDEBUG
 
-  Config cfg;
+  Config cfg{Config::load()};
   Scenario scenario{cin, /*solveNow = */ false};
   const Scenario::Results& sol{
       scenario.solution(/*usingBFS = */ true, interactive)};
