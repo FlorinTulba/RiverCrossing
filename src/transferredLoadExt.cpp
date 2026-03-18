@@ -22,6 +22,7 @@
 #include "symbolsTable.h"
 #include "transferredLoadExt.h"
 #include "util.h"
+#include "warnings.h"
 
 #include <cassert>
 #include <cmath>
@@ -150,6 +151,7 @@ void MaxLoadValidatorExt::checkTypesCfg(const TypesConstraint& cfg,
                HERE.function_name(), cfg, minConfigWeight, _maxLoad)};
 }
 
+MUTE_MAYBE_NOEXCEPT_WARN
 /// @throw logic_error if the ids configuration does not respect current
 /// extension
 void MaxLoadValidatorExt::checkIdsCfg(const IdsConstraint&,
@@ -157,6 +159,7 @@ void MaxLoadValidatorExt::checkIdsCfg(const IdsConstraint&,
   // Checking the maxLoad constraint is unpractical here,
   // because of the extra id-s (a count of mandatory unspecified entities)
 }
+UNMUTE_WARNING
 
 MaxLoadValidatorExt::MaxLoadValidatorExt(
     double maxLoad_,

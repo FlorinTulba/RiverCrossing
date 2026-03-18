@@ -17,6 +17,7 @@
 #include "configParser.h"
 #include "symbolsTable.h"
 #include "util.h"
+#include "warnings.h"
 
 #include <climits>
 
@@ -83,6 +84,7 @@ class AbsConfigConstraintValidatorExt
   AbsConfigConstraintValidatorExt(
       std::unique_ptr<const IConfigConstraintValidatorExt> nextExt_) noexcept;
 
+  MUTE_MAYBE_NOEXCEPT_WARN
   /// @throw logic_error if the types configuration does not respect current
   /// extension
   virtual void checkTypesCfg(const TypesConstraint& /*cfg*/,
@@ -92,6 +94,7 @@ class AbsConfigConstraintValidatorExt
   /// extension
   virtual void checkIdsCfg(const IdsConstraint& /*cfg*/,
                            const ent::AllEntities& /*allEnts*/) const {}
+  UNMUTE_WARNING
 
  private:
   gsl::not_null<gsl::owner<const IConfigConstraintValidatorExt*>> nextExt;
@@ -376,11 +379,13 @@ class AbsTransferConstraintsExt
   _configValidatorExt(std::unique_ptr<const IConfigConstraintValidatorExt>
                           fromNextExt) const noexcept = 0;
 
+  MUTE_MAYBE_NOEXCEPT_WARN
   /// @return true only if cfg satisfies current extension
   /// @throw logic_error for invalid extension
   [[nodiscard]] virtual bool _check(const ent::MovingEntities&) const {
     return true;
   }
+  UNMUTE_WARNING
 
   // NOLINTBEGIN(cppcoreguidelines-non-private-member-variables-in-classes) :
   // Easier to use in subclasses when protected

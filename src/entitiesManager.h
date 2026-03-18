@@ -16,6 +16,7 @@
 #include "absEntity.h"
 #include "symbolsTable.h"
 #include "util.h"
+#include "warnings.h"
 
 #include <cstddef>
 
@@ -231,6 +232,7 @@ class IMovingEntitiesExt {
   /// Selecting a new group of entities for moving to the other bank
   virtual void newGroup(const std::set<unsigned>&) = 0;
 
+  MUTE_MAYBE_NOEXCEPT_WARN
   /// Adds a new entity to the group from the raft/bridge.
   /// @throw out_of_range for invalid id
   virtual void addEntity(unsigned /*id*/) {}
@@ -238,6 +240,7 @@ class IMovingEntitiesExt {
   /// Removes an existing entity from the raft/bridge
   /// @throw out_of_range for invalid id
   virtual void removeEntity(unsigned /*id*/) {}
+  UNMUTE_WARNING
 
   /**
   Some extensions might want to change the content of the Symbols Table
@@ -283,11 +286,13 @@ class DefMovingEntitiesExt final : public IMovingEntitiesExt {
   [[nodiscard]] std::unique_ptr<IMovingEntitiesExt> clone()
       const noexcept final;
 
+  MUTE_MAYBE_NOEXCEPT_WARN
   /// Display prefix extensions
   void formatPrefixTo(FmtCtxIt&) const final {}
 
   /// Display suffix extensions
   void formatSuffixTo(FmtCtxIt&) const final {}
+  UNMUTE_WARNING
 };
 
 /**
@@ -363,6 +368,7 @@ class AbsMovingEntitiesExt
   /// Selecting a new group of entities for moving to the other bank
   virtual void _newGroup(const std::set<unsigned>&) = 0;
 
+  MUTE_MAYBE_NOEXCEPT_WARN
   /// Adds a new entity to the group from the raft/bridge
   /// @throw out_of_range for invalid id
   virtual void _addEntity(unsigned /*id*/) {}
@@ -380,6 +386,7 @@ class AbsMovingEntitiesExt
 
   // Display suffix extensions
   virtual void _formatSuffixTo(FmtCtxIt&) const {}
+  UNMUTE_WARNING
 
   std::shared_ptr<const AllEntities>
       all;  // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)

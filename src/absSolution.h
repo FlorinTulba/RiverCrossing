@@ -15,6 +15,7 @@
 
 #include "configConstraint.h"
 #include "util.h"
+#include "warnings.h"
 
 #include <cstddef>
 
@@ -75,11 +76,13 @@ class IStateExt {
   [[nodiscard]] virtual std::shared_ptr<const IStateExt> extensionForNextState(
       const ent::MovingEntities&) const = 0;
 
+  MUTE_MAYBE_NOEXCEPT_WARN
   /**
   The browser visualizer shows various state information.
   The extensions may add some more.
   */
   [[nodiscard]] virtual std::string detailsForDemo() const { return {}; }
+  UNMUTE_WARNING
 
   // Display prefix extensions
   virtual void formatPrefixTo(FmtCtxIt&) const = 0;
@@ -187,6 +190,7 @@ class AbsStateExt : public IStateExt,
   [[nodiscard]] virtual std::unique_ptr<const IStateExt> _clone(
       const std::shared_ptr<const IStateExt>& nextExt_) const noexcept = 0;
 
+  MUTE_MAYBE_NOEXCEPT_WARN
   /// Validates the parameter state based on the constraints of the extension
   [[nodiscard]] virtual bool _validate() const { return true; }
 
@@ -216,6 +220,7 @@ class AbsStateExt : public IStateExt,
   virtual void _formatPrefixTo(FmtCtxIt&) const {}
 
   virtual void _formatSuffixTo(FmtCtxIt&) const {}
+  UNMUTE_WARNING
 
   // NOLINTBEGIN(cppcoreguidelines-non-private-member-variables-in-classes) :
   // Easier to use in subclasses when protected

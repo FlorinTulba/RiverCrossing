@@ -28,6 +28,10 @@ the order of destruction.
 
 MUTE_UNSAFE_BUFF_USE_WARN warns about potential unsafe  buffer usage, such as
 when using certain standard library functions that may lead to buffer overflows.
+
+MUTE_MAYBE_NOEXCEPT_WARN warns about functions/methods which could be declared
+as noexcept. It needs to be silenced for virtual methods where derived classes
+might not be able to enforce such a strong guarantee.
 */
 
 // UNMUTE_WARNING restores the previous warning state after suppression.
@@ -48,6 +52,8 @@ when using certain standard library functions that may lead to buffer overflows.
   _Pragma("clang diagnostic push") _Pragma( \
       "clang diagnostic ignored \"-Wunsafe-buffer-usage-in-libc-call\"")
 
+#define MUTE_MAYBE_NOEXCEPT_WARN _Pragma("clang diagnostic push")
+
 #define UNMUTE_WARNING _Pragma("clang diagnostic pop")
 
 #elif defined(__GNUC__) || defined(__GNUG__)  // GCC
@@ -58,6 +64,8 @@ when using certain standard library functions that may lead to buffer overflows.
 #define MUTE_EXIT_TIME_DTOR_WARN _Pragma("GCC diagnostic push")
 
 #define MUTE_UNSAFE_BUFF_USE_WARN _Pragma("GCC diagnostic push")
+
+#define MUTE_MAYBE_NOEXCEPT_WARN _Pragma("GCC diagnostic push")
 
 #define UNMUTE_WARNING _Pragma("GCC diagnostic pop")
 
@@ -83,6 +91,13 @@ when using certain standard library functions that may lead to buffer overflows.
 
 #define MUTE_UNSAFE_BUFF_USE_WARN __pragma(warning(push))
 
+/// For virtual methods not willing to force the noexcept guarantee on derived
+/// classes
+#define WARN_MSVC_MAYBE_NOEXCEPT 26440
+
+#define MUTE_MAYBE_NOEXCEPT_WARN \
+  __pragma(warning(push)) __pragma(warning(disable : WARN_MSVC_MAYBE_NOEXCEPT))
+
 #define UNMUTE_WARNING __pragma(warning(pop))
 
 #else  // Other compilers
@@ -90,6 +105,7 @@ when using certain standard library functions that may lead to buffer overflows.
 #define MUTE_GLOBAL_CTOR_WARN
 #define MUTE_EXIT_TIME_DTOR_WARN
 #define MUTE_UNSAFE_BUFF_USE_WARN
+#define MUTE_MAYBE_NOEXCEPT_WARN
 
 #define UNMUTE_WARNING
 
