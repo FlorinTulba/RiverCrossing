@@ -540,9 +540,14 @@ class Move : public rc::sol::IMove {
         idx{idx_} {
     using namespace std;
 
+    // False warning about using moved from object 'resultedSt_'.
+    // The used object is 'resultedSt', not 'resultedSt_'.
+#pragma warning(disable : 26800)
     const rc::ent::BankEntities& receiverBank{(resultedSt->nextMoveFromLeft())
                                                   ? resultedSt->leftBank()
                                                   : resultedSt->rightBank()};
+#pragma warning(default : 26800)
+
     const set<unsigned>& movedIds{movedEnts.ids()};
     const set<unsigned>& receiverBankIds{receiverBank.ids()};
 
@@ -1033,7 +1038,7 @@ class Solver {
         std::move(initialState),
         UINT_MAX));  // UINT_MAX index required for the fake initial move
 
-    assert(!initialState);  // moved to movesToExplore[0]
+    // initialState == nullptr (was moved to movesToExplore[0])
 
     do {  // NOLINT(cppcoreguidelines-avoid-do-while) : Simpler algorithm form
       const shared_ptr<const ChainedMove> move{movesToExplore.front()};
@@ -1073,7 +1078,7 @@ class Solver {
                 1U + move->index(),  // wraps around for UINT_MAX
                 move)};
 
-        assert(!nextState);  // moved to validNextMove
+        // nextState == nullptr (was moved to validNextMove)
 
         // Checking if the new state is a solution.
         // Timing, bank and raft/bridge (capacity & load) constraints all
