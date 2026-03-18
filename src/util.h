@@ -54,6 +54,8 @@
 #define LOC_INFO std::source_location
 #define HERE LOC_INFO::current()
 
+namespace rc {
+
 /// Concept for pointer-like types: raw pointers, smart pointers, and nullptr_t
 template <typename T>
 concept PointerLike =
@@ -77,8 +79,6 @@ inline decltype(auto) throwIfNull(PointerLike auto&& ptr,
 }
 
 using FmtCtxIt = std::format_context::iterator;
-
-namespace rc {
 
 /**
 Invokes 'f' callable. If 'f' throws, terminate() is called, simulating a

@@ -59,7 +59,7 @@ gsl::not_null<shared_ptr<const rc::cond::LogicalExpr>> canRowSemantic(
     const string& canRowExpr) {
   shared_ptr<const rc::cond::LogicalExpr> semantic{
       rc::grammar::parseCanRowExpr(canRowExpr)};
-  return throwIfNull<domain_error>(
+  return rc::throwIfNull<domain_error>(
       semantic, "CanRow parsing error! See the cause above.");
 }
 

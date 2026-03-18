@@ -111,19 +111,19 @@ namespace {
   return keysCount == 1ULL;
 }
 
-/// @return the semantic from nightModeExpr
-/// @throw domain_error if nightModeExpr is incorrect
-[[nodiscard]] std::shared_ptr<const rc::cond::LogicalExpr> nightModeSemantic(
-    const string& nightModeExpr) {
-  std::shared_ptr<const rc::cond::LogicalExpr> semantic{
-      rc::grammar::parseNightModeExpr(nightModeExpr)};
-  return throwIfNull<domain_error>(
-      semantic, "NightMode parsing error! See the cause above.");
-}
-
 using namespace rc;
 using namespace rc::ent;
 using namespace rc::cond;
+
+/// @return the semantic from nightModeExpr
+/// @throw domain_error if nightModeExpr is incorrect
+[[nodiscard]] std::shared_ptr<const LogicalExpr> nightModeSemantic(
+    const string& nightModeExpr) {
+  std::shared_ptr<const LogicalExpr> semantic{
+      grammar::parseNightModeExpr(nightModeExpr)};
+  return throwIfNull<domain_error>(
+      semantic, "NightMode parsing error! See the cause above.");
+}
 
 /**
 Some scenarios mention how many entities can be simultaneously on the raft /

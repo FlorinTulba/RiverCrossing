@@ -507,7 +507,7 @@ class State : public rc::sol::IState {
 
   /// Formats the state. If the bool param is true, it shows the direction of
   /// the next move
-  void formatTo(FmtCtxIt& outIt, bool showNextMoveDir) const override {
+  void formatTo(rc::FmtCtxIt& outIt, bool showNextMoveDir) const override {
     using namespace std;
     rc::InfoWrapper iw{*extension, outIt};
 
@@ -581,7 +581,7 @@ class Move : public rc::sol::IMove {
   [[nodiscard]] unsigned index() const noexcept override { return idx; }
 
   /// Formats the move. When the bool is true, it shows next move's direction
-  void formatTo(FmtCtxIt& outIt, bool showNextMoveDir) const override {
+  void formatTo(rc::FmtCtxIt& outIt, bool showNextMoveDir) const override {
     using namespace std;
 
     if (!movedEnts.empty()) {
@@ -744,7 +744,7 @@ class Attempt : public rc::sol::IAttempt {
            (*targetLeftBank == moves.back().resultedState()->leftBank());
   }
 
-  void formatTo(FmtCtxIt& outIt) const override {
+  void formatTo(rc::FmtCtxIt& outIt) const override {
     if (!initFakeMove)
       return;
 
