@@ -155,32 +155,32 @@ CXX := g++
 override CC = $(CXX)
 
 # clang++ and g++ have same suffix (g++)
-__OMIT_CLAN := $(CC:clan%=%)
+__OMIT_CLAN := $(CXX:clan%=%)
 __AFTER_GPLUSPLUS := $(strip $(__OMIT_CLAN:g++%=%))
-CC_TYPE := $(CC:%$(__AFTER_GPLUSPLUS)=%)# clang++ or g++ or empty
+CXX_TYPE := $(CXX:%$(__AFTER_GPLUSPLUS)=%)# clang++ or g++ or empty
 
-ifneq ($(CC_TYPE:clan%=%),g++)
+ifneq ($(CXX_TYPE:clan%=%),g++)
   $(error Wrong CXX make parameter ($(CXX))!\
           Expecting CXX=[clan]g++[[-]VersionMajor].)
 endif
 
-CC_VERSION := $(shell $(CC) --version | head -n 1)
-ifeq ($(Empty),$(CC_VERSION))
-  $(error Cannot execute '$(CC) --version'!)
+CXX_VERSION := $(shell $(CXX) --version | head -n 1)
+ifeq ($(Empty),$(CXX_VERSION))
+  $(error Cannot execute '$(CXX) --version'!)
 endif
 
 # Finding the latest C++ language standard available for the given compiler.
 # Clang++ will provide this information while trying to compile a dummy empty file
 # for an invalid value for '-std' as hint[s] about the possible valid values.
 # G++ offers the information while launched with "-v --help" parameters.
-ifeq (clang++,$(CC_TYPE))
+ifeq (clang++,$(CXX_TYPE))
   CPP_STANDARD := $(shell echo "" |\
-    $(CC) -c -std=c++latest -x c++ - 2>&1 |\
+    $(CXX) -c -std=c++latest -x c++ - 2>&1 |\
     grep -oEe "c\+\+2[0-9a-z]" |\
     sort -r |\
     head -n1)
 else
-  CPP_STANDARD := $(shell $(CC) -v --help 2>/dev/null |\
+  CPP_STANDARD := $(shell $(CXX) -v --help 2>/dev/null |\
     grep -e "-std=c++2" |\
     grep -oEe "c\+\+2[0-9a-z]" |\
     sort -r |\
@@ -188,11 +188,11 @@ else
 endif
 
 CPP_STANDARD_TEST := $(shell echo "" |\
-  $(CC) -c -std=$(CPP_STANDARD) -x c++ - -o /dev/null 2>&1 |\
+  $(CXX) -c -std=$(CPP_STANDARD) -x c++ - -o /dev/null 2>&1 |\
   grep -o error)
 
 ifeq ($(CPP_STANDARD_TEST),error)
-  $(error Invalid provided/determined C++ standard for $(CC): $(CPP_STANDARD)!)
+  $(error Invalid provided/determined C++ standard for $(CXX): $(CPP_STANDARD)!)
 endif
 
 # Determine OS(Linux or WSL/MSYS2/Cygwin or Android or FreeBSD or MacOS) name
@@ -227,7 +227,7 @@ endif
 
 show_compiler_info:
 	@printf "\n=====================\n\
-	Using $(CPP_STANDARD) standard from compiler $(CC_VERSION) \
+	Using $(CPP_STANDARD) standard from compiler $(CXX_VERSION) \
 	for a $(UNAME_M) machine!\n\
 	If there appear errors within standard headers, \
 	retry providing the CPP_STANDARD=<next lower standard> \
@@ -249,7 +249,7 @@ TESTS_ONLY_SOURCES := $(notdir $(wildcard $(TESTS_DIR)*.cpp))
 TESTS_SOURCES := $(SOURCES) $(TESTS_ONLY_SOURCES)
 
 # Helper base paths for the generated files
-BASE_OUT_DIR := $(__BASE_OUT_DIR)/$(CC_TYPE)/
+BASE_OUT_DIR := $(__BASE_OUT_DIR)/$(CXX_TYPE)/
 
 BYPASSED_WARNINGS :=\
   -Wno-missing-declarations\
@@ -272,7 +272,7 @@ COMMON_CXXFLAGS :=\
   -std=$(CPP_STANDARD) -march=native -Ofast -fno-finite-math-only\
   -Wall -Wextra
 
-ifeq (clang++,$(CC_TYPE))
+ifeq (clang++,$(CXX_TYPE))
   __FLAGS_TO_REPLACE  := -Ofast -fno-finite-math-only
   __REPLACEMENT_FLAGS := -O3 -ffast-math -fhonor-nans
   COMMON_CXXFLAGS :=\
@@ -283,25 +283,25 @@ endif
 ifeq (Msys,$(UNAME_O))
   CURRENT_OS := MSYS2
 
-  ifeq (clang++,$(CC_TYPE))
+  ifeq (clang++,$(CXX_TYPE))
     COMMON_CXXFLAGS += -stdlib=libc++ -fexperimental-library
   endif
 
 else ifeq (Cygwin,$(UNAME_O))
   CURRENT_OS := Cygwin
 
-  ifeq (clang++,$(CC_TYPE))
+  ifeq (clang++,$(CXX_TYPE))
     COMMON_CXXFLAGS += -stdlib=libc++ -fexperimental-library
 
   else # GCC
     # GCC-16 test packages from Cygwin need to unlock non-standard GNU extensions,
     # like offering an unlocked 'fwrite' ('fwrite_unlocked') in <print> header.
     # Defining _GNU_SOURCE unlocks such extensions.
-    GCC_MAJOR_VER := $(shell $(CC) -dumpversion | cut -d. -f1)
+    GCC_MAJOR_VER := $(shell $(CXX) -dumpversion | cut -d. -f1)
     IS_VER_GE_16 := $(shell [ $$(echo $(GCC_MAJOR_VER)) -ge 16 ] && echo 1 ||\
       echo 0)
     ifeq ($(IS_VER_GE_16),1)
-      ARE_GNU_EXTENSIONS_LOCKED := $(shell $(CC) -dM -E -x c++ /dev/null |\
+      ARE_GNU_EXTENSIONS_LOCKED := $(shell $(CXX) -dM -E -x c++ /dev/null |\
         grep -q "_GNU_SOURCE" && echo 0 ||\
         echo 1)
       ifeq ($(ARE_GNU_EXTENSIONS_LOCKED),1)
@@ -313,14 +313,14 @@ else ifeq (Cygwin,$(UNAME_O))
 else ifeq (WSL,$(findstring WSL,$(UNAME_R)))
   CURRENT_OS := WSL
 
-  ifeq (clang++,$(CC_TYPE))
+  ifeq (clang++,$(CXX_TYPE))
     COMMON_CXXFLAGS += -stdlib=libc++ -fexperimental-library
   endif
 
 else ifeq (FreeBSD,$(UNAME_O))
   CURRENT_OS := FreeBSD
 
-  ifeq (clang++,$(CC_TYPE))
+  ifeq (clang++,$(CXX_TYPE))
     COMMON_CXXFLAGS += -fexperimental-library
  
   else # GCC
@@ -331,7 +331,7 @@ else ifeq (FreeBSD,$(UNAME_O))
 else ifeq (Darwin,$(UNAME_O))
   CURRENT_OS := MacOS
 
-  ifeq (g++,$(CC_TYPE))
+  ifeq (g++,$(CXX_TYPE))
     COMMON_CXXFLAGS += -stdlib=libstdc++
  
   else # AppleClang
@@ -345,14 +345,14 @@ else ifeq (Android,$(UNAME_O))
   # It uses already 'libc++', no need to require it.
   # The experimental library appears to be unavailable,
   # thus '-fexperimental-library' was not appended.
-  ifeq (g++,$(CC_TYPE))
+  ifeq (g++,$(CXX_TYPE))
     $(error g++ on Termux is a link to clang++!)
   endif
 
 else ifeq (GNU/Linux,$(UNAME_O))
   CURRENT_OS := Linux
 
-  ifeq (clang++,$(CC_TYPE))
+  ifeq (clang++,$(CXX_TYPE))
     COMMON_CXXFLAGS += -stdlib=libc++ -fexperimental-library
   endif
 
@@ -381,14 +381,17 @@ TARGET_EXT := $(if $(filter MSYS2 Cygwin,$(CURRENT_OS)),.exe)
 # The included file below must define the path: INCLUDE_DIR_GSL
 include GSL_Dirs$(CURRENT_OS).mk
 
-ifeq ($(Empty),$(INCLUDE_DIR_GSL))
-  $(error GSL include folder not set!)
+INCLUDE_DIR_GSL_NO_TRAILING_SLASH := $(abspath $(INCLUDE_DIR_GSL:%/=%))
+ifeq ($(Empty),$(INCLUDE_DIR_GSL_NO_TRAILING_SLASH))
+  $(error GSL include folder not set or doesn't exist: '$(INCLUDE_DIR_GSL)'!)
 endif
 
-ifeq ($(Empty),$(wildcard $(INCLUDE_DIR_GSL)gsl))
+ifeq ($(Empty),$(wildcard $(INCLUDE_DIR_GSL_NO_TRAILING_SLASH)/gsl))
   $(error GSL include folder ($(INCLUDE_DIR_GSL))\
           must contain a 'gsl' subfolder!)
 endif
+
+INCLUDE_DIR_GSL := $(INCLUDE_DIR_GSL_NO_TRAILING_SLASH)/
 
 # Configuration for necessary Boost libraries
 REQUIRED_BOOST_LIBS_SKIP_TEST := $(Empty)# None yet; Insert any apart from boost_unit_test_framework
@@ -397,7 +400,7 @@ ALL_REQUIRED_BOOST_LIBS :=\
 
 # Other necessary libraries.None for now.
 # Example exception: MSYS2 MinGW/UCRT with g++15 requires 'stdc++exp'
-EXTRA_LIBS := $(if $(filter MSYS2_g++,$(CURRENT_OS)_$(CC_TYPE)),stdc++exp)
+EXTRA_LIBS := $(if $(filter MSYS2_g++,$(CURRENT_OS)_$(CXX_TYPE)),stdc++exp)
 
 # The included file below must define 2 paths: INCLUDE_DIR_BOOST and LIB_DIR_BOOST.
 # It also has to define 'boost_libs_available' (.PHONY) target which ensures that
@@ -406,19 +409,23 @@ EXTRA_LIBS := $(if $(filter MSYS2_g++,$(CURRENT_OS)_$(CC_TYPE)),stdc++exp)
 # '-mgw14-mt[-d]-x64-1_87' (for MSYS2 MinGW with gcc-14, multithreading[, debug], x64, Boost 1.87)
 include BoostDirs$(CURRENT_OS).mk
 
-ifeq ($(Empty),$(INCLUDE_DIR_BOOST))
-  $(error Boost include folder not set!)
-endif
-ifeq ($(Empty),$(LIB_DIR_BOOST))
-  $(error Boost lib folder not set!)
+INCLUDE_DIR_BOOST_NO_TRAILING_SLASH := $(abspath $(INCLUDE_DIR_BOOST:%/=%))
+ifeq ($(Empty),$(INCLUDE_DIR_BOOST_NO_TRAILING_SLASH))
+  $(error Boost include folder not set or doesn't exist: '$(INCLUDE_DIR_BOOST)'!)
 endif
 
-ifeq ($(Empty),$(wildcard $(INCLUDE_DIR_BOOST)boost))
+LIB_DIR_BOOST_NO_TRAILING_SLASH := $(abspath $(LIB_DIR_BOOST:%/=%))
+ifeq ($(Empty),$(LIB_DIR_BOOST_NO_TRAILING_SLASH))
+  $(error Boost lib folder not set or doesn't exist: '$(LIB_DIR_BOOST)'!)
+endif
+
+ifeq ($(Empty),$(wildcard $(INCLUDE_DIR_BOOST_NO_TRAILING_SLASH)/boost))
   $(error Boost include folder ($(INCLUDE_DIR_BOOST))\
           must contain a 'boost' subfolder!)
 endif
 
-LIB_DIR_BOOST_NO_TRAILING_SLASH := $(LIB_DIR_BOOST:%/=%)
+INCLUDE_DIR_BOOST := $(INCLUDE_DIR_BOOST_NO_TRAILING_SLASH)/
+LIB_DIR_BOOST := $(LIB_DIR_BOOST_NO_TRAILING_SLASH)/
 
 PROJECT_INCLUDE_DIRS := "$(SRC_DIR)"
 TESTS_ONLY_INCLUDE_DIR := "$(TESTS_DIR)"
@@ -455,7 +462,7 @@ endif
 # Clang++ should use libc++, compiler-rt, libunwind and lld (defaults on MacOS,
 #  FreeBSD, Android and MSYS2-Clang64).
 ifeq ($(Empty),$(filter MacOS FreeBSD Android,$(CURRENT_OS)))
-  ifeq ($(CC_TYPE),clang++)
+  ifeq ($(CXX_TYPE),clang++)
     __MSYS2_ENV := $(shell echo "$(MSYSTEM)" | grep -oie "^[a-z]*")
     ifneq ($(CURRENT_OS)_$(__MSYS2_ENV),MSYS2_CLANG)
       COMMON_LINKFLAGS +=\
@@ -502,7 +509,7 @@ define configDeps
 	rm -f $$($(1)_DEPDIR)/*.d
 endef
 
-__PCH_PREFIX := $(PCH_STORE_FOLDER)/$(CURRENT_OS)_$(ARCH_LABEL)_$(CC_TYPE)_
+__PCH_PREFIX := $(PCH_STORE_FOLDER)/$(CURRENT_OS)_$(ARCH_LABEL)_$(CXX_TYPE)_
 
 # Creates a variable pointing the PCH file for the build type;
 # Sets target-specific variables for the mentioned PCH file;
@@ -751,7 +758,7 @@ endef
 define compileCpp
 	@printf "\n[$(BUILD_TYPE)] ---- Compiling '$(<F)' ----\n"
 	$(CXX) -c $(CXXFLAGS) $(BYPASSED_WARNINGS) $(INCLUDES)\
-	  $(if $(filter clang++,$(CC_TYPE)),-include-pch $(PCH_FILE))\
+	  $(if $(filter clang++,$(CXX_TYPE)),-include-pch $(PCH_FILE))\
 	  $(depFileCompileFlags) -o $@ $< &&\
 	$(fixDepFile)
 endef
@@ -768,7 +775,7 @@ define addCompileCppRule
   $(eval p_1 := $(strip $(1)))
 
   $($(p_1)_OUT_DIR)/%.o: $(SRC_DIR)%.cpp\
-      $(if $(filter-out FreeBSD_g++,$(CURRENT_OS)_$(CC_TYPE)),$(PCH_$(p_1))) |\
+      $(if $(filter-out FreeBSD_g++,$(CURRENT_OS)_$(CXX_TYPE)),$(PCH_$(p_1))) |\
       $($(p_1)_OUT_DIR) $($(p_1)_DEPDIR) $($(p_1)_DEPDIR)/%.d
 	$(value compileCpp)
 endef
@@ -778,7 +785,7 @@ $(foreach bt,$(BUILD_TYPES),$(eval $(call addCompileCppRule,$(bt))))
 # A part of the sources for the 'tests' target can be found only in TESTS_DIR
 # g++ on FreeBSD won't use a precompiled header!
 $(TESTS_OUT_DIR)/%.o: $(TESTS_DIR)%.cpp\
-    $(if $(filter-out FreeBSD_g++,$(CURRENT_OS)_$(CC_TYPE)),$(PCH_TESTS)) |\
+    $(if $(filter-out FreeBSD_g++,$(CURRENT_OS)_$(CXX_TYPE)),$(PCH_TESTS)) |\
     $(TESTS_OUT_DIR) $(TESTS_DEPDIR) $(TESTS_DEPDIR)/%.d
 	$(compileCpp)
 
@@ -808,7 +815,7 @@ define addGeneratePchRule
   $(PCH_$(p_1)): $(PCH_GENERATED_FROM) |\
       $(PCH_STORE_FOLDER) $($(p_1)_DEPDIR)\
       $($(p_1)_DEPDIR)/$(STEM_PRECOMPILED_H).d
-ifneq (FreeBSD_g++,$(CURRENT_OS)_$(CC_TYPE))
+ifneq (FreeBSD_g++,$(CURRENT_OS)_$(CXX_TYPE))
 	$(value generatePch)
 endif
 
