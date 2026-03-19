@@ -279,19 +279,25 @@ ifeq (clang++,$(CXX_TYPE))
     $(subst $(__FLAGS_TO_REPLACE),$(__REPLACEMENT_FLAGS),$(COMMON_CXXFLAGS))
 endif
 
+# Flag for the standard library to use: 'libstdc++' for g++ and 'libc++' for clang++.
+# It is specified only when the platform considers the other library as default.
+STDLIB_FLAG := $(Empty)
+
 # Platform/OS-specific variables/changes
 ifeq (Msys,$(UNAME_O))
   CURRENT_OS := MSYS2
 
   ifeq (clang++,$(CXX_TYPE))
-    COMMON_CXXFLAGS += -stdlib=libc++ -fexperimental-library
+    STDLIB_FLAG := -stdlib=libc++
+    COMMON_CXXFLAGS += -fexperimental-library
   endif
 
 else ifeq (Cygwin,$(UNAME_O))
   CURRENT_OS := Cygwin
 
   ifeq (clang++,$(CXX_TYPE))
-    COMMON_CXXFLAGS += -stdlib=libc++ -fexperimental-library
+    STDLIB_FLAG := -stdlib=libc++
+    COMMON_CXXFLAGS += -fexperimental-library
 
   else # GCC
     # GCC-16 test packages from Cygwin need to unlock non-standard GNU extensions,
@@ -314,7 +320,8 @@ else ifeq (WSL,$(findstring WSL,$(UNAME_R)))
   CURRENT_OS := WSL
 
   ifeq (clang++,$(CXX_TYPE))
-    COMMON_CXXFLAGS += -stdlib=libc++ -fexperimental-library
+    STDLIB_FLAG := -stdlib=libc++
+    COMMON_CXXFLAGS += -fexperimental-library
   endif
 
 else ifeq (FreeBSD,$(UNAME_O))
@@ -325,14 +332,15 @@ else ifeq (FreeBSD,$(UNAME_O))
  
   else # GCC
     # Gcc from FreeBSD has problems using precompiled headers
-    COMMON_CXXFLAGS += -stdlib=libstdc++ -DH_PRECOMPILED
+    STDLIB_FLAG := -stdlib=libstdc++
+    COMMON_CXXFLAGS += -DH_PRECOMPILED
   endif
 
 else ifeq (Darwin,$(UNAME_O))
   CURRENT_OS := MacOS
 
   ifeq (g++,$(CXX_TYPE))
-    COMMON_CXXFLAGS += -stdlib=libstdc++
+    STDLIB_FLAG += -stdlib=libstdc++
  
   else # AppleClang
     COMMON_CXXFLAGS += -fexperimental-library
@@ -353,13 +361,16 @@ else ifeq (GNU/Linux,$(UNAME_O))
   CURRENT_OS := Linux
 
   ifeq (clang++,$(CXX_TYPE))
-    COMMON_CXXFLAGS += -stdlib=libc++ -fexperimental-library
+    STDLIB_FLAG := -stdlib=libc++
+    COMMON_CXXFLAGS += -fexperimental-library
   endif
 
 else
   UNAME_A := $(shell uname -a)
   $(error OS not handled! The answer to 'uname -a' is: $(UNAME_A))
 endif
+
+COMMON_CXXFLAGS += $(STDLIB_FLAG)
 
 # If the env variable USE_COLOR exists and is not 0,
 # then use -fdiagnostics-color=always
@@ -427,23 +438,30 @@ endif
 INCLUDE_DIR_BOOST := $(INCLUDE_DIR_BOOST_NO_TRAILING_SLASH)/
 LIB_DIR_BOOST := $(LIB_DIR_BOOST_NO_TRAILING_SLASH)/
 
+# The list of folders used when searching for system headers
+SYSTEM_INCLUDE_DIRS :=\
+  $(realpath $(shell $(CXX) $(STDLIB_FLAG) -E -xc++ -v /dev/null 2>&1 |\
+  sed -n '/\#include <...> search starts here:/,/End of search list./p' |\
+  grep '^ ' | sed 's/ //'))
+
 PROJECT_INCLUDE_DIRS := "$(SRC_DIR)"
 TESTS_ONLY_INCLUDE_DIR := "$(TESTS_DIR)"
-FOREIGN_INCLUDE_DIRS :=\
-  "$(INCLUDE_DIR_BOOST)"\
-  "$(INCLUDE_DIR_GSL)"
 
-# idirafter and isystem can apply to any include, but they mark those as system,
-# thus no warnings are generated from such includes.
-# idirafter ensures the actual system includes are searched before idirafter ones.
-# Using isystem for default Boost headers installation in
-# /usr/include (which is already a system include folder)
-# generates file not found error for standard headers like <stdlib.h>,
-# while idirafter does the job.
-# iquote applies only to #include "".
+# Folders for headers from required libraries to be added as '-isystem'
+# for avoiding warnings about them.
+# When those libraries are installed at default locations,
+# the folders are already known by the compiler (SYSTEM_INCLUDE_DIRS)
+# and don't need to be added again with '-isystem'.
+FOREIGN_INCLUDE_DIRS :=\
+  $(if $(filter $(INCLUDE_DIR_BOOST_NO_TRAILING_SLASH),$(SYSTEM_INCLUDE_DIRS)),\
+    $(Empty),"$(INCLUDE_DIR_BOOST)")\
+  $(if $(filter $(INCLUDE_DIR_GSL_NO_TRAILING_SLASH),$(SYSTEM_INCLUDE_DIRS)),\
+    $(Empty),"$(INCLUDE_DIR_GSL)")
+
+# '-iquote' applies only to #include "" (headers from the project)
 COMMON_INCLUDES :=\
   $(PROJECT_INCLUDE_DIRS:%=-iquote %)\
-  $(FOREIGN_INCLUDE_DIRS:%=-idirafter %)
+  $(FOREIGN_INCLUDE_DIRS:%=-isystem %)
 TESTS_ONLY_INCLUDES := -iquote $(TESTS_ONLY_INCLUDE_DIR)
 
 COMMON_LINKFLAGS := -flto=auto -L"$(LIB_DIR_BOOST_NO_TRAILING_SLASH)"
