@@ -396,6 +396,10 @@ STRIP_FLAGS := $(if $(filter-out MacOS,$(CURRENT_OS)),-s)
 # Executables have '.exe' extensions (on MSYS2/Cygwin[/MSVC]) or none.
 TARGET_EXT := $(if $(filter MSYS2 Cygwin,$(CURRENT_OS)),.exe)
 
+# The list of (non-system) libraries used directly in the project (e.g. BOOST, GSL).
+# Appended at the beginning of each section dedicated to such a library.
+MAIN_LIBS := $(Empty)
+
 # '[g]realpath' is required for running this Makefile.
 # MacOS/FreeBSD need the 'grealpath', because 'realpath' found there doesn't
 # support the '-e' flag (which checks the existence of all path components).
@@ -414,6 +418,7 @@ CHECK_AND_CLEAN_PATH = $(shell $(_RealPathCmd) -eq "$(subst ",$(Empty),$(1))")
 
 # The included file below must define the path: INCLUDE_DIR_GSL
 include GSL_Dirs$(CURRENT_OS).mk
+MAIN_LIBS += GSL
 
 INCLUDE_DIR_GSL_NO_TRAILING_SLASH :=\
   $(call CHECK_AND_CLEAN_PATH,$(INCLUDE_DIR_GSL))
@@ -434,16 +439,13 @@ REQUIRED_BOOST_LIBS_SKIP_TEST := $(Empty)# None yet; Insert any apart from boost
 ALL_REQUIRED_BOOST_LIBS :=\
   $(REQUIRED_BOOST_LIBS_SKIP_TEST) boost_unit_test_framework
 
-# Other necessary libraries.None for now.
-# Example exception: MSYS2 MinGW/UCRT with g++15 requires 'stdc++exp'
-EXTRA_LIBS := $(if $(filter MSYS2_g++,$(CURRENT_OS)_$(CXX_TYPE)),stdc++exp)
-
 # The included file below must define 2 paths: INCLUDE_DIR_BOOST and LIB_DIR_BOOST.
 # It also has to define 'boost_libs_available' (.PHONY) target which ensures that
 # ALL_REQUIRED_BOOST_LIBS are created/available.
 # When necessary, it has to set BOOST_LIB_ENDING_DEBUG|RELEASE to somethink like
 # '-mgw14-mt[-d]-x64-1_87' (for MSYS2 MinGW with gcc-14, multithreading[, debug], x64, Boost 1.87)
 include BoostDirs$(CURRENT_OS).mk
+MAIN_LIBS += Boost
 
 INCLUDE_DIR_BOOST_NO_TRAILING_SLASH :=\
   $(call CHECK_AND_CLEAN_PATH,$(INCLUDE_DIR_BOOST))
@@ -464,6 +466,10 @@ endif
 
 INCLUDE_DIR_BOOST := $(INCLUDE_DIR_BOOST_NO_TRAILING_SLASH)/
 LIB_DIR_BOOST := $(LIB_DIR_BOOST_NO_TRAILING_SLASH)/
+
+# Other necessary (system) libraries.
+# Example exception: MSYS2 MinGW/UCRT with g++15 requires 'stdc++exp'
+EXTRA_LIBS := $(if $(filter MSYS2_g++,$(CURRENT_OS)_$(CXX_TYPE)),stdc++exp)
 
 # The list of folders used when searching for system headers
 # Apart from MSVC/ClangCl, the other compilers don't have spaces in these paths.
