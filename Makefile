@@ -58,6 +58,18 @@ Space := $(Empty) $(Empty)
 # Instead of passing a,b,c - provide a$(Comma)b$(Comma)c
 Comma := ,
 
+# Checks if a required command is installed and throws an error if missing
+define checkRequiredCommand
+  ifeq ($$(Empty),$$(shell command -v $(1) 2>/dev/null))
+    $$(error '$(1)' must be installed for running this Makefile)
+  endif
+endef
+
+$(eval $(call checkRequiredCommand,bash))
+SHELL := $(shell command -v bash)
+
+$(eval $(call checkRequiredCommand,which))
+
 # In order to be able to use relative paths inside the Makefile,
 # the current working directory must be (set as) the one containing this Makefile.
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -97,11 +109,6 @@ GOALS_NEEDING_DEPFILES :=\
 
 # Goals added so far to these 3 lists are .PHONY. Later additions to the lists are actual files.
 .PHONY: $(DEPFILES_AVERSE_GOALS) $(DEPFILES_NEUTRAL_GOALS) $(GOALS_NEEDING_DEPFILES)
-
-SHELL := $(shell command -v bash)
-ifeq ($(Empty),$(SHELL))
-  $(error Bash shell must be installed for running this Makefile.)
-endif
 
 # Variable used inside printf to produce sound notifications.
 # 'printf "$(Bell)"' could announce the completion of a task or finding a certain error
@@ -389,15 +396,33 @@ STRIP_FLAGS := $(if $(filter-out MacOS,$(CURRENT_OS)),-s)
 # Executables have '.exe' extensions (on MSYS2/Cygwin[/MSVC]) or none.
 TARGET_EXT := $(if $(filter MSYS2 Cygwin,$(CURRENT_OS)),.exe)
 
+# '[g]realpath' is required for running this Makefile.
+# MacOS/FreeBSD need the 'grealpath', because 'realpath' found there doesn't
+# support the '-e' flag (which checks the existence of all path components).
+_RealPathCmd := $(if $(filter MacOS FreeBSD,$(CURRENT_OS)),grealpath,realpath)
+$(eval $(call checkRequiredCommand,$(_RealPathCmd)))
+
+# Paths provided by the user for Boost / Microsoft GSL might:
+# - contain spaces
+# - have a/b/c/../../d form
+# - be wrapped in ""
+# - have/lack a trailing '/'
+# Next function removes any '"' or a trailing '/' from such paths.
+# If the path (or any of its parts) doesn't exist, it returns nothing.
+# Note: the '"' right after subst should not be escaped.
+CHECK_AND_CLEAN_PATH = $(shell $(_RealPathCmd) -eq "$(subst ",$(Empty),$(1))")
+
 # The included file below must define the path: INCLUDE_DIR_GSL
 include GSL_Dirs$(CURRENT_OS).mk
 
-INCLUDE_DIR_GSL_NO_TRAILING_SLASH := $(abspath $(INCLUDE_DIR_GSL:%/=%))
+INCLUDE_DIR_GSL_NO_TRAILING_SLASH :=\
+  $(call CHECK_AND_CLEAN_PATH,$(INCLUDE_DIR_GSL))
 ifeq ($(Empty),$(INCLUDE_DIR_GSL_NO_TRAILING_SLASH))
   $(error GSL include folder not set or doesn't exist: '$(INCLUDE_DIR_GSL)'!)
 endif
 
-ifeq ($(Empty),$(wildcard $(INCLUDE_DIR_GSL_NO_TRAILING_SLASH)/gsl))
+ifeq ($(Empty),$(call\
+    CHECK_AND_CLEAN_PATH,$(INCLUDE_DIR_GSL_NO_TRAILING_SLASH)/gsl))
   $(error GSL include folder ($(INCLUDE_DIR_GSL))\
           must contain a 'gsl' subfolder!)
 endif
@@ -420,17 +445,19 @@ EXTRA_LIBS := $(if $(filter MSYS2_g++,$(CURRENT_OS)_$(CXX_TYPE)),stdc++exp)
 # '-mgw14-mt[-d]-x64-1_87' (for MSYS2 MinGW with gcc-14, multithreading[, debug], x64, Boost 1.87)
 include BoostDirs$(CURRENT_OS).mk
 
-INCLUDE_DIR_BOOST_NO_TRAILING_SLASH := $(abspath $(INCLUDE_DIR_BOOST:%/=%))
+INCLUDE_DIR_BOOST_NO_TRAILING_SLASH :=\
+  $(call CHECK_AND_CLEAN_PATH,$(INCLUDE_DIR_BOOST))
 ifeq ($(Empty),$(INCLUDE_DIR_BOOST_NO_TRAILING_SLASH))
   $(error Boost include folder not set or doesn't exist: '$(INCLUDE_DIR_BOOST)'!)
 endif
 
-LIB_DIR_BOOST_NO_TRAILING_SLASH := $(abspath $(LIB_DIR_BOOST:%/=%))
+LIB_DIR_BOOST_NO_TRAILING_SLASH := $(call CHECK_AND_CLEAN_PATH,$(LIB_DIR_BOOST))
 ifeq ($(Empty),$(LIB_DIR_BOOST_NO_TRAILING_SLASH))
   $(error Boost lib folder not set or doesn't exist: '$(LIB_DIR_BOOST)'!)
 endif
 
-ifeq ($(Empty),$(wildcard $(INCLUDE_DIR_BOOST_NO_TRAILING_SLASH)/boost))
+ifeq ($(Empty),$(call\
+    CHECK_AND_CLEAN_PATH,$(INCLUDE_DIR_BOOST_NO_TRAILING_SLASH)/boost))
   $(error Boost include folder ($(INCLUDE_DIR_BOOST))\
           must contain a 'boost' subfolder!)
 endif
@@ -439,6 +466,8 @@ INCLUDE_DIR_BOOST := $(INCLUDE_DIR_BOOST_NO_TRAILING_SLASH)/
 LIB_DIR_BOOST := $(LIB_DIR_BOOST_NO_TRAILING_SLASH)/
 
 # The list of folders used when searching for system headers
+# Apart from MSVC/ClangCl, the other compilers don't have spaces in these paths.
+# 'realpath' was still needed since they do use to provide a/b/c/../..d style paths.
 SYSTEM_INCLUDE_DIRS :=\
   $(realpath $(shell $(CXX) $(STDLIB_FLAG) -E -xc++ -v /dev/null 2>&1 |\
   sed -n '/\#include <...> search starts here:/,/End of search list./p' |\
