@@ -482,22 +482,30 @@ SYSTEM_INCLUDE_DIRS :=\
 PROJECT_INCLUDE_DIRS := "$(SRC_DIR)"
 TESTS_ONLY_INCLUDE_DIR := "$(TESTS_DIR)"
 
+# '-iquote' applies only to #include "" (headers from the project)
+COMMON_INCLUDES := $(PROJECT_INCLUDE_DIRS:%=-iquote %)
+TESTS_ONLY_INCLUDES := -iquote $(TESTS_ONLY_INCLUDE_DIR)
+
 # Folders for headers from required libraries to be added as '-isystem'
 # for avoiding warnings about them.
 # When those libraries are installed at default locations,
 # the folders are already known by the compiler (SYSTEM_INCLUDE_DIRS)
 # and don't need to be added again with '-isystem'.
-FOREIGN_INCLUDE_DIRS :=\
-  $(if $(filter $(INCLUDE_DIR_BOOST_NO_TRAILING_SLASH),$(SYSTEM_INCLUDE_DIRS)),\
-    $(Empty),"$(INCLUDE_DIR_BOOST)")\
-  $(if $(filter $(INCLUDE_DIR_GSL_NO_TRAILING_SLASH),$(SYSTEM_INCLUDE_DIRS)),\
-    $(Empty),"$(INCLUDE_DIR_GSL)")
+# When installed at paths containing spaces, they are clearly not among SYSTEM_INCLUDE_DIRS
+# 'headerDir' takes as parameter the uppercase library name (BOOST or GSL)
+# and returns nothing or '-isystem "$(INCLUDE_DIR_$(Lib)_NO_TRAILING_SLASH)"'
+define headersDir
+$(strip\
+  $(eval _Lib := $(shell echo $(1) | tr '[:lower:]' '[:upper:]'))\
+  $(eval _IncludeDirNoTrailingSlash := $(INCLUDE_DIR_$(_Lib)_NO_TRAILING_SLASH))\
+  \
+  $(if $(word 2,$(_IncludeDirNoTrailingSlash)),\
+    -isystem "$(_IncludeDirNoTrailingSlash)",\
+    $(if $(filter-out $(SYSTEM_INCLUDE_DIRS),$(_IncludeDirNoTrailingSlash)),\
+      -isystem "$(_IncludeDirNoTrailingSlash)")))
+endef
 
-# '-iquote' applies only to #include "" (headers from the project)
-COMMON_INCLUDES :=\
-  $(PROJECT_INCLUDE_DIRS:%=-iquote %)\
-  $(FOREIGN_INCLUDE_DIRS:%=-isystem %)
-TESTS_ONLY_INCLUDES := -iquote $(TESTS_ONLY_INCLUDE_DIR)
+COMMON_INCLUDES += $(foreach lib,$(MAIN_LIBS),$(call headersDir,$(lib)))
 
 COMMON_LINKFLAGS := -flto=auto -L"$(LIB_DIR_BOOST_NO_TRAILING_SLASH)"
 
@@ -763,11 +771,11 @@ VPATH := $(VPATH):$(LIB_DIR_BOOST_NO_TRAILING_SLASH)
 # `which ls` was used because ls might be an alias with flags for displaying extra characters.
 -lboost_%: | boost_libs_available
 	@__FOUND_BOOST_LIBS_COUNT=$$(\
-	  `which ls` $(LIB_DIR_BOOST){lib,cyg,}boost_$*.{so,dylib,dll,dll.a} 2>/dev/null |\
+	  `which ls` "$(LIB_DIR_BOOST)"{lib,cyg,}boost_$*.{so,dylib,dll,dll.a} 2>/dev/null |\
 	  wc -l);\
 	if [ $$__FOUND_BOOST_LIBS_COUNT -eq 0 ]; then\
 	  printf "Couldn't find library:\
-	  $(LIB_DIR_BOOST)[lib|cyg]boost_$*.(so|dylib|dll[.a])!\n" >&2;\
+	  '$(LIB_DIR_BOOST)[lib|cyg]boost_$*.(so|dylib|dll[.a])'!\n" >&2;\
 	  exit 1;\
 	fi
 
