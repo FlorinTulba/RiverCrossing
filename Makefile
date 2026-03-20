@@ -242,17 +242,17 @@ show_compiler_info:
 	=====================\n"
 
 # Source folders
-SRC_DIR := src/
-TESTS_DIR := test/
+SRC_DIR := src
+TESTS_DIR := test
 
 # Precompiled files
 STEM_PRECOMPILED_H := precompiled
-PCH_GENERATED_FROM := $(SRC_DIR)$(STEM_PRECOMPILED_H).h
+PCH_GENERATED_FROM := $(SRC_DIR)/$(STEM_PRECOMPILED_H).h
 
 # The C++ sources of the project
 SOURCES := $(filter-out precompiledHeaderGenerator.cpp,\
-  $(notdir $(wildcard $(SRC_DIR)*.cpp)))
-TESTS_ONLY_SOURCES := $(notdir $(wildcard $(TESTS_DIR)*.cpp))
+  $(notdir $(wildcard $(SRC_DIR)/*.cpp)))
+TESTS_ONLY_SOURCES := $(notdir $(wildcard $(TESTS_DIR)/*.cpp))
 TESTS_SOURCES := $(SOURCES) $(TESTS_ONLY_SOURCES)
 
 # Helper base paths for the generated files
@@ -821,7 +821,7 @@ endef
 define addCompileCppRule
   $(eval p_1 := $(strip $(1)))
 
-  $($(p_1)_OUT_DIR)/%.o: $(SRC_DIR)%.cpp\
+  $($(p_1)_OUT_DIR)/%.o: $(SRC_DIR)/%.cpp\
       $(if $(filter-out FreeBSD_g++,$(CURRENT_OS)_$(CXX_TYPE)),$(PCH_$(p_1))) |\
       $($(p_1)_OUT_DIR) $($(p_1)_DEPDIR) $($(p_1)_DEPDIR)/%.d
 	$(value compileCpp)
@@ -831,7 +831,7 @@ $(foreach bt,$(BUILD_TYPES),$(eval $(call addCompileCppRule,$(bt))))
 
 # A part of the sources for the 'tests' target can be found only in TESTS_DIR
 # g++ on FreeBSD won't use a precompiled header!
-$(TESTS_OUT_DIR)/%.o: $(TESTS_DIR)%.cpp\
+$(TESTS_OUT_DIR)/%.o: $(TESTS_DIR)/%.cpp\
     $(if $(filter-out FreeBSD_g++,$(CURRENT_OS)_$(CXX_TYPE)),$(PCH_TESTS)) |\
     $(TESTS_OUT_DIR) $(TESTS_DEPDIR) $(TESTS_DEPDIR)/%.d
 	$(compileCpp)
