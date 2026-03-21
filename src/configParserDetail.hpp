@@ -209,7 +209,7 @@ using boost::fusion::at_c;
 // Suppress -Wglobal-constructors for parser-expression objects created here.
 MUTE_GLOBAL_CTOR_WARN
 
-// Semantic actions and definition for 'logicalExpr'
+// Semantic actions and definition for 'logicalExpr', 'valueOrRange' and 'value'
 template <class Type>
 inline const auto createWith1Param = [](const auto& ctx) {
   _val(ctx) = std::make_shared<const Type>(_attr(ctx));
