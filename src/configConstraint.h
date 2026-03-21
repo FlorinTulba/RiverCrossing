@@ -939,11 +939,11 @@ class Addition : public NumericExpr {
   gsl::not_null<std::shared_ptr<const NumericExpr>> right;
 };
 
-/// Modulus of 2 numeric expressions
+/// Modulus of 2 non-negative numeric expressions
 class Modulus : public NumericExpr {
  public:
   /**
-  @throw logic_error when both values are 0 or one is non-integer
+  @throw logic_error when both values are 0 or one is negative/non-integer
   @throw overflow_error when only the denominator is 0
   */
   Modulus(const std::shared_ptr<const NumericExpr>& numerator_,
@@ -961,7 +961,7 @@ class Modulus : public NumericExpr {
 
   /**
   @throw out_of_range whenever a variable isn't found
-  @throw logic_error when both values are 0 or one is non-integer
+  @throw logic_error when both values are 0 or one is negative/non-integer
   @throw overflow_error when only the denominator is 0
   */
   [[nodiscard]] double eval(const SymbolsTable& st) const override;
@@ -970,7 +970,7 @@ class Modulus : public NumericExpr {
 
  protected:
   /**
-  @throw logic_error for non-integer values
+  @throw logic_error for negative/non-integer values
   @return the corresponding integer value
   */
   [[nodiscard]] static long validLong(double v);

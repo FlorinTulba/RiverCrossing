@@ -960,12 +960,13 @@ void Addition::formatTo(FmtCtxIt& outIt) const {
 }
 
 long Modulus::validLong(double v) {
-  const long result{static_cast<long>(v)};
-  if (abs(v - static_cast<double>(result)) > Eps)
-    throw logic_error{
-        format("{} - Operands of modulus need to be integer values!",
-               HERE.function_name())};
-  return result;
+  if (const long result{static_cast<long>(v)};
+      abs(v - static_cast<double>(result)) <= Eps && result >= 0L)
+    return result;
+
+  throw logic_error{
+      format("{} - Operands of modulus need to be integer values >= 0!",
+             HERE.function_name())};
 }
 
 long Modulus::validOperation(long numeratorL, long denominatorL) {
@@ -984,10 +985,10 @@ Modulus::Modulus(const shared_ptr<const NumericExpr>& numerator_,
                  const shared_ptr<const NumericExpr>& denominator_)
     : numerator{numerator_},
       denominator{denominator_} {
-  // when the denominator is 1 or -1, the result is always 0
+  // when the denominator is 1, the result is always 0
   const auto& denomValOpt{denominator->constValue()};
   const bool hasConstDenominator{denomValOpt.has_value()};
-  if (hasConstDenominator && 1L == abs(validLong(*denomValOpt))) {
+  if (hasConstDenominator && 1L == validLong(*denomValOpt)) {
     val = 0.;
     return;
   }

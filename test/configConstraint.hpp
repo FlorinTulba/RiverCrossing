@@ -151,7 +151,7 @@ BOOST_AUTO_TEST_CASE(modulus_usecases) {
   using namespace rc::cond;
 
   bool b{};
-  constexpr double d1{5.}, d2{3.}, badVal{2.3};
+  constexpr double d1{5.}, d2{3.}, badVal{2.3}, negVal{-4.0};
   constexpr double d{
       static_cast<double>(static_cast<long>(d1) % static_cast<long>(d2))};
   const string var1{"a"}, var2{"b"};
@@ -161,9 +161,9 @@ BOOST_AUTO_TEST_CASE(modulus_usecases) {
   const shared_ptr<const NumericExpr> c1{make_shared<const NumericConst>(d1)},
       c2{make_shared<const NumericConst>(d2)},
       badCt{make_shared<const NumericConst>(badVal)},
+      negCt{make_shared<const NumericConst>(negVal)},
       zero{make_shared<const NumericConst>(0.)},
       one{make_shared<const NumericConst>(1.)},
-      minusOne{make_shared<const NumericConst>(-1.)},
       v1{make_shared<const NumericVariable>(var1)},
       v2{make_shared<const NumericVariable>(var2)};
 
@@ -186,6 +186,25 @@ BOOST_AUTO_TEST_CASE(modulus_usecases) {
     BOOST_CHECK(false);  // Unexpected exception
   }
 
+  // negative arguments
+  BOOST_CHECK_THROW(Modulus(c1, negCt), logic_error);
+  BOOST_CHECK_THROW(Modulus(negCt, v2), logic_error);
+  BOOST_CHECK_THROW(Modulus(negCt, negCt), logic_error);
+  try {
+    const Modulus m{v1, v2};
+    BOOST_CHECK(m.dependsOnVariable(var1));
+    BOOST_CHECK(m.dependsOnVariable(var2));
+    BOOST_CHECK_THROW(ignore = m.eval(SymbolsTable{{var1, negVal}, {var2, d2}}),
+                      logic_error);
+    BOOST_CHECK_THROW(ignore = m.eval(SymbolsTable{{var1, d1}, {var2, negVal}}),
+                      logic_error);
+    BOOST_CHECK_THROW(
+        ignore = m.eval(SymbolsTable{{var1, negVal}, {var2, negVal}}),
+        logic_error);
+  } catch (...) {
+    BOOST_CHECK(false);  // Unexpected exception
+  }
+
   // denominator or both arguments are 0
   BOOST_CHECK_THROW(Modulus m(c1, zero), overflow_error);
   BOOST_CHECK_THROW(Modulus m(zero, zero), logic_error);
@@ -201,7 +220,7 @@ BOOST_AUTO_TEST_CASE(modulus_usecases) {
     BOOST_CHECK(false);  // Unexpected exception
   }
 
-  // denominator 1 or -1 means result 0
+  // denominator 1 means result 0
   try {  // const numerator
     const Modulus m{c1, one};
     BOOST_CHECK(!m.dependsOnVariable(var1));
@@ -216,7 +235,7 @@ BOOST_AUTO_TEST_CASE(modulus_usecases) {
   }
 
   try {  // the numerator is a variable
-    const Modulus m{v1, minusOne};
+    const Modulus m{v1, one};
     BOOST_CHECK(!m.dependsOnVariable(var1));
     BOOST_CHECK(!m.dependsOnVariable(var2));
     const auto optVal{m.constValue()};
