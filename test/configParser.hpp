@@ -666,7 +666,9 @@ BOOST_AUTO_TEST_CASE(valueRule_correctInput) {
 
 // Value ::= <<constant>> | Variable
 BOOST_DATA_TEST_CASE(valueRule_wrongInput,
-                     bdata::make({"", "100..", "abc"}),
+                     bdata::make({"", "100..", "abc", "nan", "NAN", "inf",
+                                  "INF", "infinity", "INFINITY", "-inf", "-INF",
+                                  "-infinity", "-INFINITY"}),
                      wrongInput) {
   using namespace rc::grammar;
 

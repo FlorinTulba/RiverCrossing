@@ -263,6 +263,15 @@ BYPASSED_WARNINGS :=\
   -Wno-unknown-pragmas\
   -Wno-reorder
 
+# Apple Clang 17 instantiates some Boost Test-related template types
+# (when comparing double values), which refer Infinity and -Wnan-infinity-disabled
+# is signaled pointing out Infinity is disabled, indeed by the '-ffast-math' flag.
+# However, the project only uses NaN (permitted by the '-fhonor-nans' flag)
+# and DBL_MAX and also ensures that the scenario parser fails to read Infinity/NaN values.
+# So it's safe to disable the warning and for all clang compilers for TESTS build configuration.
+_DisableInfWarning :=\
+  $(if $(filter clang++,$(CXX_TYPE)),-Wno-nan-infinity-disabled)
+
 # Append -DH_PRECOMPILED to check for missing includes within individual cpp-s.
 # Remove -DH_PRECOMPILED after correcting the includes from each cpp with issues.
 # Similarly, -Winvalid-pch explains why pch files did not match within PCH_STORE_FOLDER.
@@ -689,7 +698,7 @@ endef
 $(eval $(call newBuildType,RELEASE,release,Release,-DNDEBUG))
 $(eval $(call newBuildType,DEBUG,debug,Debug,-g))
 $(eval $(call newBuildType,TESTS,tests,tests,\
-  -g -DUNIT_TESTING -DBOOST_TEST_DYN_LINK -DBOOST_TEST_NO_LIB))
+  -g -DUNIT_TESTING -DBOOST_TEST_DYN_LINK -DBOOST_TEST_NO_LIB $(_DisableInfWarning)))
 
 all: $(TOP_GOALS_PER_BUILD_TYPE)
 

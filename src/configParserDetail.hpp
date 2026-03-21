@@ -44,6 +44,7 @@
 #include <boost/spirit/home/x3/directive/omit.hpp>
 #include <boost/spirit/home/x3/nonterminal/rule.hpp>
 #include <boost/spirit/home/x3/numeric/real.hpp>
+#include <boost/spirit/home/x3/numeric/real_policies.hpp>
 #include <boost/spirit/home/x3/numeric/uint.hpp>
 #include <boost/spirit/home/x3/string/literal_string.hpp>
 #include <boost/spirit/home/x3/support/utility/error_reporting.hpp>
@@ -189,6 +190,28 @@ inline const bsx::rule<IdsConfigTag, rc::cond::IdsConstraint> idsConfig{
     "idsConfig"};
 inline const bsx::rule<IdsGroupTag, std::vector<unsigned>> idsGroup{"idsGroup"};
 
+/// A policy that behaves like the standard bsx::real_policies<double> used by
+/// bsx::double_, but ignores non-finite double values as only finite values
+/// should be handled by scenarios.
+class FiniteDoublePolicy : public bsx::real_policies<double> {
+ public:
+  /// Fail to parse "inf[inity]" and "INF[INITY]" on purpose
+  template <typename Iterator, typename Attribute>
+  static bool parse_inf(Iterator&, const Iterator&, Attribute&) noexcept {
+    return false;
+  }
+
+  /// Fail to parse "nan" and "NAN" on purpose (despite they are supported even
+  /// on clang, due to the '-fhonor-nans' flag)
+  template <typename Iterator, typename Attribute>
+  static bool parse_nan(Iterator&, const Iterator&, Attribute&) noexcept {
+    return false;
+  }
+};
+
+// Define a finite-only double parser
+inline const bsx::real_parser<double, FiniteDoublePolicy> finiteDoubleParser{};
+
 // Defining the rules and their semantic actions
 namespace bsa = bsx::ascii;
 using bsa::alnum;
@@ -197,7 +220,6 @@ using bsa::blank;
 using bsa::char_;
 
 using bsx::attr;
-using bsx::double_;
 using bsx::eoi;
 using bsx::eps;
 using bsx::lit;
@@ -301,8 +323,9 @@ const auto unfencedOperand_def =
     value[forwardAttr];
 
 // Definition for 'value'
-const auto value_def = double_[createWith1Param<rc::cond::NumericConst>] |
-                       variable[createWith1Param<rc::cond::NumericVariable>];
+const auto value_def =
+    finiteDoubleParser[createWith1Param<rc::cond::NumericConst>] |
+    variable[createWith1Param<rc::cond::NumericVariable>];
 
 // Definition for 'variable'
 const auto variable_def = '%' > typeName > '%';
